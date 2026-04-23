@@ -1,2 +1,3 @@
 module modules
 singleton Colors 1.0 Colors.qml
+Pill 1.0 Pill.qml

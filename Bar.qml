@@ -27,22 +27,18 @@ PanelWindow {
         anchors.rightMargin: 10
         spacing: 0
 
-        Rectangle {
-            width: 60
-            height: 24
-            radius: 12
-            color: Colors.color8
-        }
-
         //Left
         RowLayout {
             spacing: 6
             Layout.alignment: Qt.AlignVCenter
 
-            Text {
-                text: "Left"
-                color: "white"
-                font.pixelSize: 14
+            Pill {
+                Text {
+                    text: "Left"
+                    color: "white"
+                    font.pixelSize: 14
+                }
+
             }
 
         }
@@ -57,10 +53,13 @@ PanelWindow {
             spacing: 6
             Layout.alignment: Qt.AlignVCenter
 
-            Text {
-                text: "Center"
-                color: "white"
-                font.pixelSize: 14
+            Pill {
+                Text {
+                    text: "Center"
+                    color: "white"
+                    font.pixelSize: 14
+                }
+
             }
 
         }
@@ -75,10 +74,13 @@ PanelWindow {
             spacing: 6
             Layout.alignment: Qt.AlignVCenter
 
-            Text {
-                text: "Right"
-                color: "white"
-                font.pixelSize: 14
+            Pill {
+                Text {
+                    text: "Right"
+                    color: "white"
+                    font.pixelSize: 14
+                }
+
             }
 
         }

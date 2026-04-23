@@ -49,7 +49,7 @@ QtObject {
     property color muted:   root.color8   // dimmed text/icons
 
     // Watches the file — live reloads when wal runs
-    FileView {
+    property FileView walFile: FileView {
         id: walFile
         path: StandardPaths.writableLocation(StandardPaths.HomeLocation)
               + "/.cache/wal/colors.json"
