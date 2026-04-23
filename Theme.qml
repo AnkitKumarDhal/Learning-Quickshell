@@ -1,0 +1,1 @@
+/home/mizx/.cache/wal/colors-quickshell.qml
