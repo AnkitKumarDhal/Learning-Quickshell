@@ -16,6 +16,9 @@ PanelWindow {
     implicitHeight: 30
     color: "transparent"
 
+    // Use attached property for WlrLayershell
+    WlrLayershell.namespace: "quickshell"
+
     RowLayout {
         anchors.fill: parent
         anchors.margins: 5
@@ -23,6 +26,7 @@ PanelWindow {
 
         WorkspacesWidget {}
 
+        // This Item pushes the stats to the right edge
         Item {
             Layout.fillWidth: true
         }
@@ -30,5 +34,10 @@ PanelWindow {
         CpuWidget {}
 
         MemWidget {}
+    }
+
+    // ClockWidget centered absolutely in the panel
+    ClockWidget {
+        anchors.centerIn: parent
     }
 }
