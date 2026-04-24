@@ -33,13 +33,7 @@ PanelWindow {
             spacing: 6
             Layout.alignment: Qt.AlignVCenter
 
-            Pill {
-                Text {
-                    text: "Left"
-                    color: "white"
-                    font.pixelSize: 14
-                }
-            }
+            WorkspaceWidget {}
         }
 
         // Spacer
@@ -68,30 +62,6 @@ PanelWindow {
                     font.pixelSize: 14
                 }
             }
-        }
-    }
-
-    DropdownPanel {
-        id: centerDropdown
-        parentWindow: barWindow
-        targetPill: centerPill
-
-        popupEdge: Edges.Bottom
-        popupGap: 7
-        popupOffset: -80
-
-        Text {
-            text: "Date & Time"
-            color: Colors.foreground
-            opacity: 0.5
-            font.pixelSize: 11
-            font.capitalization: Font.AllUppercase
-        }
-
-        Text {
-            text: "Thursday, 23 April"
-            color: Colors.foreground
-            font.pixelSize: 14
         }
     }
 }
