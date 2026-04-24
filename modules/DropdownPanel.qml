@@ -10,7 +10,7 @@ PopupWindow {
     property var parentWindow
     property var targetPill
 
-    property int popupEdge: Edge.Bottom
+    property int popupEdge: Edges.Bottom
     property int popupGap: 8
     property int popupOffset: 0
 

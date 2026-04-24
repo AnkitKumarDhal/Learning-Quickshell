@@ -43,24 +43,18 @@ PanelWindow {
         }
 
         // Spacer
-        Item {
-            Layout.fillWidth: true
-        }
+        Item { Layout.fillWidth: true }
 
         //Center
         RowLayout {
             spacing: 6
             Layout.alignment: Qt.AlignVCenter
 
-            ClockWidget {
-                parentWindow: barWindow
-            }
+            ClockWidget { parentWindow: barWindow }
         }
 
         // Spacer
-        Item {
-            Layout.fillWidth: true
-        }
+        Item { Layout.fillWidth: true }
 
         // Right
         RowLayout {
