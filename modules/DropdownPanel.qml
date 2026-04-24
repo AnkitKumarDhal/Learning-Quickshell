@@ -22,15 +22,20 @@ PopupWindow {
     anchor.window: parentWindow
     anchor.rect: {
         if (isOpen && targetPill) {
-            return targetPill.mapToItem(null, 0, 0, targetPill.width, targetPill.height);
+            // Get the exact coordinates of the pill on the screen
+            let r = targetPill.mapToItem(null, 0, 0, targetPill.width, targetPill.height);
+            
+            // Mathematically push the Wayland anchor box outwards based on the edge
+            if (root.popupEdge & Edges.Bottom) { r.height += root.popupGap; }
+            if (root.popupEdge & Edges.Top)    { r.y -= root.popupGap; r.height += root.popupGap; }
+            if (root.popupEdge & Edges.Right)  { r.width += root.popupGap; }
+            if (root.popupEdge & Edges.Left)   { r.x -= root.popupGap; r.width += root.popupGap; }
+            
+            return r;
         }
-        return Qt.rect(0, 0, 0, 0)
+        return Qt.rect(0, 0, 0, 0);
     }
     anchor.edges: root.popupEdge
-    anchor.margins.top: (root.popupEdge & Edges.Bottom) ? root.popupGap : 0
-    anchor.margins.bottom: (root.popupEdge & Edges.Top) ? root.popupGap : 0
-    anchor.margins.left: (root.popupEdge & Edges.Right) ? root.popupGap : 0
-    anchor.margins.right: (root.popupEdge & Edges.Left) ? root.popupGap : 0
 
     Rectangle {
         id: panelBg
