@@ -44,6 +44,7 @@ Item {
 
         popupEdge: Edges.Bottom
         popupGap: 7
+        popupOffset: -80
 
         Text {
             text: "Date & Time"

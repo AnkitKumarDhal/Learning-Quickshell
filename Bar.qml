@@ -55,12 +55,8 @@ PanelWindow {
             spacing: 6
             Layout.alignment: Qt.AlignVCenter
 
-            Pill {
-                Text {
-                    text: "Right"
-                    color: "white"
-                    font.pixelSize: 14
-                }
+            VolumeWidget {
+                parentWindow: barWindow
             }
         }
     }
