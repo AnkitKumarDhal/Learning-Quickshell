@@ -2,6 +2,7 @@ pragma Singleton
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtCore
 import Quickshell
 import Quickshell.Io
 
@@ -57,6 +58,7 @@ QtObject {
     }
 
     function load(raw) {
+        if (typeof raw !== "string" || raw.trim() === "") return;
         try {
             const data = JSON.parse(raw)
             const s = data.special

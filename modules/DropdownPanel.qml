@@ -16,8 +16,8 @@ PopupWindow {
     visible: isOpen
     color: "transparent"
 
-    width: container.implicitWidth + 28
-    height: container.implicitHeight + 28
+    implicitWidth: container.implicitWidth + 28
+    implicitHeight: container.implicitHeight + 28
 
     anchor.window: parentWindow
     anchor.rect: {
