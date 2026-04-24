@@ -52,16 +52,8 @@ PanelWindow {
             spacing: 6
             Layout.alignment: Qt.AlignVCenter
 
-            Pill {
-                id: centerPill
-
-                onClicked: centerDropdown.isOpen = !centerDropdown.isOpen
-                Text {
-                    text: "12:34"
-                    color: Colors.foreground
-                    font.pixelSize: 14
-                    font.bold: true
-                }
+            ClockWidget {
+                parentWindow: barWindow
             }
         }
 
