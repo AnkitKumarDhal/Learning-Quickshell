@@ -8,6 +8,21 @@ Item {
     implicitWidth: pill.implicitWidth
     implicitHeight: pill.implicitHeight
 
+    property int maxWs: {
+        let max = 5;
+        for (let i = 0; i < Hyprland.workspaces.length; i++) {
+            if (Hyprland.workspaces[i].id > max) {
+                max = Hyprland.workspaces[i].id;
+            }
+        }
+
+        if (Hyprland.focusedWorkspace?.id > max) {
+            max = Hyprland.focusedWorkspace.id;
+        }
+
+        return max;
+    }
+
     Pill {
         id: pill
         anchors.fill: parent
@@ -16,7 +31,7 @@ Item {
             spacing: 6
 
             Repeater {
-                model: 5
+                model: root.maxWs
 
                 Rectangle {
                     property int wsId: index + 1
@@ -34,6 +49,15 @@ Item {
 
                     Behavior on color {
                         ColorAnimation { duration: 200 }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -5
+
+                        onClicked: {
+                            Hyprland.dispatch("workspace" + " " + wsId)
+                        }
                     }
                 }
             }

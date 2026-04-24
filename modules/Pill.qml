@@ -16,19 +16,19 @@ Rectangle {
     border.color: mouseArea.containsMouse ? Qt.rgba(Colors.accent.r, Colors.accent.g, Colors.accent.b, 0.5) : Colors.pillBorder
     border.width: 1
 
-    Row {
-        id: container
-
-        anchors.centerIn: parent
-        spacing: 8
-    }
-
     MouseArea {
         id: mouseArea
 
         anchors.fill: parent
         hoverEnabled: true
         onClicked: root.clicked()
+    }
+
+    Row {
+        id: container
+
+        anchors.centerIn: parent
+        spacing: 8
     }
 
     Behavior on color {
