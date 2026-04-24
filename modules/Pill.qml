@@ -4,6 +4,8 @@ import Quickshell
 Rectangle {
     id: root
 
+    signal clicked()
+
     default property alias content: container.data
 
     implicitHeight: 32

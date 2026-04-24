@@ -5,11 +5,12 @@ import Quickshell.Wayland
 import "modules"
 
 PanelWindow {
-    id: root
+    id: barWindow
 
     implicitHeight: 40
     exclusiveZone: implicitHeight
     color: "transparent"
+
     //Layer Shell config
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "quickshell-bar"
@@ -38,9 +39,7 @@ PanelWindow {
                     color: "white"
                     font.pixelSize: 14
                 }
-
             }
-
         }
 
         // Spacer
@@ -54,14 +53,16 @@ PanelWindow {
             Layout.alignment: Qt.AlignVCenter
 
             Pill {
+                id: centerPill
+
+                onClicked: centerDropdown.isOpen = !centerDropdown.isOpen
                 Text {
-                    text: "Center"
-                    color: "white"
+                    text: "12:34"
+                    color: Colors.foreground
                     font.pixelSize: 14
+                    font.bold: true
                 }
-
             }
-
         }
 
         // Spacer
@@ -80,11 +81,30 @@ PanelWindow {
                     color: "white"
                     font.pixelSize: 14
                 }
-
             }
-
         }
-
     }
 
+    DropdownPanel {
+        id: centerDropdown
+        parentWindow: barWindow
+        targetPill: centerPill
+
+        popupEdge: Edges.Bottom
+        popupGap: 9
+
+        Text {
+            text: "Date & Time"
+            color: Colors.foreground
+            opacity: 0.5
+            font.pixelSize: 11
+            font.capitalization: Font.AllUppercase
+        }
+
+        Text {
+            text: "Thursday, 23 April"
+            color: Colors.foreground
+            font.pixelSize: 14
+        }
+    }
 }

@@ -1,3 +1,4 @@
 module modules
 singleton Colors 1.0 Colors.qml
 Pill 1.0 Pill.qml
+DropdownPanel 1.0 DropdownPanel.qml
