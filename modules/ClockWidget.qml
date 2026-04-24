@@ -19,7 +19,7 @@ Item {
         triggeredOnStart: true
         onTriggered: {
             let now = new Date();
-            root.currentTime = Qt.formatTime(now, "hh:mm");
+            root.currentTime = Qt.formatTime(now, "h:mm AP");
             root.currentDate = Qt.formatDate(now, "dddd, d MMMM");
         }
     }
