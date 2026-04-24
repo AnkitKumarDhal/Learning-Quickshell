@@ -12,6 +12,7 @@ PopupWindow {
 
     property int popupEdge: Edge.Bottom
     property int popupGap: 8
+    property int popupOffset: 0
 
     visible: isOpen
     color: "transparent"
@@ -22,14 +23,21 @@ PopupWindow {
     anchor.window: parentWindow
     anchor.rect: {
         if (isOpen && targetPill) {
-            // Get the exact coordinates of the pill on the screen
             let r = targetPill.mapToItem(null, 0, 0, targetPill.width, targetPill.height);
             
-            // Mathematically push the Wayland anchor box outwards based on the edge
+            // Push outwards for the gap
             if (root.popupEdge & Edges.Bottom) { r.height += root.popupGap; }
             if (root.popupEdge & Edges.Top)    { r.y -= root.popupGap; r.height += root.popupGap; }
             if (root.popupEdge & Edges.Right)  { r.width += root.popupGap; }
             if (root.popupEdge & Edges.Left)   { r.x -= root.popupGap; r.width += root.popupGap; }
+            
+            // Slide along the horizontal/vertical axis for the offset
+            if ((root.popupEdge & Edges.Top) || (root.popupEdge & Edges.Bottom)) {
+                r.x += root.popupOffset;
+            }
+            if ((root.popupEdge & Edges.Left) || (root.popupEdge & Edges.Right)) {
+                r.y += root.popupOffset;
+            }
             
             return r;
         }

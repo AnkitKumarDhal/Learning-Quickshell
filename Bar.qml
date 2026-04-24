@@ -91,7 +91,8 @@ PanelWindow {
         targetPill: centerPill
 
         popupEdge: Edges.Bottom
-        popupGap: 1
+        popupGap: 7
+        popupOffset: -80
 
         Text {
             text: "Date & Time"
