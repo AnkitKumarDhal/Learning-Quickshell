@@ -1,0 +1,4 @@
+module qs.services
+
+singleton Volume 1.0 Volume.qml
+singleton Osd 1.0 Osd.qml

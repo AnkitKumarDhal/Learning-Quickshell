@@ -29,7 +29,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: 20
-        colors: colors.surface_container_high
+        color: colors.surface_container_high
         border.color: colors.outline_variant
         border.width: 1
         opacity: Services.Osd.visible ? 1.0 : 0.0

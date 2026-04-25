@@ -76,7 +76,7 @@ Singleton {
 
     FileView {
         id: colorsFile
-        path: Quickshell.evn("HOME") + "/.cache/wal/colors-quickshell.json"
+        path: Quickshell.env("HOME") + "/.cache/wal/colors-quickshell.json"
         watchChanges: true
         onFileChanged: reloadTimer.restart()
     }

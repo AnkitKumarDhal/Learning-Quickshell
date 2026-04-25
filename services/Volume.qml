@@ -56,11 +56,11 @@ Singleton {
         }
     }
 
-    function setDefaultSink(sink: PwNode) void {
+    function setDefaultSink(sink: PwNode): void {
         Pipewire.preferredDefaultAudioSink = sink;
     }
 
-    function setDefaultSource(source: PwNode) void {
+    function setDefaultSource(source: PwNode): void {
         Pipewire.preferredDefaultAudioSource = source;
     }
 
