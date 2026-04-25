@@ -2,3 +2,4 @@ module qs.services
 
 singleton Volume 1.0 Volume.qml
 singleton Osd 1.0 Osd.qml
+singleton Time 1.0 Time.qml
