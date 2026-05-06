@@ -5,30 +5,25 @@ import Quickshell.Io
 import Quickshell.Wayland
 
 import qs.Osd
-import qs.colors
-import qs.core
-import qs.services
-
+import qs.services as Services
+import qs.modules.bar
+import qs.modules.calendar
+import qs.components
 
 ShellRoot {
     id: root
-
+    CalendarWindow{}
     PanelWindow {
-        id: rootPanel
+        focusable: true
+        WlrLayershell.layer: WlrLayer.Bottom
         exclusionMode: ExclusionMode.Ignore
-        implicitWidth: screen.width
-        implicitHeight: screen.height
-
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+        color: "transparent"
         anchors {
+            left: true
+            right: true
             top: true
             bottom: true
-            right: true
-            left: true
         }
-
-        color: "transparent"
-        focusable: false
-
-        OsdWindow {}
     }
 }
