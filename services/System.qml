@@ -5,7 +5,7 @@ import Quickshell.Io
 import qs.services
 
 Singleton {
-    id: state
+    id: stats
 
     property real cpu: 0
     property real ram: 0
@@ -21,11 +21,11 @@ Singleton {
         running: true
         repeat: true
         onTriggered: {
-            cpuProc.running: true
-            ramProc.running: true
-            diskProc.running: true
-            tempProc.running: true
-            uptimeProc.running: true
+            cpuProc.running = true
+            ramProc.running = true
+            diskProc.running = true
+            tempProc.running = true
+            uptimeProc.running = true
         }
     }
 
@@ -34,7 +34,7 @@ Singleton {
         running: true
         repeat: true
         onTriggered: {
-            brightnessProc.running: true
+            brightnessProc.running = true
         }
     }
 

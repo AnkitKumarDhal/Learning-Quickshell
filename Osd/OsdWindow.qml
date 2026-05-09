@@ -5,7 +5,7 @@ import Quickshell.Wayland
 
 import qs.services as Services
 import "../colors" as ColorsModule
-import qs.core
+import qs.Core
 
 Item {
     id: root
@@ -61,7 +61,7 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: Services.Osd.type === "volume" ? getVolumeIcon() : Icons.Brightness
+                    text: Services.Osd.type === "volume" ? getVolumeIcon() : Icons.brightness
                     font.pixelSize: 28
                     font.family: "Material Design Icons"
                     color: colors.on_primary_container

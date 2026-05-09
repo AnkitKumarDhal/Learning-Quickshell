@@ -14,6 +14,6 @@ Singleton {
     }
 
     function format(fmt) {
-        return Qt.formatDateTime(clocke.date, fmt)
+        return Qt.formatDateTime(clock.date, fmt)
     }
 }

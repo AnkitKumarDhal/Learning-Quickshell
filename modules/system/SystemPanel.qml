@@ -75,11 +75,6 @@ Item {
         SystemGraphs { }
     }
 
-    Component {
-        id: screenTab
-        ScreenTools { }
-    }
-
     IpcHandler {
         target: "systemPanel"
         function toggle(): void {

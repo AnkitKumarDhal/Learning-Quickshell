@@ -1,5 +1,5 @@
 import QtQuick
-import Quickshell
+import Quickshell.Io
 import "../../../colors" as ColorsModule
 import qs.services as Services
 
