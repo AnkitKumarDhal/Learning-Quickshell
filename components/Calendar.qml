@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import QtQuick.Layouts
 import QtQuick.Controls
 import "../colors" as ColorsModule
@@ -21,11 +22,11 @@ Item {
 
     function isToday(y, m, d) {
         const t = new Date()
-        return t.getFullyear() === y && t.getMonth() === m && t.getDate() === d
+        return t.getFullYear() === y && t.getMonth() === m && t.getDate() === d
     }
 
     function monthModel() {
-        const y = currentDate.getFullyear()
+        const y = currentDate.getFullYear()
         const m = currentDate.getMonth()
     
         const offset = firstDayOffset(y, m)
@@ -60,7 +61,7 @@ Item {
                 ToolButton {
                     text: "◀"
                     onClicked: {
-                        root.currentDate = new Date(root.currentDate.getFullyear(), root.currentDate.getMonth() - 1, 1)
+                        root.currentDate = new Date(root.currentDate.getFullYear(), root.currentDate.getMonth() - 1, 1)
                     }
                 }
 
@@ -76,7 +77,7 @@ Item {
                 ToolButton {
                     text: "▶"
                     onClicked: {
-                        root.currentDate = new Date(root.currentDate.getFullyear(), root.currentDate.getMonth() + 1, 1)
+                        root.currentDate = new Date(root.currentDate.getFullYear(), root.currentDate.getMonth() + 1, 1)
                     }
                 }
             }
@@ -114,7 +115,7 @@ Item {
                         radius: 10
 
                         property bool valid: modelData.day > 0
-                        property bool today: valid && root.isToday(root.currentDate.getFullyear(), root.currentDate.getMonth(), modelData.day)
+                        property bool today: valid && root.isToday(root.currentDate.getFullYear(), root.currentDate.getMonth(), modelData.day)
 
                         color: today ? ColorsModule.Colors.primary : "transparent"
                         border.color: valid ? ColorsModule.Colors.outline_variant : "transparent"
