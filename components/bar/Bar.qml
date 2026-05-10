@@ -1,7 +1,9 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import "../../settings"
 import "clock"
+import "window"
 
 PanelWindow {
     id: topBar
@@ -12,7 +14,6 @@ PanelWindow {
         right: true
     }
 
-    // exclusionMode: ExclusionMode.Normal
     color: "transparent"
     implicitHeight: 38
 
@@ -20,8 +21,13 @@ PanelWindow {
         anchors.fill: parent
         anchors.margins: 8
 
-        Clock {
+        RowLayout {
             anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 10
+
+            Window {}
+            Clock{}
         }
     }
 }
