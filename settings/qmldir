@@ -1,4 +1,1 @@
 singleton Colors 1.0 Colors.qml
-singleton Fonts 1.0 Fonts.qml
-singleton Pill 1.0 Pill.qml
-singleton States 1.0 States.qml

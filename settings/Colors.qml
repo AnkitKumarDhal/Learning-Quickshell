@@ -10,9 +10,15 @@ QtObject {
 
     property FileView watcher: FileView {
         path: Quickshell.shellPath("settings/Colors.json")
-        onFileDataChanged: {
+        watchChanges: true
+        onFileChanged: reload()
+
+        onTextChanged: {
             try {
-                root.palette = JSON.parse(fileData)
+                // Ensure we don't try to parse empty strings during the split-second reload
+                if (text() !== "") {
+                    root.palette = JSON.parse(text())
+                }
             } catch (e) {}
         }
     }
