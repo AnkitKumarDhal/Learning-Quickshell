@@ -59,9 +59,10 @@ Rectangle {
     Text {
         id: cpuText
         anchors.centerIn: parent
-        text: "󰍛 " + Math.round(cpuPill.cpuUsage) + "%"
+        text: "CPU: " + Math.round(cpuPill.cpuUsage) + "%"
         color: Colors.primary
         font.pointSize: 11
         font.bold: true
+        font.family: Fonts.font
     }
 }

@@ -22,5 +22,6 @@ Rectangle {
         color: Colors.primary
         font.pointSize: 11
         font.bold: true
+        font.family: Fonts.font
     }
 }

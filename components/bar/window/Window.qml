@@ -23,6 +23,7 @@ Rectangle {
             text: "󰣇"
             color: Colors.primary
             font.pointSize: 14
+            font.family: "JetBrains Mono"
         }
 
         Text {
@@ -30,6 +31,7 @@ Rectangle {
             color: Colors.primary
             font.pointSize: 11
             font.bold: true
+            font.family: Fonts.font
 
             elide: Text.ElideRight
             Layout.maximumWidth: 350
