@@ -46,6 +46,7 @@ PanelWindow {
             spacing: 10
 
             Cpu{}
+            Memory{}
         }
     }
 }
