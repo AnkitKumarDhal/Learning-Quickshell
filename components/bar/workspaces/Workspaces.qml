@@ -1,16 +1,28 @@
-import "../../../settings"
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
+import QtQuick.Layouts
 import Quickshell.Hyprland
+import "../../../settings"
 
 Rectangle {
     id: workspaces
 
-    implicitWidth: layout.implicitWidth + 28
+    implicitWidth: layout.implicitWidth + 32
     implicitHeight: 30
     radius: 15
     color: Colors.background
+
+    property int dotCount: {
+        let highest = 3;
+        let wss = Hyprland.workspaces.values;
+
+        for (let i = 0; i < wss.length; i++) {
+            if (wss[i].id > highest) {
+                highest = wss[i].id;
+            }
+        }
+        return highest;
+    }
 
     Row {
         id: layout
@@ -19,21 +31,31 @@ Rectangle {
         spacing: 8
 
         Repeater {
-            model: Hyprland.workspaces
-
+            model: workspaces.dotCount
             delegate: Rectangle {
-                required property var modelData
+                readonly property int wsId: index + 1
+                property var hyprWs: {
+                    let wss = Hyprland.workspaces.values;
+                    for (let i = 0; i < wss.length; i++) {
+                        if (wss[i].id === wsId) {
+                            return wss[i];
+                        }
+                    }
+                    return null;
+                }
 
-                visible: modelData.id > 0
-                width: modelData.active ? 30 : 12
+                readonly property bool isActive: hyprWs ? hyprWs.active : false
+                readonly property bool isOccupied: hyprWs !== null
+
+                width: isActive ? 30 : 12
                 height: 12
                 radius: 6
-                color: modelData.active ? Colors.primary : Colors.outline
+                color: isActive ? Colors.primary : Colors.outline
 
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        modelData.activate();
+                        Hyprland.dispatch("workspace " + wsId)
                     }
                 }
 
@@ -42,20 +64,14 @@ Rectangle {
                         duration: 250
                         easing.type: Easing.OutExpo
                     }
-
                 }
 
                 Behavior on color {
                     ColorAnimation {
                         duration: 200
                     }
-
                 }
-
             }
-
         }
-
     }
-
 }
