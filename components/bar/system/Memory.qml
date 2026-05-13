@@ -52,7 +52,7 @@ Rectangle {
     Text {
         id: memText
         anchors.centerIn: parent
-        text: "MEM " + memPill.memUsed.toFixed(1) + " GB"
+        text: "MEM: " + memPill.memUsed.toFixed(1) + " GB"
         color: Colors.primary
         font.pointSize: 11
         font.bold: true
