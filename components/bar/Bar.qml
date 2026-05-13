@@ -1,21 +1,22 @@
+import "../../settings"
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import "../../settings"
 import "clock"
 import "window"
+import "workspaces"
 
 PanelWindow {
     id: topBar
+
+    color: "transparent"
+    implicitHeight: 38
 
     anchors {
         top: true
         left: true
         right: true
     }
-
-    color: "transparent"
-    implicitHeight: 38
 
     Item {
         anchors.fill: parent
@@ -26,8 +27,24 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 10
 
-            Window {}
-            Clock{}
+            Window {
+            }
+
+            Clock {
+            }
+
         }
+
+        RowLayout {
+            anchors.centerIn: parent
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 10
+
+            Workspaces {
+            }
+
+        }
+
     }
+
 }
