@@ -5,6 +5,7 @@ import Quickshell
 import "clock"
 import "window"
 import "workspaces"
+import "system"
 
 PanelWindow {
     id: topBar
@@ -27,12 +28,8 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 10
 
-            Window {
-            }
-
-            Clock {
-            }
-
+            Window {}
+            Clock {}
         }
 
         RowLayout {
@@ -40,11 +37,15 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 10
 
-            Workspaces {
-            }
-
+            Workspaces {}
         }
 
-    }
+        RowLayout {
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 10
 
+            Cpu{}
+        }
+    }
 }
