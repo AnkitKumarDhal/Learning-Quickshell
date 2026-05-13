@@ -6,6 +6,7 @@ import "clock"
 import "window"
 import "workspaces"
 import "system"
+import "notification"
 
 PanelWindow {
     id: topBar
@@ -47,6 +48,7 @@ PanelWindow {
 
             Cpu{}
             Memory{}
+            NotificationButton{}
         }
     }
 }

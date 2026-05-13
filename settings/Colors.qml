@@ -30,6 +30,8 @@ QtObject {
     readonly property string on_Surface: palette.on_surface || "#f1dedd"
     readonly property string surfaceVariant: palette.surface_variant || "#534342"
     readonly property string on_SurfaceVariant: palette.on_surface_variant || "#d8c2c0"
+    readonly property string surfaceContainer: palette.surface_container || "#271d1d"
+    readonly property string surfaceContainerHighest: palette.surface_container_highest || "#3d3231"
     
     // --- Primary ---
     readonly property string primary: palette.primary || "#ffb3af"
