@@ -11,6 +11,7 @@ Singleton {
     property bool full: false
     property string status: "Unknown"
     readonly property real fraction: capacity / 100
+    property bool hasBattery: false
 
     Process {
         id: _capProc
@@ -23,10 +24,14 @@ Singleton {
                 const v = parseInt(data.trim());
                 if (!isNaN(v))
                     root.capacity = v;
-
+                    root.hasBattery = true;
             }
         }
-
+        
+        onExited: (code, status) => {
+            if (code !== 0)
+                root.hasBattery = false;
+        }
     }
 
     Process {

@@ -6,71 +6,73 @@ import Quickshell
 Rectangle {
     id: batteryPill
 
+    visible: BatteryService.hasBattery
     function batteryIcon() : string {
-        if (BatteryService.full)
+        if (BatteryService.full) {
             return "󰁹 ";
+        }
 
         if (BatteryService.charging) {
-            if (BatteryService.capacity >= 90)
+            if (BatteryService.capacity >= 90) {
                 return "󰂅 ";
-
-            if (BatteryService.capacity >= 80)
+            }
+            if (BatteryService.capacity >= 80) {
                 return "󰂄 ";
-
-            if (BatteryService.capacity >= 70)
+            }
+            if (BatteryService.capacity >= 70) {
                 return "󰂃 ";
-
-            if (BatteryService.capacity >= 60)
+            }
+            if (BatteryService.capacity >= 60) {
                 return "󰂂 ";
-
-            if (BatteryService.capacity >= 50)
+            }
+            if (BatteryService.capacity >= 50) {
                 return "󰂁 ";
-
-            if (BatteryService.capacity >= 40)
+            }
+            if (BatteryService.capacity >= 40) {
                 return "󰂀 ";
-
-            if (BatteryService.capacity >= 30)
+            }
+            if (BatteryService.capacity >= 30) {
                 return "󰁿 ";
-
-            if (BatteryService.capacity >= 20)
+            }
+            if (BatteryService.capacity >= 20) {
                 return "󰁾 ";
-
-            if (BatteryService.capacity >= 10)
+            }
+            if (BatteryService.capacity >= 10) {
                 return "󰁽 ";
-
+            }
             return "󰁻 ";
         }
-        if (BatteryService.capacity >= 90)
+        if (BatteryService.capacity >= 90) {
             return "󰁹 ";
-
-        if (BatteryService.capacity >= 80)
+        }
+        if (BatteryService.capacity >= 80) {
             return "󰁺 ";
-
-        if (BatteryService.capacity >= 60)
+        }
+        if (BatteryService.capacity >= 60) {
             return "󰁿 ";
-
-        if (BatteryService.capacity >= 40)
+        }
+        if (BatteryService.capacity >= 40) {
             return "󰁼 ";
-
-        if (BatteryService.capacity >= 20)
+        }
+        if (BatteryService.capacity >= 20) {
             return "󰁻 ";
-
-        if (BatteryService.capacity >= 10)
+        }
+        if (BatteryService.capacity >= 10) {
             return "󰁺 ";
-
+        }
         return "󰂎 ";
     }
 
     function batteryColor() : string {
-        if (BatteryService.charging || BatteryService.full)
+        if (BatteryService.charging || BatteryService.full) {
             return Colors.tertiary;
-
-        if (BatteryService.capacity <= 10)
+        }
+        if (BatteryService.capacity <= 10) {
             return Colors.error;
-
-        if (BatteryService.capacity <= 25)
+        }
+        if (BatteryService.capacity <= 25) {
             return Colors.primary;
-
+        }
         return Colors.primary;
     }
 
@@ -104,9 +106,6 @@ Rectangle {
                 duration: 600
                 easing.type: Easing.InOutSine
             }
-
         }
-
     }
-
 }
