@@ -54,7 +54,6 @@ PanelWindow {
             spacing: 10
 
             Battery {
-                barWindow: topBar
             }
 
             Cpu {
