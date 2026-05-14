@@ -11,7 +11,6 @@ Rectangle {
         if (BatteryService.full) {
             return "󰁹 ";
         }
-
         if (BatteryService.charging) {
             if (BatteryService.capacity >= 90) {
                 return "󰂅 ";
