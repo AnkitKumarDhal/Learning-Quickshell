@@ -15,7 +15,6 @@ PanelWindow {
     }
 
     margins {
-        // top: 48
         right: 8
     }
 
@@ -29,26 +28,30 @@ PanelWindow {
     ColumnLayout {
         id: toastLayout
         width: parent.width
-        spacing: 10
+        spacing: 6
 
         Repeater {
             model: NotificationService.server.trackedNotifications.values
 
-            delegate: Rectangle {
+            delegate: Item {
                 id: toastDelegate
                 required property var modelData
 
                 property bool showAsToast: true
 
-                visible: showAsToast && !NotificationService.panelVisible
-
                 Layout.fillWidth: true
-                Layout.preferredHeight: visible ? (col.implicitHeight + 20) : 0
+                // Animate height in/out instead of popping
+                Layout.preferredHeight: visible ? toastInner.implicitHeight : 0
+                visible: showAsToast && !NotificationService.panelVisible
+                clip: true
 
-                color: Colors.background
-                radius: 12
-                border.color: Colors.primary
-                border.width: 1
+                Behavior on Layout.preferredHeight {
+                    NumberAnimation {
+                        duration: 400
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: [0.05, 0, 0.133, 0.06, 0.166, 0.4, 0.208, 0.82, 0.25, 1, 1, 1]
+                    }
+                }
 
                 Timer {
                     interval: 3500
@@ -56,32 +59,77 @@ PanelWindow {
                     onTriggered: toastDelegate.showAsToast = false
                 }
 
-                ColumnLayout {
-                    id: col
-                    anchors.fill: parent
-                    anchors.margins: 20
-                    spacing: 4
-                    visible: toastDelegate.visible
+                Rectangle {
+                    id: toastInner
+                    width: parent.width
+                    implicitHeight: toastCol.implicitHeight + 16
+                    color: Colors.background
+                    radius: 14
+                    border.color: Colors.primary
+                    border.width: 1
 
-                    Text {
-                        text: modelData.summary
+                    Rectangle {
+                        id: toastHighlight
+                        anchors.fill: parent
+                        radius: parent.radius
                         color: Colors.primary
-                        font.family: Fonts.font
-                        font.bold: true
-                        font.pointSize: 11
-                        Layout.fillWidth: true
-                        elide: Text.ElideRight
+                        opacity: toastMouse.containsMouse ? 0.08 : 0
+
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
                     }
 
-                    Text {
-                        text: modelData.body
-                        color: Colors.on_Surface
-                        font.family: Fonts.font
-                        font.pointSize: 10
-                        Layout.fillWidth: true
-                        wrapMode: Text.Wrap
-                        maximumLineCount: 3
-                        elide: Text.ElideRight
+                    // Accent bar
+                    Rectangle {
+                        width: 3
+                        height: 16
+                        radius: 2
+                        color: Colors.primary
+                        anchors.left: parent.left
+                        anchors.leftMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    ColumnLayout {
+                        id: toastCol
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.topMargin: 8
+                        anchors.leftMargin: 20
+                        anchors.rightMargin: 12
+                        anchors.bottomMargin: 8
+                        spacing: 3
+
+                        Text {
+                            text: modelData.summary
+                            color: Colors.primary
+                            font.family: Fonts.font
+                            font.bold: true
+                            font.pixelSize: 13
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            text: modelData.body
+                            color: Colors.primary
+                            opacity: 0.7
+                            font.family: Fonts.font
+                            font.pixelSize: 11
+                            Layout.fillWidth: true
+                            wrapMode: Text.Wrap
+                            maximumLineCount: 3
+                            elide: Text.ElideRight
+                            visible: modelData.body !== ""
+                        }
+                    }
+
+                    MouseArea {
+                        id: toastMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: toastDelegate.showAsToast = false
                     }
                 }
             }

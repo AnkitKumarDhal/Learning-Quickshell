@@ -12,7 +12,11 @@ Rectangle {
     implicitWidth: layout.implicitWidth + 32
     implicitHeight: 30
     radius: 15
-    color: NotificationService.panelVisible ? Colors.primaryContainer : Colors.background
+    color: Colors.background
+    border.color: Colors.primary
+    border.width: NotificationService.panelVisible ? 1 : 0
+
+    Behavior on border.width { NumberAnimation { duration: 150 } }
 
     RowLayout {
         id: layout
@@ -21,7 +25,7 @@ Rectangle {
 
         Text {
             text: "󰂚"
-            color: NotificationService.panelVisible ? Colors.on_PrimaryContainer : Colors.primary
+            color: Colors.primary
             font.pointSize: 11
             font.family: Fonts.font
         }
@@ -29,7 +33,7 @@ Rectangle {
         Text {
             visible: notifButton.notifCount > 0
             text: notifButton.notifCount
-            color: NotificationService.panelVisible ? Colors.on_PrimaryContainer : Colors.primary
+            color: Colors.primary
             font.pointSize: 11
             font.bold: true
             font.family: Fonts.font
@@ -38,8 +42,8 @@ Rectangle {
 
     MouseArea {
         anchors.fill: parent
-        onClicked: {
-            NotificationService.panelVisible = !NotificationService.panelVisible
-        }
+        cursorShape: Qt.PointingHandCursor
+        hoverEnabled: true
+        onClicked: NotificationService.panelVisible = !NotificationService.panelVisible
     }
 }
