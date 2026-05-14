@@ -8,6 +8,7 @@ import "notification"
 import "system"
 import "window"
 import "workspaces"
+import "volume"
 
 PanelWindow {
     id: topBar
@@ -30,12 +31,8 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 10
 
-            Window {
-            }
-
-            Clock {
-            }
-
+            Window {}
+            Clock {}
         }
 
         RowLayout {
@@ -43,9 +40,7 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 10
 
-            Workspaces {
-            }
-
+            Workspaces {}
         }
 
         RowLayout {
@@ -53,20 +48,11 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 10
 
-            Battery {
-            }
-
-            Cpu {
-            }
-
-            Memory {
-            }
-
-            NotificationButton {
-            }
-
+            Battery {}
+            Cpu {}
+            Memory {}
+            Volume {}
+            NotificationButton {}
         }
-
     }
-
 }
