@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import QtQuick.Layouts
+import Quickshell.Hyprland
 import Quickshell.Wayland
 import "../../../services"
 import "../../../settings"
@@ -27,6 +28,18 @@ PanelWindow {
 
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+
+    HyprlandFocusGrab {
+        id: focusGrab
+        windows: [notifPanel]
+        onCleared: {
+            NotificationService.panelVisible = false
+        }
+    }
+
+    onVisibleChanged: {
+        focusGrab.active = visible
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -58,7 +71,6 @@ PanelWindow {
                     implicitWidth: clearText.implicitWidth + 24
                     implicitHeight: 32
                     radius: 16
-                    // Only render the button if notifications actually exist
                     visible: NotificationService.notifications.length > 0 
 
                     Text {
