@@ -2,11 +2,12 @@ import "../../settings"
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import "battery"
 import "clock"
+import "notification"
+import "system"
 import "window"
 import "workspaces"
-import "system"
-import "notification"
 
 PanelWindow {
     id: topBar
@@ -29,8 +30,12 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 10
 
-            Window {}
-            Clock {}
+            Window {
+            }
+
+            Clock {
+            }
+
         }
 
         RowLayout {
@@ -38,7 +43,9 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 10
 
-            Workspaces {}
+            Workspaces {
+            }
+
         }
 
         RowLayout {
@@ -46,9 +53,21 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 10
 
-            Cpu{}
-            Memory{}
-            NotificationButton{}
+            Battery {
+                barWindow: topBar
+            }
+
+            Cpu {
+            }
+
+            Memory {
+            }
+
+            NotificationButton {
+            }
+
         }
+
     }
+
 }

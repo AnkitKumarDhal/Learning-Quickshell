@@ -7,10 +7,13 @@ QtObject {
     id: root
 
     property bool panelVisible: false
-    property NotificationServer server: NotificationServer {
+    property NotificationServer server
+
+    server: NotificationServer {
         // registerServer: true
         bodySupported: true
         actionsSupported: true
     }
+
     property var notifications: server.trackedNotifications.values
 }

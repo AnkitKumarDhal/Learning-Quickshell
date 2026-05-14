@@ -1,8 +1,8 @@
 import QtQuick
 import Quickshell
-import "services"
 import "components/bar"
 import "components/bar/notification"
+import "services"
 
 ShellRoot {
     id: shellRoot
@@ -13,14 +13,27 @@ ShellRoot {
 
     Variants {
         model: Quickshell.screens
+
         delegate: Component {
             Scope {
                 required property var modelData
 
-                Bar {screen: modelData}
-                NotificationPanel {screen: modelData}
-                NotificationToast {screen: modelData}
+                Bar {
+                    screen: modelData
+                }
+
+                NotificationPanel {
+                    screen: modelData
+                }
+
+                NotificationToast {
+                    screen: modelData
+                }
+
             }
+
         }
+
     }
+
 }
