@@ -9,6 +9,7 @@ import "system"
 import "window"
 import "workspaces"
 import "volume"
+import "tray"
 
 PanelWindow {
     id: topBar
@@ -52,6 +53,7 @@ PanelWindow {
             Cpu {}
             Memory {}
             Volume {}
+            Tray {}
             NotificationButton {}
         }
     }
