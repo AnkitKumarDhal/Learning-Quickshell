@@ -75,7 +75,7 @@ PanelWindow {
 
                     Text {
                         text: modelData.body
-                        color: Colors.on_surface
+                        color: Colors.on_Surface
                         font.family: Fonts.font
                         font.pointSize: 10
                         Layout.fillWidth: true

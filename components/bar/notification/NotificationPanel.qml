@@ -40,13 +40,44 @@ PanelWindow {
             anchors.margins: 16
             spacing: 12
 
-            Text {
-                text: "Notification Panel"
-                color: Colors.on_Surface
-                font.family: Fonts.font
-                font.bold: true
-                font.pointSize: 14
+            RowLayout {
                 Layout.fillWidth: true
+
+                Text {
+                    text: "Notification Panel"
+                    color: Colors.on_Surface
+                    font.family: Fonts.font
+                    font.bold: true
+                    font.pointSize: 14
+                    Layout.fillWidth: true
+                }
+
+                Rectangle {
+                    id: clearBtn
+                    color: hoverArea.containsMouse ? Colors.surfaceVariant : "transparent"
+                    implicitWidth: clearText.implicitWidth + 24
+                    implicitHeight: 32
+                    radius: 16
+                    // Only render the button if notifications actually exist
+                    visible: NotificationService.notifications.length > 0 
+
+                    Text {
+                        id: clearText
+                        anchors.centerIn: parent
+                        text: "Clear All"
+                        color: hoverArea.containsMouse ? Colors.error : Colors.primary
+                        font.family: Fonts.font
+                        font.pointSize: 10
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        id: hoverArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: NotificationService.clearAll()
+                    }
+                }
             }
 
             ListView {

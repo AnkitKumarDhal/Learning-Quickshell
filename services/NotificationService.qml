@@ -18,4 +18,10 @@ Singleton {
     }
 
     property var notifications: server.trackedNotifications.values
+    function clearAll() {
+        let notifs = server.trackedNotifications.values;
+        for (let i = notifs.length - 1; i >= 0; i--) {
+            notifs[i].dismiss();
+        }
+    }
 }
