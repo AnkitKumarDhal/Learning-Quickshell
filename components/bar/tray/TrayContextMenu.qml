@@ -2,6 +2,7 @@ import Qt5Compat.GraphicalEffects
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Wayland
 import "../../../settings"
 
@@ -23,15 +24,30 @@ PanelWindow {
         menuX = safeX;
         menuY = y - 32;
         hasCurrent = true;
+        grabTimer.restart();
     }
 
     function close() {
         hasCurrent = false;
+        focusGrab.active = false;
+        grabTimer.stop();
     }
 
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: wrapper.visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: hasCurrent ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+    HyprlandFocusGrab {
+        id: focusGrab
+        windows: [root]
+        onCleared: root.close()
+    }
+
+    Timer {
+        id: grabTimer
+        interval: 50
+        onTriggered: focusGrab.active = true
+    }
 
     anchors {
         top: true
@@ -42,7 +58,7 @@ PanelWindow {
 
     MouseArea {
         anchors.fill: parent
-        enabled: wrapper.visible
+        enabled: root.hasCurrent
         onClicked: root.close()
     }
 
@@ -60,7 +76,7 @@ PanelWindow {
         Rectangle {
             id: menuBg
             anchors.fill: parent
-            color: Colors.background 
+            color: Colors.background
             clip: true
             bottomLeftRadius: 14
             bottomRightRadius: 14
@@ -80,7 +96,7 @@ PanelWindow {
                 width: parent.width - 16
                 height: 36
                 radius: 8
-                color: Colors.primary 
+                color: Colors.primary
                 opacity: active ? 0.15 : 0
 
                 Behavior on y { NumberAnimation { duration: 200; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
@@ -148,14 +164,14 @@ PanelWindow {
                                     visible: modelData.icon !== undefined && modelData.icon !== ""
                                     layer.enabled: true
                                     layer.effect: ColorOverlay {
-                                        color: (highlight.active && highlight.targetY === menuItem.y) ? Colors.primary : Colors.primary
+                                        color: Colors.primary
                                     }
                                 }
                             }
 
                             Text {
                                 text: modelData.text || ""
-                                color: (highlight.active && highlight.targetY === menuItem.y) ? Colors.primary : Colors.primary
+                                color: Colors.primary
                                 Layout.fillWidth: true
                                 elide: Text.ElideRight
                                 font.pixelSize: 13
@@ -199,6 +215,6 @@ PanelWindow {
     }
 
     mask: Region {
-        item: wrapper.visible ? wrapper : null
+        item: hasCurrent ? root.contentItem : null
     }
 }
