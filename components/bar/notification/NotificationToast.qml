@@ -3,7 +3,7 @@ import Quickshell
 import QtQuick.Layouts
 import Quickshell.Wayland
 import "../../../settings"
-// import "../../../services"
+import "../../../services"
 
 PanelWindow {
     id: toastWindow
@@ -15,7 +15,7 @@ PanelWindow {
     }
 
     margins {
-        top: 48
+        // top: 48
         right: 8
     }
 
@@ -32,7 +32,7 @@ PanelWindow {
         spacing: 10
 
         Repeater {
-            model: notifService.server.trackedNotifications
+            model: NotificationService.server.trackedNotifications.values
 
             delegate: Rectangle {
                 id: toastDelegate
@@ -40,12 +40,12 @@ PanelWindow {
 
                 property bool showAsToast: true
 
-                visible: showAsToast && !notifService.panelVisible
+                visible: showAsToast && !NotificationService.panelVisible
 
                 Layout.fillWidth: true
                 Layout.preferredHeight: visible ? (col.implicitHeight + 20) : 0
 
-                color: Colors.surfaceContainerHighest
+                color: Colors.background
                 radius: 12
                 border.color: Colors.primary
                 border.width: 1

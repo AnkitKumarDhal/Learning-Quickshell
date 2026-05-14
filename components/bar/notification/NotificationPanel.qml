@@ -2,14 +2,14 @@ import QtQuick
 import Quickshell
 import QtQuick.Layouts
 import Quickshell.Wayland
-// import "../../../services"
+import "../../../services"
 import "../../../settings"
 
 PanelWindow {
     id: notifPanel
 
     property var screen
-    visible: notifService.panelVisible
+    visible: NotificationService.panelVisible
 
     anchors {
         top: true
@@ -52,7 +52,7 @@ PanelWindow {
             ListView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                model: notifService.server.trackedNotifications.values
+                model: NotificationService.server.trackedNotifications.values
                 spacing: 10
                 clip: true
 

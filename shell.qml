@@ -7,9 +7,6 @@ import "services"
 ShellRoot {
     id: shellRoot
 
-    NotificationService {
-        id: notifService
-    }
 
     Variants {
         model: Quickshell.screens

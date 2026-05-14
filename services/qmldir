@@ -1,2 +1,2 @@
-NotificationService 1.0 NotificationService.qml
+singleton NotificationService 1.0 NotificationService.qml
 singleton BatteryService 1.0 BatteryService.qml
