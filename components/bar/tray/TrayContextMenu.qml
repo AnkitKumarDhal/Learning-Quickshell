@@ -16,7 +16,10 @@ PanelWindow {
     property int animLength: 400
     property var animCurve: [0.05, 0, 0.133, 0.06, 0.166, 0.4, 0.208, 0.82, 0.25, 1, 1, 1]
 
+    property var menuStack: []
+
     function open(handle, x, y) {
+        menuStack = [];
         menuHandle = handle;
         let width = 240;
         let safeX = x - (width / 2);
@@ -29,9 +32,26 @@ PanelWindow {
 
     function close() {
         hasCurrent = false;
+        menuStack = [];
         focusGrab.active = false;
         grabTimer.stop();
     }
+
+    function openSubmenu(submenuHandle) {
+        var stack = menuStack.slice();
+        stack.push(menuHandle);
+        menuStack = stack;
+        menuHandle = submenuHandle;
+    }
+
+    function goBack() {
+        if (menuStack.length === 0) return;
+        var stack = menuStack.slice();
+        menuHandle = stack.pop();
+        menuStack = stack;
+    }
+
+    readonly property bool canGoBack: menuStack.length > 0
 
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
@@ -64,14 +84,17 @@ PanelWindow {
 
     Item {
         id: wrapper
-        readonly property real contentHeight: menuColumn.implicitHeight + 16
+        readonly property real backHeight: root.canGoBack ? 32 + 4 : 0
+        readonly property real topPad: 8
+        readonly property real bottomPad: 8
+        readonly property real contentHeight: topPad + backHeight + menuColumn.implicitHeight + bottomPad
 
         x: root.menuX
         y: root.menuY
         width: 240
         visible: height > 0
         clip: true
-        implicitHeight: root.hasCurrent ? contentHeight : 0
+        implicitHeight: root.hasCurrent ? Math.max(contentHeight, 52) : 0
 
         Rectangle {
             id: menuBg
@@ -84,6 +107,60 @@ PanelWindow {
             QsMenuOpener {
                 id: opener
                 menu: root.menuHandle
+            }
+
+            Item {
+                id: backButton
+                visible: root.canGoBack
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.topMargin: 8
+                anchors.leftMargin: 8
+                anchors.rightMargin: 8
+                height: visible ? 32 : 0
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 8
+                    color: Colors.primary
+                    opacity: backMouse.containsMouse ? 0.18 : 0.08
+
+                    Behavior on opacity { NumberAnimation { duration: 120 } }
+                }
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 10
+                    spacing: 6
+
+                    Text {
+                        text: "‹"
+                        color: Colors.primary
+                        font.pixelSize: 18
+                        font.bold: true
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    Text {
+                        text: "Back"
+                        color: Colors.primary
+                        font.pixelSize: 13
+                        font.bold: true
+                        font.family: Fonts.font
+                        Layout.fillWidth: true
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+
+                MouseArea {
+                    id: backMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.goBack()
+                }
             }
 
             Rectangle {
@@ -105,13 +182,17 @@ PanelWindow {
 
             Column {
                 id: menuColumn
-                anchors.top: parent.top
+                anchors.top: backButton.bottom
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.topMargin: 8
                 anchors.leftMargin: 8
                 anchors.rightMargin: 8
                 spacing: 2
+
+                onChildrenChanged: {
+                    highlight.active = false;
+                }
 
                 Repeater {
                     model: opener.children
@@ -179,6 +260,16 @@ PanelWindow {
                                 font.family: Fonts.font
                                 verticalAlignment: Text.AlignVCenter
                             }
+
+                            Text {
+                                visible: menuItem.hasChildren
+                                text: "›"
+                                color: Colors.primary
+                                font.pixelSize: 16
+                                font.bold: true
+                                opacity: 0.7
+                                verticalAlignment: Text.AlignVCenter
+                            }
                         }
 
                         MouseArea {
@@ -196,7 +287,7 @@ PanelWindow {
                             onClicked: {
                                 if (!menuItem.isSeparator) {
                                     if (modelData.hasChildren) {
-                                        root.menuHandle = modelData;
+                                        root.openSubmenu(modelData);
                                     } else {
                                         modelData.triggered();
                                         root.close();
