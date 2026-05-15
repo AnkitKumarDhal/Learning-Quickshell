@@ -11,6 +11,7 @@ import "window"
 import "workspaces"
 import "volume"
 import "tray"
+import "media"
 
 PanelWindow {
     id: topBar
@@ -45,6 +46,7 @@ PanelWindow {
             spacing: 10
 
             Workspaces {}
+            Media {}
         }
 
         RowLayout {
