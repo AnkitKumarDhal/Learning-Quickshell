@@ -41,7 +41,7 @@ PanelWindow {
         var stack = menuStack.slice();
         stack.push(menuHandle);
         menuStack = stack;
-        menuHandle = submenuHandle;
+        menuHandle = submenuHandle.menu;
     }
 
     function goBack() {
