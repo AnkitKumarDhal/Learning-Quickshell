@@ -5,6 +5,9 @@ import "../../../settings"
 
 Rectangle {
     id: cpuPill
+
+    property var popup: null
+
     implicitWidth: cpuText.implicitWidth + 32
     implicitHeight: 30
     radius: 15
@@ -40,7 +43,7 @@ Rectangle {
                 const diffTotal = total     - cpuPill._prevTotal
 
                 if (diffTotal > 0)
-                    cpuPill.cpuUsage = (1.0 - diffIdle / diffTotal) * 100.0
+                cpuPill.cpuUsage = (1.0 - diffIdle / diffTotal) * 100.0
 
                 cpuPill._prevIdle  = totalIdle
                 cpuPill._prevTotal = total

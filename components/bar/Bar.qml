@@ -1,4 +1,5 @@
 import "../../settings"
+import "../popups"
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -22,6 +23,8 @@ PanelWindow {
         left: true
         right: true
     }
+
+    SystemPopup { id: sysPopup }
 
     Item {
         anchors.fill: parent
@@ -50,8 +53,8 @@ PanelWindow {
             spacing: 10
 
             Battery {}
-            Cpu {}
-            Memory {}
+            Cpu { popup: sysPopup }
+            Memory { popup: sysPopup }
             Volume {}
             Tray {}
             NotificationButton {}

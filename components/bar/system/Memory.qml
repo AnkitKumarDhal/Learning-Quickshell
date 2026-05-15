@@ -6,6 +6,8 @@ import "../../../settings"
 Rectangle {
     id: memPill
 
+    property var popup: null
+
     implicitWidth: memText.implicitWidth + 32
     implicitHeight: 30
     radius: 15
@@ -13,7 +15,7 @@ Rectangle {
 
     property real memUsed: 0.0
     property real memTotal: 0.0
-    
+
     Process {
         id: memProc
         command: ["cat", "/proc/meminfo"]
