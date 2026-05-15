@@ -51,11 +51,12 @@ Rectangle {
                 height: 12
                 radius: 6
                 color: isActive ? Colors.primary : Colors.outline
+                opacity: (isActive || isOccupied) ? 1.0 : 0.3
 
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        Hyprland.dispatch("workspace " + wsId)
+                        Hyprland.dispatch("hl.dsp.focus({ workspace = " + wsId + " })")
                     }
                 }
 
