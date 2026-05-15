@@ -37,11 +37,11 @@ PanelWindow {
         grabTimer.stop();
     }
 
-    function openSubmenu(submenuHandle) {
+    function openSubmenu(item) {
         var stack = menuStack.slice();
         stack.push(menuHandle);
         menuStack = stack;
-        menuHandle = submenuHandle.menu;
+        menuHandle = item;
     }
 
     function goBack() {
@@ -287,6 +287,10 @@ PanelWindow {
                             onClicked: {
                                 if (!menuItem.isSeparator) {
                                     if (modelData.hasChildren) {
+
+            console.log("item:", JSON.stringify(Object.keys(modelData)))
+            console.log("item.menu:", modelData.menu)
+            console.log("item.menu children:", modelData.menu ? modelData.menu.children : "null")
                                         root.openSubmenu(modelData);
                                     } else {
                                         modelData.triggered();
