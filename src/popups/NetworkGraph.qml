@@ -1,62 +1,114 @@
 import QtQuick
 import qs.src.theme
 
-// Scrolling line graph for network up/down rates
-// upHistory and downHistory are arrays of raw byte/s values, newest last
-// Max 60 samples (1 per second)
-
 Canvas {
     id: root
 
     property var upHistory:   []
     property var downHistory: []
+    property real slideOffset: 0.0
 
-    onUpHistoryChanged:   requestPaint()
-    onDownHistoryChanged: requestPaint()
+    // Drives the fluid 60FPS scrolling to match the 1000ms data polling
+    NumberAnimation {
+        id: slideAnim
+        target: root
+        property: "slideOffset"
+        from: 1.0
+        to: 0.0
+        duration: 1000 
+    }
+
+    onUpHistoryChanged: slideAnim.restart()
+    onSlideOffsetChanged: requestPaint()
 
     onPaint: {
         const ctx = getContext("2d")
         ctx.clearRect(0, 0, width, height)
 
         if (!root.upHistory || !root.downHistory ||
-        root.upHistory.length < 2 || root.downHistory.length < 2) return
-        if (root.upHistory.length < 2 && root.downHistory.length < 2) return
+            root.upHistory.length < 2 || root.downHistory.length < 2) return
 
         const allVals = root.upHistory.concat(root.downHistory)
-        const maxVal  = Math.max(...allVals, 1024)  // min 1KB so graph never flatlines
+        const maxVal  = Math.max(...allVals, 1024) 
+
+        // 1. Save state and create a clipping mask so the graph doesn't bleed out
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(0, 0, width, height)
+        ctx.clip()
+
+        // 2. Translate the canvas horizontally to animate the scroll
+        const step = width / Math.max(root.upHistory.length - 2, 1)
+        ctx.translate(slideOffset * step, 0)
 
         function drawLine(history, color) {
-            if (history.length < 2) return
-            const step = width / (history.length - 1)
-
             ctx.beginPath()
             ctx.strokeStyle = color
-            ctx.lineWidth   = 1.5
+            ctx.lineWidth   = 2.0
             ctx.lineJoin    = "round"
 
-            history.forEach((v, i) => {
-                const x = i * step
-                const y = height - (v / maxVal) * height * 0.85  // 85% max so line doesn't clip top
-                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
-            })
+            // Shift initial X coordinate to the left by 1 step (-1) to hide data popping in
+            const points = history.map((v, i) => ({
+                x: (i - 1) * step, 
+                y: height - (v / maxVal) * height * 0.85 
+            }))
+
+            ctx.moveTo(points[0].x, points[0].y)
+
+            for (let i = 0; i < points.length - 1; i++) {
+                const p1 = points[i]
+                const p2 = points[i + 1]
+                const midX = (p1.x + p2.x) / 2
+                const midY = (p1.y + p2.y) / 2
+
+                if (i === points.length - 2) {
+                    ctx.quadraticCurveTo(p1.x, p1.y, p2.x, p2.y)
+                } else {
+                    ctx.quadraticCurveTo(p1.x, p1.y, midX, midY)
+                }
+            }
             ctx.stroke()
 
-            // Fill under line
-            ctx.lineTo(width, height)
-            ctx.lineTo(0, height)
+            // Fill under line safely using Qt.rgba
+            ctx.lineTo(points[points.length - 1].x, height)
+            ctx.lineTo(points[0].x, height)
             ctx.closePath()
-            ctx.fillStyle = color.toString().replace(")", ", 0.1)").replace("rgb", "rgba")
+            ctx.fillStyle = Qt.rgba(color.r, color.g, color.b, 0.2)
             ctx.fill()
         }
 
-        drawLine(root.upHistory,   Colors.tertiary.toString())
-        drawLine(root.downHistory, Colors.primary.toString())
+        drawLine(root.upHistory, Colors.tertiary)
+        drawLine(root.downHistory, Colors.primary)
 
-        // Legend
-        ctx.font         = "10px '" + Fonts.font + "'"
-        ctx.fillStyle    = Colors.tertiary.toString()
-        ctx.fillText("↑ Up", 4, 12)
-        ctx.fillStyle    = Colors.primary.toString()
-        ctx.fillText("↓ Down", 4, 24)
+        // 3. Restore state so the legend doesn't scroll or get clipped
+        ctx.restore()
+
+        // 4. Draw a highly visible static legend card on top
+        ctx.fillStyle = Qt.rgba(Colors.surfaceContainerHighest.r, Colors.surfaceContainerHighest.g, Colors.surfaceContainerHighest.b, 0.9)
+        ctx.beginPath()
+        ctx.roundRect(8, 8, 76, 44, 8)
+        ctx.fill()
+        
+        ctx.strokeStyle = Qt.rgba(Colors.outlineVariant.r, Colors.outlineVariant.g, Colors.outlineVariant.b, 0.5)
+        ctx.lineWidth = 1
+        ctx.stroke()
+
+        ctx.font = "bold 11px '" + Fonts.font + "'"
+        
+        // Up label
+        ctx.fillStyle = Colors.tertiary
+        ctx.beginPath()
+        ctx.arc(20, 20, 4, 0, 2 * Math.PI)
+        ctx.fill()
+        ctx.fillStyle = Colors.on_Surface
+        ctx.fillText("Up", 32, 24)
+
+        // Down label
+        ctx.fillStyle = Colors.primary
+        ctx.beginPath()
+        ctx.arc(20, 36, 4, 0, 2 * Math.PI)
+        ctx.fill()
+        ctx.fillStyle = Colors.on_Surface
+        ctx.fillText("Down", 32, 40)
     }
 }

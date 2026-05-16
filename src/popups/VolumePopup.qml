@@ -10,8 +10,14 @@ import qs.src.services
 
 PanelWindow {
     id: root
-
     property var screen
+
+    PwObjectTracker {
+        objects: Pipewire.nodes.values.filter(n => n.audio !== null && !n.isStream && n.isSink)
+    }
+    PwObjectTracker {
+        objects: Pipewire.nodes.values.filter(n => n.audio !== null && !n.isStream && !n.isSink)
+    }
 
     color:         "transparent"
     exclusionMode: ExclusionMode.Ignore
@@ -45,7 +51,7 @@ PanelWindow {
             rightMargin: Theme.barMargin
         }
         width:        360
-        height:       cardCol.implicitHeight + 24
+        height:       cardCol.implicitHeight + 18
         radius:       Theme.popupRadius
         color:        Colors.surfaceContainer
         border.color: Colors.outlineVariant
@@ -58,7 +64,10 @@ PanelWindow {
                 top:     parent.top
                 left:    parent.left
                 right:   parent.right
-                margins: 16
+                topMargin: 10
+                rightMargin: 16
+                leftMargin: 16
+                bottomMargin: 16
             }
             spacing: 12
 
@@ -273,6 +282,7 @@ PanelWindow {
                 // Current input device
                 Rectangle {
                     Layout.fillWidth: true
+                    Layout.bottomMargin: 8
                     height:  44
                     radius:  10
                     color:   inDevHov.containsMouse
@@ -281,7 +291,7 @@ PanelWindow {
                     Behavior on color { ColorAnimation { duration: 120 } }
 
                     RowLayout {
-                        anchors { fill: parent; margins: 12 }
+                        anchors { fill: parent; rightMargin: 12; leftMargin: 12 }
                         spacing: 8
 
                         Text {
@@ -351,22 +361,17 @@ PanelWindow {
 
                 Repeater {
                     model: Pipewire.nodes.values.filter(n =>
-                        n.isStream === false &&
                         n.audio !== null &&
-                        n.type === PwNodeType.Sink
+                        !n.isStream &&
+                        n.isSink
                     )
-
                     delegate: DeviceRow {
                         required property var modelData
                         Layout.fillWidth: true
-
                         deviceName:  modelData.description || modelData.name || "Unknown"
                         isDefault:   VolumeService.sink && VolumeService.sink.id === modelData.id
                         icon:        "󰓃"
-
-                        onActivated: {
-                            Pipewire.preferredDefaultAudioSink = modelData
-                        }
+                        onActivated: Pipewire.preferredDefaultAudioSink = modelData
                     }
                 }
 
@@ -390,22 +395,17 @@ PanelWindow {
 
                 Repeater {
                     model: Pipewire.nodes.values.filter(n =>
-                        n.isStream === false &&
                         n.audio !== null &&
-                        n.type === PwNodeType.Source
+                        !n.isStream &&
+                        !n.isSink
                     )
-
                     delegate: DeviceRow {
                         required property var modelData
                         Layout.fillWidth: true
-
                         deviceName: modelData.description || modelData.name || "Unknown"
                         isDefault:  VolumeService.source && VolumeService.source.id === modelData.id
                         icon:       "󰍬"
-
-                        onActivated: {
-                            Pipewire.preferredDefaultAudioSource = modelData
-                        }
+                        onActivated: Pipewire.preferredDefaultAudioSource = modelData
                     }
                 }
 
