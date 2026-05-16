@@ -1,0 +1,2 @@
+singleton SystemStats 1.0 SystemStats.qml
+# system submodule is imported as qs.src.services.system
