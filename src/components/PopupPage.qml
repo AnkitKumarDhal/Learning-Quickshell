@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import qs.theme
+import qs.src.theme
 
 // Scrollable content container for popup pages.
 // Wrap your popup's inner content in this instead of a plain Column.

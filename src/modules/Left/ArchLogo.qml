@@ -8,7 +8,8 @@ PillBase {
     id: root
 
     hoverExpand: true
-    contentItem: Text{
+
+    contentItem: Text {
         text: "󰣇"
         color: Colors.primary
         font.pointSize: 14

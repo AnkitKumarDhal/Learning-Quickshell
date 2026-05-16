@@ -1,5 +1,5 @@
 import QtQuick
-import qs.state
+import qs.src.state
 
 // Slide-in/out animation container for all popups.
 //
