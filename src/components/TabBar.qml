@@ -1,5 +1,5 @@
 import QtQuick
-import "../theme"
+import qs.theme
 
 // Reusable tab switcher — horizontal or vertical.
 //
