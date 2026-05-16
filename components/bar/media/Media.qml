@@ -1,4 +1,5 @@
 import QtQuick
+import QtQml
 import Quickshell
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
@@ -9,8 +10,39 @@ RowLayout {
     id: mediaRoot
     spacing: 5
 
-    property var players: Mpris.players.values
-    property var activePlayer: players.length > 0 ? players[0] : null
+    property var trackedPlayer: null
+    // Fallback to the first available player if none are explicitly tracked
+    property var activePlayer: trackedPlayer || (Mpris.players.values.length > 0 ? Mpris.players.values[0] : null)
+
+    Instantiator {
+        model: Mpris.players
+        
+        Connections {
+            required property var modelData
+            target: modelData
+
+            // Switch the tracked player whenever a player starts playing
+            function onPlaybackStateChanged() {
+                if (modelData.playbackState === MprisPlaybackState.Playing) {
+                    mediaRoot.trackedPlayer = modelData
+                }
+            }
+
+            // Check state immediately when a new player is registered on D-Bus
+            Component.onCompleted: {
+                if (modelData.playbackState === MprisPlaybackState.Playing) {
+                    mediaRoot.trackedPlayer = modelData
+                }
+            }
+
+            // Clean up the tracker if the active player process gets killed/closed
+            Component.onDestruction: {
+                if (mediaRoot.trackedPlayer === modelData) {
+                    mediaRoot.trackedPlayer = null
+                }
+            }
+        }
+    }
 
     visible: activePlayer !== null
 
