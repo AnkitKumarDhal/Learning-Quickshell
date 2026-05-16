@@ -64,14 +64,12 @@ Item {
     property real _animValue: 0.0
 
     onValueChanged: _animValue = value
+    on_AnimValueChanged: canvas.requestPaint()
 
     Behavior on _animValue {
         NumberAnimation {
             duration:    800
             easing.type: Easing.OutCubic
-            onRunningChanged: {
-                if (running) canvas.requestPaint()
-            }
         }
     }
 
