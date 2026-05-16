@@ -1,0 +1,3 @@
+pragma Singleton
+singleton Popups Popups.qml
+singleton ShellState ShellState.qml
