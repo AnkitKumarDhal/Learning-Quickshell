@@ -105,13 +105,6 @@ PillBase {
         }
     }
 
-    onClicked: {
-        Popups.systemMode = "cpu"
-        Popups.systemOpen = !Popups.systemOpen
-    }
-
-    onRightClicked: {
-        Popups.systemMode = "mem"
-        Popups.systemOpen = !Popups.systemOpen
-    }
+    onClicked:      Popups.systemOpen = !Popups.systemOpen
+    onRightClicked: Popups.systemOpen = !Popups.systemOpen
 }
