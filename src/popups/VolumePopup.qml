@@ -146,6 +146,7 @@ PanelWindow {
                 // Current output device — click to go to devices tab
                 Rectangle {
                     Layout.fillWidth: true
+                    Layout.bottomMargin: 8
                     height:  44
                     radius:  10
                     color:   outDevHov.containsMouse
@@ -154,7 +155,7 @@ PanelWindow {
                     Behavior on color { ColorAnimation { duration: 120 } }
 
                     RowLayout {
-                        anchors { fill: parent; margins: 12 }
+                        anchors { fill: parent; rightMargin: 12; leftMargin: 12 }
                         spacing: 8
 
                         Text {
@@ -166,24 +167,25 @@ PanelWindow {
 
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 0
+                            spacing:          0
 
                             Text {
-                                text:           "Output device"
-                                color:          Colors.on_SurfaceVariant
-                                font.pixelSize: 10
-                                font.family:    Fonts.font
+                                text:              "Output device"
+                                color:             Colors.on_SurfaceVariant
+                                font.pixelSize:    10
+                                font.family:       Fonts.font
+                                Layout.fillWidth:  true
                             }
 
                             Text {
-                                text: VolumeService.sink
-                                          ? (VolumeService.sink.description || "Unknown")
-                                          : "None"
-                                color:          Colors.on_Surface
-                                font.pixelSize: 12
-                                font.bold:      true
-                                font.family:    Fonts.font
-                                elide:          Text.ElideRight
+                                text:             VolumeService.sink
+                                                      ? (VolumeService.sink.description || "Unknown")
+                                                      : "None"
+                                color:            Colors.on_Surface
+                                font.pixelSize:   12
+                                font.bold:        true
+                                font.family:      Fonts.font
+                                elide:            Text.ElideRight
                                 Layout.fillWidth: true
                             }
                         }

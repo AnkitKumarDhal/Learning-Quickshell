@@ -77,17 +77,25 @@ PanelWindow {
                 // Clear all button
                 Rectangle {
                     visible:      NotificationService.notifications.length > 0
-                    width:        70
+                    width:        90
                     height:       26
                     radius:       13
-                    color:        clearHov.containsMouse
-                                      ? Colors.errorContainer
-                                      : "transparent"
+                    color:        "transparent"
                     border.color: Colors.outline
                     border.width: 1
-                    Behavior on color { ColorAnimation { duration: 120 } }
+
+                    Rectangle {
+                        width: 90
+                        height: 26
+                        radius: 15
+                        color: Colors.primary
+                        opacity: clearHov.containsMouse ? 0.25 : 0
+
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                    }
 
                     Text {
+                        id:               clearText
                         anchors.centerIn: parent
                         text:             "Clear all"
                         color:            Colors.on_Surface
@@ -194,15 +202,29 @@ PanelWindow {
 
                             // App icon
                             Rectangle {
-                                width:  32
-                                height: 32
+                                width:  36
+                                height: 36
                                 radius: 8
                                 color:  Colors.primaryContainer
                                 Layout.alignment: Qt.AlignTop
 
+                                Image {
+                                    anchors.centerIn: parent
+                                    width:   22
+                                    height:  22
+                                    source:  notifItem.modelData && notifItem.modelData.appIcon
+                                                 ? "image://icon/" + notifItem.modelData.appIcon
+                                                 : ""
+                                    visible: source !== ""
+                                    fillMode: Image.PreserveAspectFit
+                                    smooth:   true
+                                }
+
+                                // Fallback icon when no app icon available
                                 Text {
                                     anchors.centerIn: parent
-                                    text:             notifItem.modelData.appIcon || "󰂚"
+                                    visible:          !(notifItem.modelData && notifItem.modelData.appIcon)
+                                    text:             "󰂚"
                                     font.pixelSize:   16
                                     font.family:      Fonts.font
                                     color:            Colors.on_PrimaryContainer

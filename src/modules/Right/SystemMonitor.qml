@@ -80,28 +80,29 @@ PillBase {
         spacing: 8
 
         Text {
-            text: "CPU " + Math.round(root.cpuUsage) + "%"
-            color: Colors.primary
+            text:           "CPU " + Math.round(root.cpuUsage) + "%"
+            color:          Colors.primary
             font.pointSize: 11
-            font.bold: true
-            font.family: Fonts.font
-            anchors.verticalCenter: parent.verticalCenter
+            font.bold:      true
+            font.family:    Fonts.font
+            verticalAlignment: Text.AlignVCenter
         }
 
         Rectangle {
-            width: 1; height: 14
-            color: Colors.outline
+            width:  1
+            height: 14
+            color:  Colors.outline
             opacity: 0.5
             anchors.verticalCenter: parent.verticalCenter
         }
 
         Text {
-            text: "MEM " + root.memUsed.toFixed(1) + "G"
-            color: Colors.primary
+            text:           "MEM " + root.memUsed.toFixed(1) + "G"
+            color:          Colors.primary
             font.pointSize: 11
-            font.bold: true
-            font.family: Fonts.font
-            anchors.verticalCenter: parent.verticalCenter
+            font.bold:      true
+            font.family:    Fonts.font
+            verticalAlignment: Text.AlignVCenter
         }
     }
 

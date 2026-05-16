@@ -21,7 +21,8 @@ PillBase {
         font.bold:         true
         font.family:       Fonts.font
         elide:             Text.ElideRight
-        width:             Math.min(implicitWidth, 350)
+        Layout.fillWidth:  true
+        Layout.maximumWidth: 250
         Layout.alignment:  Qt.AlignVCenter
     }
 }

@@ -99,10 +99,24 @@ Item {
                 color:  Colors.primaryContainer
                 Layout.alignment: Qt.AlignTop
 
+                Image {
+                    anchors.centerIn: parent
+                    width:   22
+                    height:  22
+                    source:  root.notif && root.notif.appIcon
+                                 ? "image://icon/" + root.notif.appIcon
+                                 : ""
+                    visible: source !== ""
+                    fillMode: Image.PreserveAspectFit
+                    smooth:   true
+                }
+
+                // Fallback icon when no app icon available
                 Text {
                     anchors.centerIn: parent
-                    text:             root.notif ? (root.notif.appIcon || "󰂚") : "󰂚"
-                    font.pixelSize:   18
+                    visible:          !(root.notif && root.notif.appIcon)
+                    text:             "󰂚"
+                    font.pixelSize:   16
                     font.family:      Fonts.font
                     color:            Colors.on_PrimaryContainer
                 }

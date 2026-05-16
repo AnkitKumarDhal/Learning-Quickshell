@@ -9,6 +9,22 @@ PillBase {
     id: root
 
     hoverExpand: false  // fixed width, dots handle their own sizing
+    hoverEnabled: false
+
+    onClicked: (mouse) => {
+        // find which dot was clicked by x position
+        const dotWidth   = 12
+        const activeDotW = 30
+        let x = mouse.x - Theme.pillPadding / 2
+        for (let i = 0; i < root.dotCount; i++) {
+            const w = (dotsRow.itemAt(i)?.isActive ? activeDotW : dotWidth)
+            if (x <= w) {
+                Hyprland.dispatch("hl.dsp.focus({ workspace = " + (i + 1) + " })")
+                return
+            }
+            x -= w + 8  // 8 = spacing
+        }
+    }
 
     property int dotCount: {
         let highest = 3
@@ -49,12 +65,6 @@ PillBase {
                 Behavior on width  { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
                 Behavior on color  { ColorAnimation  { duration: 200 } }
                 Behavior on opacity { NumberAnimation { duration: 200 } }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Hyprland.dispatch("hl.dsp.focus({ workspace = " + wsId + " })")
-                }
             }
         }
     }

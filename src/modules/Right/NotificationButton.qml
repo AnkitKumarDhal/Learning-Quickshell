@@ -24,7 +24,7 @@ PillBase {
             color: Colors.primary
             font.pointSize: 11
             font.family: Fonts.font
-            anchors.verticalCenter: parent.verticalCenter
+            verticalAlignment: Text.AlignVCenter
         }
 
         Text {
@@ -34,7 +34,7 @@ PillBase {
             font.pointSize: 11
             font.bold: true
             font.family: Fonts.font
-            anchors.verticalCenter: parent.verticalCenter
+            verticalAlignment: Text.AlignVCenter
         }
     }
 

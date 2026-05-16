@@ -239,7 +239,6 @@ Singleton {
             netProc.running  = true
             tempProc.running = true
             if (root.hasGpu) gpuReadProc.running = true
-
             // Disk polls less frequently — every 10s
             if (_diskTick % 10 === 0) diskProc.running = true
             _diskTick++

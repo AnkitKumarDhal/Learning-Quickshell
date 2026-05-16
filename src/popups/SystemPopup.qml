@@ -35,6 +35,7 @@ PanelWindow {
         open: Popups.systemOpen
         onCloseRequested: Popups.systemOpen = false
     }
+onVisibleChanged: console.log("SystemPopup visible:", visible)
 
     // ── Popup card ────────────────────────────────────────────────────────────
     Rectangle {
