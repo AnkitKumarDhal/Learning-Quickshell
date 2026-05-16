@@ -12,8 +12,26 @@ Row {
 
     spacing: 6
 
-    property var  players:      Mpris.players.values
-    property var  activePlayer: players.length > 0 ? players[0] : null
+    property var players: Mpris.players.values
+    property var activePlayer: {
+        if (players.length === 0) return null
+
+        let bestMatch = null
+        
+        // We loop through ALL players intentionally. 
+        // This forces QML to register a visual dependency on EVERY player's playback state.
+        for (let i = 0; i < players.length; i++) {
+            let state = players[i].playbackState
+            
+            // If we find a playing player, mark it as the best match
+            if (state === MprisPlaybackState.Playing && bestMatch === null) {
+                bestMatch = players[i]
+            }
+        }
+        
+        // Return the playing source, or fallback to the first available if everything is paused
+        return bestMatch || players[0]
+    }
     property bool hasArt:       activePlayer && activePlayer.trackArtUrl !== ""
     property bool isPlaying:    activePlayer?.playbackState === MprisPlaybackState.Playing ?? false
 

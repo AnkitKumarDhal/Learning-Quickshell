@@ -53,7 +53,7 @@ Canvas {
         drawLine(root.downHistory, Colors.primary.toString())
 
         // Legend
-        ctx.font         = "10px " + Fonts.font
+        ctx.font         = "10px '" + Fonts.font + "'"
         ctx.fillStyle    = Colors.tertiary.toString()
         ctx.fillText("↑ Up", 4, 12)
         ctx.fillStyle    = Colors.primary.toString()

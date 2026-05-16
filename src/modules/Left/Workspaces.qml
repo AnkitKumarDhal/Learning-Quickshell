@@ -18,7 +18,7 @@ PillBase {
         let x = mouse.x - Theme.pillPadding / 2
         for (let i = 0; i < root.dotCount; i++) {
             const w = (dotsRow.itemAt(i)?.isActive ? activeDotW : dotWidth)
-            if (x <= w) {
+            if (x <= w + 4 || i == root.dotCount - 1) {
                 Hyprland.dispatch("hl.dsp.focus({ workspace = " + (i + 1) + " })")
                 return
             }

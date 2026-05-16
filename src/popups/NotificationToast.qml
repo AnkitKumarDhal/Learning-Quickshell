@@ -26,6 +26,15 @@ PanelWindow {
     implicitWidth:  380
     implicitHeight: 500
 
+    mask: Region {
+        Region {
+            x: root.width - 360 - 12
+            y: root.height - 2 - (NotificationService.activeToasts.length * 88)
+            width: 360
+            height: NotificationService.activeToasts.length * 88
+        }
+    }
+
     WlrLayershell.layer: WlrLayer.Overlay
 
     // ── Toast stack ───────────────────────────────────────────────────────────

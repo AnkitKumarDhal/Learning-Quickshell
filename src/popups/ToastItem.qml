@@ -65,7 +65,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius:       Theme.popupRadius
-        color:        Colors.surfaceContainerHighest
+        color:        Colors.surfaceContainerHigh
         border.color: Colors.outlineVariant
         border.width: Theme.popupBorder
 

@@ -41,16 +41,16 @@ PanelWindow {
         anchors {
             top:         parent.top
             right:       parent.right
-            topMargin:   Theme.barHeight + 8
+            topMargin:   Theme.barHeight + 2
             rightMargin: Theme.barMargin
         }
         width:         360
         height:        Math.min(
-                           notifCol.implicitHeight + 60,
+                           notifCol.implicitHeight + 48,
                            root.implicitHeight - Theme.barHeight - 24
                        )
         radius:        Theme.popupRadius
-        color:         Colors.surfaceContainer
+        color:         Colors.background
         border.color:  Colors.outlineVariant
         border.width:  Theme.popupBorder
         clip:          true
@@ -63,7 +63,7 @@ PanelWindow {
             color:  "transparent"
 
             RowLayout {
-                anchors { fill: parent; margins: 16 }
+                anchors { fill: parent; topMargin: 8; leftMargin: 16; rightMargin: 16; bottomMargin: 8 }
 
                 Text {
                     text:           "Notifications"
@@ -130,24 +130,24 @@ PanelWindow {
                 right:  parent.right
                 bottom: parent.bottom
             }
-            contentHeight: notifCol.implicitHeight + 16
+            contentHeight: notifCol.implicitHeight
             clip:          true
             boundsBehavior: Flickable.StopAtBounds
 
-            ScrollBar.vertical: ScrollBar {
-                policy: ScrollBar.AsNeeded
-                contentItem: Rectangle {
-                    implicitWidth:  3
-                    implicitHeight: 40
-                    radius:         1.5
-                    color:          Qt.rgba(1, 1, 1, 0.25)
-                }
-                background: Item {}
-            }
+            // ScrollBar.vertical: ScrollBar {
+            //     policy: ScrollBar.AsNeeded
+            //     contentItem: Rectangle {
+            //         implicitWidth:  3
+            //         implicitHeight: 40
+            //         radius:         1.5
+            //         color:          Qt.rgba(1, 1, 1, 0.25)
+            //     }
+            //     background: Item {}
+            // }
 
             Column {
                 id:       notifCol
-                anchors { top: parent.top; left: parent.left; right: parent.right; topMargin: 8 }
+                anchors { top: parent.top; left: parent.left; right: parent.right }
                 spacing:  4
                 padding:  8
 
@@ -193,6 +193,8 @@ PanelWindow {
                         color:   itemHov.containsMouse
                                      ? Colors.surfaceContainerHighest
                                      : Colors.surfaceContainerHigh
+                        border.width: 1
+                        border.color: Colors.outlineVariant
                         Behavior on color { ColorAnimation { duration: 120 } }
 
                         RowLayout {
