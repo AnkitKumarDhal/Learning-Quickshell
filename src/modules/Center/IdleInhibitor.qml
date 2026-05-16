@@ -1,6 +1,6 @@
 import QtQuick
 import Quickshell
-import Quickshell.Wayland
+import Quickshell.Io
 import qs.src.components
 import qs.src.theme
 import qs.src.state
@@ -10,25 +10,38 @@ PillBase {
 
     hoverExpand: true
 
-    WaylandIdleInhibitor {
-        id: inhibitor
-        active: false
+    property bool inhibiting: false
+
+    Process {
+        id: inhibitProc
+        command: ["systemd-inhibit",
+                  "--what=idle",
+                  "--who=Quickshell",
+                  "--why=User requested",
+                  "--mode=block",
+                  "sleep", "infinity"]
+        running: false
+
+        onExited: root.inhibiting = false
     }
 
-    property bool inhibiting: inhibitor.active
-
     Text {
-        text: root.inhibiting ? "󰛨" : "󰾪"
+        text:  root.inhibiting ? "󰛨" : "󰾪"
         color: root.inhibiting ? Colors.tertiary : Colors.primary
-        font.pointSize: 12
-        font.family: Fonts.font
+        font.pixelSize: 12
+        font.family:    Fonts.font
         verticalAlignment: Text.AlignVCenter
 
         Behavior on color { ColorAnimation { duration: 150 } }
     }
 
     onClicked: {
-        inhibitor.active = !inhibitor.active
+        if (root.inhibiting) {
+            inhibitProc.running  = false
+        } else {
+            inhibitProc.running  = true
+        }
+        root.inhibiting          = !root.inhibiting
         Popups.idleInhibitorOpen = !Popups.idleInhibitorOpen
     }
 }

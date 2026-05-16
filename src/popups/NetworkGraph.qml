@@ -18,6 +18,8 @@ Canvas {
         const ctx = getContext("2d")
         ctx.clearRect(0, 0, width, height)
 
+        if (!root.upHistory || !root.downHistory ||
+        root.upHistory.length < 2 || root.downHistory.length < 2) return
         if (root.upHistory.length < 2 && root.downHistory.length < 2) return
 
         const allVals = root.upHistory.concat(root.downHistory)

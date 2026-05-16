@@ -6,6 +6,7 @@ import Quickshell.Io
 import qs.src.components
 import qs.src.theme
 import qs.src.state
+import qs.src.services.system
 import qs.src.services
 
 PanelWindow {

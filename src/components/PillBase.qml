@@ -6,7 +6,7 @@ Rectangle {
     id: root
 
     // ── Content ───────────────────────────────────────────────────────────────
-    default property alias content: innerLayout.data
+    default property alias contentData: innerLayout.data
 
     // ── Behaviour flags ───────────────────────────────────────────────────────
     property bool hoverExpand:  true   // +10px width on hover

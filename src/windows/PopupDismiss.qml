@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import qs.src.state
+import qs.src.theme
 
 // Transparent fullscreen overlay that dismisses all popups when:
 //   - User clicks anywhere outside a popup
