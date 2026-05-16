@@ -9,6 +9,8 @@ PillBase {
     id: root
 
     hoverExpand: false  // tray expands differently via its own toggle
+    hoverEnabled: false
+    mouseEnabled: false
     visible: SystemTray.items.values.length > 0
 
     Row {

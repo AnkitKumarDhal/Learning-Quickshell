@@ -44,9 +44,12 @@ Rectangle {
     }
 
     // ── Input ─────────────────────────────────────────────────────────────────
+    property bool mouseEnabled: true
+
     MouseArea {
         id:              hov
         anchors.fill:    parent
+        enabled:         root.mouseEnabled
         hoverEnabled:    true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape:     Qt.PointingHandCursor

@@ -84,7 +84,7 @@ PanelWindow {
         readonly property real backHeight:     root.canGoBack ? 32 + 4 : 0
         readonly property real topPad:         8
         readonly property real bottomPad:      8
-        readonly property real contentHeight:  topPad + backHeight + menuColumn.implicitHeight + bottomPad
+        readonly property real contentHeight:  topPad + backHeight + (canGoBack ? 4 : 0) + menuColumn.implicitHeight + bottomPad
 
         x:     root.menuX
         y:     root.menuY
@@ -187,7 +187,7 @@ PanelWindow {
                 id: menuColumn
 
                 anchors {
-                    top:         backButton.bottom
+                    top:         backButton.visible ? backButton.bottom : parent.top
                     left:        parent.left
                     right:       parent.right
                     topMargin:   8
