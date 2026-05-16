@@ -1,3 +1,10 @@
+NotificationToast 1.0 NotificationToast.qml
+NotificationPanel 1.0 NotificationPanel.qml
+ToastItem 1.0 ToastItem.qml
+SystemPopup 1.0 SystemPopup.qml
+Speedometer 1.0 Speedometer.qml
+DiskBar 1.0 DiskBar.qml
+NetworkGraph 1.0 NetworkGraph.qml
 VolumePopup 1.0 VolumePopup.qml
 VolumeSlider 1.0 VolumeSlider.qml
 DeviceRow 1.0 DeviceRow.qml
