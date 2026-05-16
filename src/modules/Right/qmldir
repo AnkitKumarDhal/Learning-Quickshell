@@ -1,0 +1,5 @@
+SystemMonitor 1.0 SystemMonitor.qml
+Volume 1.0 Volume.qml
+Battery 1.0 Battery.qml
+Tray 1.0 Tray.qml
+NotificationButton 1.0 NotificationButton.qml
