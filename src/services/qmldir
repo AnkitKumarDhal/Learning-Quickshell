@@ -1,0 +1,3 @@
+singleton BatteryService 1.0 BatteryService.qml
+singleton NotificationService 1.0 NotificationService.qml
+singleton VolumeService 1.0 VolumeService.qml
