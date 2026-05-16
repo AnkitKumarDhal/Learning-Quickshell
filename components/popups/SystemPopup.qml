@@ -22,7 +22,7 @@ PanelWindow {
     property real memFree: 0.0
 
     function open(mode) {
-        mode = m
+        root.mode = m
         isOpen = true
         grabTimer.restart()
     }
