@@ -45,11 +45,11 @@ Rectangle {
 
     // ── Input ─────────────────────────────────────────────────────────────────
     MouseArea {
-        id: hov
-        anchors.fill: parent
-        hoverEnabled: true
+        id:              hov
+        anchors.fill:    parent
+        hoverEnabled:    true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        cursorShape: Qt.PointingHandCursor
+        cursorShape:     Qt.PointingHandCursor
 
         onClicked: (mouse) => {
             if (mouse.button === Qt.RightButton)

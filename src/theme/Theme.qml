@@ -6,6 +6,7 @@ QtObject {
     id: root
 
     // ── Pill geometry ─────────────────────────────────────────────────────────
+    readonly property int borderWidth:   3
     readonly property int barHeight:     36
     readonly property int pillHeight:    30
     readonly property int pillRadius:    15
