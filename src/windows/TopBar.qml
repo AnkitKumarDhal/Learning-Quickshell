@@ -87,6 +87,7 @@ PanelWindow {
             spacing: Theme.barSpacing
 
             SystemMonitor       {}
+            Network             {}
             Volume              {}
             Battery             {}
             Tray                { window: root }

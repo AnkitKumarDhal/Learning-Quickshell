@@ -32,6 +32,7 @@ ShellRoot {
                 NotificationPanel   { screen: modelData }
                 SystemPopup         { screen: modelData }
                 VolumePopup         { screen: modelData }
+                NetworkPopup        { screen: modelData }
             }
         }
     }
