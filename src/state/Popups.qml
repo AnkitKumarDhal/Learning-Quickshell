@@ -47,5 +47,5 @@ Singleton {
         volumeOpen        = false
         networkOpen       = false
     }
-    onNetworkOpenChanged: NetworkService.scannerActive = networkOpen
+    // onNetworkOpenChanged: NetworkService.scannerActive = networkOpen
 }

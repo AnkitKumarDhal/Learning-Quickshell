@@ -25,7 +25,7 @@ PillBase {
             return "󰁻 "
         }
         if (BatteryService.capacity >= 90) return "󰁹 "
-        if (BatteryService.capacity >= 80) return "󰁺 "
+        if (BatteryService.capacity >= 80) return "󰂀 "
         if (BatteryService.capacity >= 60) return "󰁿 "
         if (BatteryService.capacity >= 40) return "󰁼 "
         if (BatteryService.capacity >= 20) return "󰁻 "

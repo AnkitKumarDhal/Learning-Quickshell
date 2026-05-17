@@ -56,7 +56,7 @@ Rectangle {
                 }
                 font.family: Fonts.fontM
                 font.pixelSize: 14
-                color: row.network.connected ? Colors.primary : Colors.onSurface
+                color: row.network.connected ? Colors.primary : Colors.on_Surface
             }
 
             // SSID
@@ -65,7 +65,7 @@ Rectangle {
                 font.family: Fonts.font
                 font.pixelSize: 11
                 font.weight: row.network.connected ? Font.Medium : Font.Normal
-                color: row.network.connected ? Colors.primary : Colors.onSurface
+                color: row.network.connected ? Colors.primary : Colors.on_Surface
                 elide: Text.ElideRight
                 Layout.fillWidth: true
             }
@@ -137,7 +137,7 @@ Rectangle {
                 echoMode: TextInput.Password
                 font.family: Fonts.font
                 font.pixelSize: 11
-                color: Colors.onSurface
+                color: Colors.on_Surface
                 placeholderTextColor: Colors.outline
                 background: Rectangle {
                     radius: 8

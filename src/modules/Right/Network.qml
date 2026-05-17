@@ -35,14 +35,14 @@ PillBase {
         text: root._icon
         font.family: Fonts.fontM
         font.pixelSize: 14
-        color: NetworkService.wifiConnected ? Colors.onBackground : Colors.outline
+        color: NetworkService.wifiConnected ? Colors.primary : Colors.outline
     }
 
     Text {
         text: NetworkService.ssid || "Unknown"
         font.family: Fonts.font
-        font.pixelSize: 11
-        color: Colors.on_Background
+        font.pixelSize: 13
+        color: Colors.primary
         visible: root._showLabel
     }
 }
