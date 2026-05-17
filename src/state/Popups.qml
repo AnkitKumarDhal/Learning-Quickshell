@@ -1,39 +1,29 @@
 pragma Singleton
+
 import QtQuick
 import Quickshell
 
 Singleton {
     id: root
 
-    // ── Timing constants (read by PopupSlide) ─────────────────────────────────
-    readonly property int slideDuration:  400
+    // ── Timing Constants ──────────────────────────────────────────────────────
+    // Read by PopupSlide
+    readonly property int slideDuration:   400
     readonly property int hoverCloseDelay: 300
 
-    // ── Notification panel ────────────────────────────────────────────────────
+    // ── Popup States ──────────────────────────────────────────────────────────
     property bool notificationsOpen: false
-
-    // ── System monitor ────────────────────────────────────────────────────────
-    property bool systemOpen: false
-
-    // ── Tray context menu — managed internally by TrayContextMenu ─────────────
-    // No open bool needed here; TrayContextMenu owns its own state
-
-    // ── Control Panel (Arch menu) ─────────────────────────────────────────────
-    property bool archMenuOpen: false
-
-    // ── Calendar Popup ────────────────────────────────────────────────────────
-    property bool calendarOpen: false
-
-    // ── Media Player ──────────────────────────────────────────────────────────
-    property bool mediaOpen: false
-
-    // ── Idle Inhibitor ────────────────────────────────────────────────────────
+    property bool systemOpen:        false
+    property bool archMenuOpen:      false
+    property bool calendarOpen:      false
+    property bool mediaOpen:         false
     property bool idleInhibitorOpen: false
+    property bool volumeOpen:        false
 
-    // ── Volume ────────────────────────────────────────────────────────────────
-    property bool volumeOpen: false
+    // Note: Tray context menu is managed internally by TrayContextMenu.
+    // No open bool needed here; TrayContextMenu owns its own state.
 
-    // ── Aggregate ─────────────────────────────────────────────────────────────
+    // ── Aggregate State ───────────────────────────────────────────────────────
     readonly property bool anyOpen:
         notificationsOpen ||
         systemOpen        ||
@@ -43,6 +33,7 @@ Singleton {
         idleInhibitorOpen ||
         volumeOpen
 
+    // ── Methods ───────────────────────────────────────────────────────────────
     function closeAll() {
         notificationsOpen = false
         systemOpen        = false

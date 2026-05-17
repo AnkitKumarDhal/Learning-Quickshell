@@ -82,11 +82,23 @@ Canvas {
 
         // 3. Restore state so the legend doesn't scroll or get clipped
         ctx.restore()
-
+        const drawRoundedRect = (x, y, w, h, r) => {
+            ctx.beginPath()
+            ctx.moveTo(x + r, y)
+            ctx.lineTo(x + w - r, y)
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+            ctx.lineTo(x + w, y + h - r)
+            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+            ctx.lineTo(x + r, y + h)
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+            ctx.lineTo(x, y + r)
+            ctx.quadraticCurveTo(x, y, x + r, y)
+            ctx.closePath()
+        }
         // 4. Draw a highly visible static legend card on top
         ctx.fillStyle = Qt.rgba(Colors.surfaceContainerHighest.r, Colors.surfaceContainerHighest.g, Colors.surfaceContainerHighest.b, 0.9)
         ctx.beginPath()
-        ctx.roundRect(8, 8, 76, 44, 8)
+        drawRoundedRect(8, 8, 76, 44, 8)
         ctx.fill()
         
         ctx.strokeStyle = Qt.rgba(Colors.outlineVariant.r, Colors.outlineVariant.g, Colors.outlineVariant.b, 0.5)

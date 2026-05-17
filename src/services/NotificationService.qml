@@ -63,7 +63,10 @@ Singleton {
     }
 
     function clearAll() {
-        server.trackedNotifications.values.forEach(n => n.dismiss())
+        // FIX: Copy the live list into a static array before iterating
+        // so dismissing an item doesn't shift the indices underneath us!
+        const allNotifs = [...server.trackedNotifications.values]
+        allNotifs.forEach(n => n.dismiss())
         root._arrivalMap = {}
     }
 

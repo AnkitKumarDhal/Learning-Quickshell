@@ -30,9 +30,8 @@ Item {
         clip:           true
 
         ScrollBar.vertical: ScrollBar {
-            policy: contentCol.implicitHeight + root.padV * 2 > flick.height
-                        ? ScrollBar.AlwaysOn
-                        : ScrollBar.AlwaysOff
+            policy: contentCol.implicitHeight + root.padV * 2 > flick.height ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+            
             contentItem: Rectangle {
                 implicitWidth:  3
                 implicitHeight: 40
@@ -44,6 +43,7 @@ Item {
 
         Column {
             id: contentCol
+            spacing: 8
             anchors {
                 top:         parent.top
                 topMargin:   root.padV
@@ -52,7 +52,6 @@ Item {
                 right:       parent.right
                 rightMargin: root.padH + 6
             }
-            spacing: 8
         }
     }
 }

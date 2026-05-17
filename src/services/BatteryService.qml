@@ -1,4 +1,5 @@
 pragma Singleton
+
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -6,6 +7,7 @@ import Quickshell.Io
 Singleton {
     id: root
 
+    // ── Battery State ─────────────────────────────────────────────────────────
     property int    capacity:   0
     property bool   charging:   false
     property bool   full:       false
@@ -14,6 +16,7 @@ Singleton {
 
     readonly property real fraction: capacity / 100
 
+    // ── Polling Processes ─────────────────────────────────────────────────────
     Process {
         id: _capProc
         command: ["cat", "/sys/class/power_supply/BAT0/capacity"]
@@ -30,8 +33,9 @@ Singleton {
         }
 
         onExited: (code) => {
-            if (code !== 0)
+            if (code !== 0) {
                 root.hasBattery = false
+            }
         }
     }
 
@@ -50,10 +54,12 @@ Singleton {
         }
     }
 
+    // ── Polling Timer ─────────────────────────────────────────────────────────
     Timer {
-        interval:  30000
-        repeat:    true
-        running:   true
+        interval: 30000
+        repeat:   true
+        running:  true
+        
         onTriggered: {
             _capProc.running  = true
             _statProc.running = true

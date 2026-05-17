@@ -2,67 +2,41 @@ import QtQuick
 import qs.src.state
 
 // Slide-in/out animation container for all popups.
-//
-// Click-open usage:
-//   PopupSlide {
-//       edge: "right"
-//       open: Popups.systemOpen
-//       // content
-//   }
-//
-// Hover-open usage:
-//   PopupSlide {
-//       edge: "right"
-//       open:            Popups.audioOpen
-//       hoverEnabled:    true
-//       triggerHovered:  someTriggerRegion.containsMouse
-//       onCloseRequested: Popups.audioOpen = false
-//       // content
-//   }
-//
 // Always bind your PopupWindow.visible to slide.windowVisible
 
 Item {
     id: root
 
     // ── Required ──────────────────────────────────────────────────────────────
-    property string edge:         "top"   // "top" | "bottom" | "left" | "right"
-    property bool   open:         false
+    property string edge: "top" // "top" | "bottom" | "left" | "right"
+    property bool   open: false
 
-    // ── Hover-to-open (optional) ──────────────────────────────────────────────
+    // ── Hover-to-open (Optional) ──────────────────────────────────────────────
     property bool hoverEnabled:   false
     property bool triggerHovered: false
 
-    // ── Timing ───────────────────────────────────────────────────────────────
-    property int slideDuration:   Popups.slideDuration
-    property int closeDelay:      Popups.hoverCloseDelay
+    // ── Timing ────────────────────────────────────────────────────────────────
+    property int slideDuration: Popups.slideDuration
+    property int closeDelay:    Popups.hoverCloseDelay
 
     // ── Output ────────────────────────────────────────────────────────────────
     // Bind your PopupWindow.visible to this
-    property bool windowVisible:  false
+    property bool windowVisible: false
 
     signal closeRequested()
 
     // ── Internal ──────────────────────────────────────────────────────────────
-    property bool _selfHovered:   false
+    property bool _selfHovered: false
 
-    readonly property bool _effectiveOpen:
-        open || (hoverEnabled && (triggerHovered || _selfHovered))
+    readonly property bool _effectiveOpen: open || (hoverEnabled && (triggerHovered || _selfHovered))
 
     default property alias content: inner.data
 
     clip: true
 
     on_EffectiveOpenChanged: {
-        if (_effectiveOpen) {
-            hoverCloseTimer.stop()
-            windowVisible = true
-        } else {
-            if (hoverEnabled)
-                hoverCloseTimer.restart()
-            else
-                slideCloseTimer.restart()
-        }
+        if (_effectiveOpen) { hoverCloseTimer.stop(); windowVisible = true } 
+        else { hoverEnabled ? hoverCloseTimer.restart() : slideCloseTimer.restart() }
     }
 
     // Wait for slide animation to finish before hiding the window
@@ -84,17 +58,14 @@ Item {
         }
     }
 
-    // ── Sliding item ──────────────────────────────────────────────────────────
+    // ── Sliding Item ──────────────────────────────────────────────────────────
     Item {
         id:     inner
         width:  parent.width
         height: parent.height
 
-        x: root._effectiveOpen ? 0 : (root.edge === "left"  ? -width :
-                                       root.edge === "right" ?  width : 0)
-
-        y: root._effectiveOpen ? 0 : (root.edge === "top"    ? -height :
-                                       root.edge === "bottom" ?  height : 0)
+        x: root._effectiveOpen ? 0 : (root.edge === "left" ? -width : root.edge === "right" ? width : 0)
+        y: root._effectiveOpen ? 0 : (root.edge === "top" ? -height : root.edge === "bottom" ? height : 0)
 
         Behavior on x { NumberAnimation { duration: root.slideDuration; easing.type: Easing.OutCubic } }
         Behavior on y { NumberAnimation { duration: root.slideDuration; easing.type: Easing.OutCubic } }
