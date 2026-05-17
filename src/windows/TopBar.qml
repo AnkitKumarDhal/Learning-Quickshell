@@ -89,7 +89,7 @@ PanelWindow {
             SystemMonitor       {}
             Volume              {}
             Battery             {}
-            Tray                {}
+            Tray                { window: root }
             NotificationButton  {}
         }
     }

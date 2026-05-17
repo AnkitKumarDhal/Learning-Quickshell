@@ -8,6 +8,8 @@ import qs.src.theme
 PillBase {
     id: root
 
+    property var window
+
     hoverExpand: false  // tray expands differently via its own toggle
     hoverEnabled: false
     mouseEnabled: false
@@ -46,8 +48,8 @@ PillBase {
                         else if (mouse.button === Qt.MiddleButton)
                             modelData.secondaryActivate()
                         else if (mouse.button === Qt.RightButton) {
-                            var pos = mapToGlobal(width / 2, height)
-                            contextMenu.open(modelData.menu, pos.x, pos.y)
+                            var pos = mapToItem(null, mouse.x, mouse.y)
+                            modelData.display(root.window, pos.x, pos.y)
                         }
                     }
 
@@ -58,6 +60,5 @@ PillBase {
             }
         }
     }
-
-    TrayContextMenu { id: contextMenu }
 }
+

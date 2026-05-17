@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
-import qs.src.theme                          // replaces ../../../settings
+import qs.src.theme
 
 PanelWindow {
     id: root
@@ -15,14 +15,12 @@ PanelWindow {
     property bool hasCurrent: false
     property int  animLength: 400
     property var  animCurve:  [0.05, 0, 0.133, 0.06, 0.166, 0.4, 0.208, 0.82, 0.25, 1, 1, 1]
-    property var  menuStack:  []
 
     function open(handle, x, y) {
-        menuStack = []
         menuHandle = handle
-        let width  = 240
-        let safeX  = x - (width / 2)
-        safeX      = Math.max(8, Math.min(safeX, Screen.width - width - 8))
+        let w      = 240
+        let safeX  = x - (w / 2)
+        safeX      = Math.max(8, Math.min(safeX, Screen.width - w - 8))
         menuX      = safeX
         menuY      = y - 32
         hasCurrent = true
@@ -30,27 +28,10 @@ PanelWindow {
     }
 
     function close() {
-        hasCurrent        = false
-        menuStack         = []
-        focusGrab.active  = false
+        hasCurrent       = false
+        focusGrab.active = false
         grabTimer.stop()
     }
-
-    function openSubmenu(item) {
-        var stack = menuStack.slice()
-        stack.push(menuHandle)
-        menuStack  = stack
-        menuHandle = item
-    }
-
-    function goBack() {
-        if (menuStack.length === 0) return
-        var stack  = menuStack.slice()
-        menuHandle = stack.pop()
-        menuStack  = stack
-    }
-
-    readonly property bool canGoBack: menuStack.length > 0
 
     color: "transparent"
     WlrLayershell.layer:         WlrLayer.Overlay
@@ -72,6 +53,7 @@ PanelWindow {
 
     anchors { top: true; bottom: true; left: true; right: true }
 
+    // Click outside to close
     MouseArea {
         anchors.fill: parent
         enabled:      root.hasCurrent
@@ -81,10 +63,9 @@ PanelWindow {
     Item {
         id: wrapper
 
-        readonly property real backHeight:     root.canGoBack ? 32 + 4 : 0
-        readonly property real topPad:         8
-        readonly property real bottomPad:      8
-        readonly property real contentHeight:  topPad + backHeight + (canGoBack ? 4 : 0) + menuColumn.implicitHeight + bottomPad
+        readonly property real topPad:        8
+        readonly property real bottomPad:     8
+        readonly property real contentHeight: topPad + menuColumn.implicitHeight + bottomPad
 
         x:     root.menuX
         y:     root.menuY
@@ -95,74 +76,16 @@ PanelWindow {
         implicitHeight: root.hasCurrent ? Math.max(contentHeight, 52) : 0
 
         Rectangle {
-            id:                  menuBg
-            anchors.fill:        parent
-            color:               Colors.background
-            clip:                true
-            bottomLeftRadius:    14
-            bottomRightRadius:   14
+            id:               menuBg
+            anchors.fill:     parent
+            color:            Colors.background
+            clip:             true
+            bottomLeftRadius: 14
+            bottomRightRadius: 14
 
             QsMenuOpener {
                 id:   opener
                 menu: root.menuHandle
-            }
-
-            Item {
-                id:      backButton
-                visible: root.canGoBack
-
-                anchors {
-                    top:        parent.top
-                    left:       parent.left
-                    right:      parent.right
-                    topMargin:  8
-                    leftMargin: 8
-                    rightMargin: 8
-                }
-                height: visible ? 32 : 0
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius:       8
-                    color:        Colors.primary
-                    opacity:      backMouse.containsMouse ? 0.18 : 0.08
-                    Behavior on opacity { NumberAnimation { duration: 120 } }
-                }
-
-                RowLayout {
-                    anchors {
-                        fill:        parent
-                        leftMargin:  10
-                        rightMargin: 10
-                    }
-                    spacing: 6
-
-                    Text {
-                        text:               "‹"
-                        color:              Colors.primary
-                        font.pixelSize:     18
-                        font.bold:          true
-                        verticalAlignment:  Text.AlignVCenter
-                    }
-
-                    Text {
-                        text:              "Back"
-                        color:             Colors.primary
-                        font.pixelSize:    13
-                        font.bold:         true
-                        font.family:       Fonts.font
-                        Layout.fillWidth:  true
-                        verticalAlignment: Text.AlignVCenter
-                    }
-                }
-
-                MouseArea {
-                    id:           backMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape:  Qt.PointingHandCursor
-                    onClicked:    root.goBack()
-                }
             }
 
             Rectangle {
@@ -171,12 +94,12 @@ PanelWindow {
                 property real targetY: 0
                 property bool active:  false
 
-                x:      8
-                y:      menuColumn.y + targetY
-                width:  parent.width - 16
-                height: 36
-                radius: 8
-                color:  Colors.primary
+                x:       8
+                y:       menuColumn.y + targetY
+                width:   parent.width - 16
+                height:  36
+                radius:  8
+                color:   Colors.primary
                 opacity: active ? 0.15 : 0
 
                 Behavior on y       { NumberAnimation { duration: 200; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
@@ -187,7 +110,7 @@ PanelWindow {
                 id: menuColumn
 
                 anchors {
-                    top:         backButton.visible ? backButton.bottom : parent.top
+                    top:         parent.top
                     left:        parent.left
                     right:       parent.right
                     topMargin:   8
@@ -204,6 +127,9 @@ PanelWindow {
                     delegate: Item {
                         id: menuItem
 
+                        required property var modelData
+                        required property int index
+
                         property bool isSeparator: modelData.isSeparator
                         property bool hasChildren: modelData.hasChildren
 
@@ -212,12 +138,12 @@ PanelWindow {
 
                         // Separator line
                         Rectangle {
-                            visible:        isSeparator
+                            visible:          isSeparator
                             anchors.centerIn: parent
-                            width:          parent.width - 16
-                            height:         1
-                            color:          Colors.primary
-                            opacity:        0.5
+                            width:            parent.width - 16
+                            height:           1
+                            color:            Colors.primary
+                            opacity:          0.5
                         }
 
                         // Active indicator bar
@@ -230,14 +156,14 @@ PanelWindow {
                             radius: 2
                             color:  Colors.primary
                             anchors {
-                                left:                  parent.left
-                                leftMargin:            4
-                                verticalCenter:        parent.verticalCenter
+                                left:           parent.left
+                                leftMargin:     4
+                                verticalCenter: parent.verticalCenter
                             }
                         }
 
                         RowLayout {
-                            visible:      !isSeparator
+                            visible: !isSeparator
                             anchors {
                                 fill:        parent
                                 leftMargin:  12
@@ -286,6 +212,21 @@ PanelWindow {
                             }
                         }
 
+                        // QsMenuAnchor for native submenu display
+                        QsMenuAnchor {
+                            id:      anchor
+                            menu:    menuItem.hasChildren ? menuItem.modelData : null
+                            // visible: false
+
+                            // Anchor to right edge of this item
+                            anchor.window:     root
+                            anchor.rect.x:     menuItem.x + wrapper.x + menuBg.x + menuColumn.x + menuItem.width
+                            anchor.rect.y:     menuItem.y + wrapper.y + menuBg.y + menuColumn.y
+                            anchor.rect.width: 0
+                            anchor.rect.height: menuItem.height
+                            anchor.edges:      Edges.Right | Edges.Top
+                        }
+
                         MouseArea {
                             id:           itemMouse
                             anchors.fill: parent
@@ -302,13 +243,12 @@ PanelWindow {
                             }
 
                             onClicked: {
-                                if (!menuItem.isSeparator) {
-                                    if (modelData.hasChildren) {
-                                        root.openSubmenu(modelData)
-                                    } else {
-                                        modelData.triggered()
-                                        root.close()
-                                    }
+                                if (menuItem.isSeparator) return
+                                if (menuItem.hasChildren) {
+                                    anchor.open()
+                                } else {
+                                    menuItem.modelData.triggered()
+                                    root.close()
                                 }
                             }
                         }
@@ -319,9 +259,9 @@ PanelWindow {
 
         Behavior on implicitHeight {
             NumberAnimation {
-                duration:            root.animLength
-                easing.type:         Easing.BezierSpline
-                easing.bezierCurve:  root.animCurve
+                duration:           root.animLength
+                easing.type:        Easing.BezierSpline
+                easing.bezierCurve: root.animCurve
             }
         }
     }
