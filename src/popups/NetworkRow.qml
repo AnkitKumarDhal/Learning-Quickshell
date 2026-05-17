@@ -21,7 +21,7 @@ Item {
         }
     }
 
-    // Background and full-row click handler
+    // Background and full-row click handler (Normal 1-click connect)
     Rectangle {
         anchors.fill: parent
         radius: 10
@@ -51,7 +51,7 @@ Item {
         }
     }
 
-    // Content sits on top so the TextField can consume its own clicks safely
+    // Content sits on top so the TextField and Lock button consume clicks safely
     ColumnLayout {
         id: innerCol
         anchors { top: parent.top; left: parent.left; right: parent.right; margins: 12 }
@@ -89,16 +89,35 @@ Item {
                 Behavior on color { ColorAnimation { duration: 120 } }
             }
 
-            // Lock icon
-            Text {
+            // Interactive Lock icon / Manual Password Toggle
+            Rectangle {
                 visible: root.network.security !== WifiSecurityType.Open && !root.network.connected
-                text: "󰌾"
-                font.family: Fonts.fontM
-                font.pixelSize: 14
-                color: Colors.outline
+                width: 24; height: 24; radius: 12
+                color: lockHover.containsMouse ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.1) : "transparent"
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: root._showPsk ? "󰌑" : "󰌾" // Swaps from a lock to a key when open
+                    font.family: Fonts.fontM
+                    font.pixelSize: 14
+                    color: lockHover.containsMouse || root._showPsk ? Colors.primary : Colors.outline
+                    Behavior on color { ColorAnimation { duration: 120 } }
+                }
+
+                HoverHandler { id: lockHover }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        root._showPsk = !root._showPsk;
+                        if (root._showPsk) pskField.forceActiveFocus();
+                    }
+                }
             }
 
-            // "Connected" chip (mirrors DeviceRow's "Default" chip)
+            // "Connected" chip
             Rectangle {
                 visible: root.network.connected || root.network.stateChanging
                 width: chipRow.implicitWidth + 16
