@@ -21,7 +21,7 @@ PanelWindow {
         right: true
     }
 
-    implicitWidth:  340
+    implicitWidth:  380
     implicitHeight: root.screen ? root.screen.height : 800
 
     WlrLayershell.layer: WlrLayer.Overlay
@@ -35,6 +35,12 @@ PanelWindow {
         onCloseRequested: Popups.networkOpen = false
     }
 
+    Binding {
+        target: NetworkService
+        property: "scannerActive"
+        value: Popups.networkOpen
+    }
+
     // ── Popup card ────────────────────────────────────────────────────────────
     Rectangle {
         anchors {
@@ -44,8 +50,8 @@ PanelWindow {
             rightMargin: Theme.barMargin
         }
 
-        width:        320
-        height:       mainCol.implicitHeight + 24
+        width:        360
+        height:       mainCol.implicitHeight + 18
         radius:       Theme.popupRadius
         color:        Colors.surfaceContainer
         border.color: Colors.outlineVariant
@@ -55,12 +61,15 @@ PanelWindow {
         ColumnLayout {
             id: mainCol
             anchors {
-                top:   parent.top
-                left:  parent.left
-                right: parent.right
-                margins: 12
+                top:          parent.top
+                left:         parent.left
+                right:        parent.right
+                topMargin:    10
+                leftMargin:   16
+                rightMargin:  16
+                bottomMargin: 16
             }
-            spacing: 8
+            spacing: 12
 
             // ── Tab bar ──────────────────────────────────────────────────────
             TabBar {
@@ -83,33 +92,34 @@ PanelWindow {
             ColumnLayout {
                 visible: Popups.networkTab === 0
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
 
                 RowLayout {
                     Layout.fillWidth: true
+                    Layout.bottomMargin: 4
 
                     Text {
                         text: "Wi-Fi"
+                        color: Colors.on_SurfaceVariant
+                        font.pixelSize: 11
+                        font.bold: true
                         font.family: Fonts.font
-                        font.pixelSize: 12
-                        font.weight: Font.Medium
-                        color: Colors.on_Surface
+                        leftPadding: 4
                         Layout.fillWidth: true
                     }
 
                     Rectangle {
                         width: 40; height: 22; radius: 11
-                        color: NetworkService.wifiEnabled
-                            ? Colors.primary
-                            : Colors.surfaceVariant
+                        color: NetworkService.wifiEnabled ? Colors.primary : Colors.surfaceContainerHighest
+                        border.width: NetworkService.wifiEnabled ? 0 : 1
+                        border.color: Colors.outlineVariant
                         opacity: (NetworkService.wifiHardwareEnabled ?? true) ? 1.0 : 0.4
-                        enabled: NetworkService.wifiHardwareEnabled ?? true
-
+                        
                         Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                         Rectangle {
                             width: 16; height: 16; radius: 8
-                            color: Colors.on_Primary
+                            color: NetworkService.wifiEnabled ? Colors.on_Primary : Colors.outline
                             anchors.verticalCenter: parent.verticalCenter
                             x: NetworkService.wifiEnabled ? 20 : 4
                             Behavior on x { NumberAnimation { duration: Theme.hoverFadeDuration; easing.type: Easing.OutCubic } }
@@ -117,31 +127,31 @@ PanelWindow {
 
                         MouseArea {
                             anchors.fill: parent
-                            enabled: NetworkService.wifiHardwareEnabled
+                            enabled: NetworkService.wifiHardwareEnabled ?? true
                             onClicked: NetworkService.setWifiEnabled(!NetworkService.wifiEnabled)
+                            cursorShape: Qt.PointingHandCursor
                         }
                     }
                 }
 
                 Flickable {
                     Layout.fillWidth: true
-                    height: Math.min(networkCol.implicitHeight, 240)
+                    Layout.preferredHeight: Math.min(networkCol.implicitHeight, 280)
                     contentHeight: networkCol.implicitHeight
                     clip: true
                     visible: NetworkService.wifiEnabled
+                    boundsBehavior: Flickable.StopAtBounds
 
                     ColumnLayout {
                         id: networkCol
                         width: parent.width
-                        spacing: 2
+                        spacing: 4
 
                         Repeater {
                             model: NetworkService.networks
 
                             delegate: NetworkRow {
                                 required property var modelData
-                                required property int index
-
                                 Layout.fillWidth: true
                                 network: modelData
                             }
@@ -174,32 +184,34 @@ PanelWindow {
             ColumnLayout {
                 visible: Popups.networkTab === 1
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
 
                 RowLayout {
                     Layout.fillWidth: true
+                    Layout.bottomMargin: 4
 
                     Text {
                         text: "Bluetooth"
+                        color: Colors.on_SurfaceVariant
+                        font.pixelSize: 11
+                        font.bold: true
                         font.family: Fonts.font
-                        font.pixelSize: 12
-                        font.weight: Font.Medium
-                        color: Colors.on_Surface
+                        leftPadding: 4
                         Layout.fillWidth: true
                     }
 
                     Rectangle {
                         width: 40; height: 22; radius: 11
-                        color: NetworkService.btEnabled
-                            ? Colors.primary
-                            : Colors.surfaceVariant
+                        color: NetworkService.btEnabled ? Colors.primary : Colors.surfaceContainerHighest
+                        border.width: NetworkService.btEnabled ? 0 : 1
+                        border.color: Colors.outlineVariant
                         opacity: NetworkService.btAdapter ? 1.0 : 0.4
-
+                        
                         Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                         Rectangle {
                             width: 16; height: 16; radius: 8
-                            color: Colors.on_Primary
+                            color: NetworkService.btEnabled ? Colors.on_Primary : Colors.outline
                             anchors.verticalCenter: parent.verticalCenter
                             x: NetworkService.btEnabled ? 20 : 4
                             Behavior on x { NumberAnimation { duration: Theme.hoverFadeDuration; easing.type: Easing.OutCubic } }
@@ -209,30 +221,43 @@ PanelWindow {
                             anchors.fill: parent
                             enabled: NetworkService.btAdapter !== null
                             onClicked: NetworkService.setBtEnabled(!NetworkService.btEnabled)
+                            cursorShape: Qt.PointingHandCursor
                         }
                     }
                 }
 
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 2
+                    spacing: 4
                     visible: NetworkService.btEnabled
 
                     Repeater {
                         model: NetworkService.btDevices
 
-                        delegate: Rectangle {
+                        delegate: Item {
                             required property var modelData
-                            required property int index
 
                             Layout.fillWidth: true
-                            height: 36
-                            radius: 8
-                            color: "transparent"
+                            implicitHeight: 44
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: 10
+                                color: btHov.containsMouse ? Colors.surfaceContainerHighest : Qt.rgba(Colors.primaryContainer.r, Colors.primaryContainer.g, Colors.primaryContainer.b, 0.3)
+                                Behavior on color { ColorAnimation { duration: 120 } }
+
+                                MouseArea {
+                                    id: btHov
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: modelData.connected = false
+                                }
+                            }
 
                             RowLayout {
-                                anchors { fill: parent; leftMargin: 8; rightMargin: 8 }
-                                spacing: 8
+                                anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+                                spacing: 10
 
                                 Text {
                                     text: {
@@ -246,15 +271,16 @@ PanelWindow {
                                         return "󰂯";
                                     }
                                     font.family: Fonts.fontM
-                                    font.pixelSize: 14
-                                    color: Colors.onSurface
+                                    font.pixelSize: 16
+                                    color: Colors.primary
                                 }
 
                                 Text {
                                     text: modelData.name
                                     font.family: Fonts.font
-                                    font.pixelSize: 11
-                                    color: Colors.onSurface
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    color: Colors.on_Surface
                                     elide: Text.ElideRight
                                     Layout.fillWidth: true
                                 }
@@ -267,29 +293,32 @@ PanelWindow {
                                     color: Colors.outline
                                 }
 
+                                // Connected chip (mirrors DeviceRow's "Default" chip)
                                 Rectangle {
-                                    width: 56; height: 22; radius: 11
-                                    color: disconnectHover.containsMouse
-                                        ? Qt.rgba(Colors.error.r, Colors.error.g, Colors.error.b, 0.15)
-                                        : "transparent"
-                                    border.width: 1
-                                    border.color: Colors.error
+                                    width: btChip.implicitWidth + 16
+                                    height: 22
+                                    radius: 11
+                                    color: Colors.primary
 
-                                    Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
-
-                                    Text {
+                                    Row {
+                                        id: btChip
                                         anchors.centerIn: parent
-                                        text: "Disconnect"
-                                        font.family: Fonts.font
-                                        font.pixelSize: 9
-                                        color: Colors.error
-                                    }
-
-                                    HoverHandler { id: disconnectHover }
-
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        onClicked: modelData.connected = false
+                                        spacing: 4
+                                        Text {
+                                            text: "󰄵"
+                                            color: Colors.on_Primary
+                                            font.pixelSize: 10
+                                            font.family: Fonts.font
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                        Text {
+                                            text: "Connected"
+                                            color: Colors.on_Primary
+                                            font.pixelSize: 10
+                                            font.bold: true
+                                            font.family: Fonts.font
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
                                     }
                                 }
                             }

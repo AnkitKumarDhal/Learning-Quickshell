@@ -59,7 +59,7 @@ Item {
 
                 Rectangle {
                     anchors.centerIn: parent
-                    width:            hIcon.implicitWidth + (hLabel.visible ? hLabel.implicitWidth + 8 : 0) + 24
+                    width:            Math.min(parent.width - 4, hIcon.implicitWidth + (hLabel.visible ? hLabel.implicitWidth + 8 : 0) + 24)
                     height:           parent.height - 8
                     radius:           height / 2
                     color:            hTab.isActive ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.18) 
