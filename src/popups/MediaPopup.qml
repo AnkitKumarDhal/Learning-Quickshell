@@ -6,7 +6,7 @@ import Quickshell.Services.Mpris
 import qs.src.components
 import qs.src.theme
 import qs.src.state
-import "media"
+import qs.src.popups.media
 
 PanelWindow {
     id: win
@@ -16,10 +16,13 @@ PanelWindow {
     color:         "transparent"
     exclusionMode: ExclusionMode.Ignore
 
-    anchors.top: true
+    anchors {
+        top:   true
+        right: true
+    }
 
-    implicitWidth:  win.screen ? win.screen.width : 1920
-    implicitHeight: win.screen ? win.screen.height : 1080
+    implicitWidth:  380
+    implicitHeight: win.screen ? win.screen.height : 800
 
     WlrLayershell.layer: WlrLayer.Overlay
     visible: slide.windowVisible
