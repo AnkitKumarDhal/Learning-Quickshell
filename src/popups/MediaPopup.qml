@@ -13,17 +13,29 @@ PanelWindow {
     id: win
 
     property var screen
-    WlrLayershell.screen:        screen
+
+    color:         "transparent"
+    exclusionMode: ExclusionMode.Ignore
+
+    anchors {
+        top:   true
+        right: true
+    }
+
+    implicitWidth:  380
+    implicitHeight: win.screen ? win.screen.height : 800
+
     WlrLayershell.layer:         WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    visible: slide.windowVisible
 
-    anchors.top:   true
-    anchors.left:  true
-    anchors.right: true
-
-    implicitHeight: 1
-    color:          "transparent"
-    visible:        slide.windowVisible
+    PopupSlide {
+        id: slide
+        anchors.fill: parent
+        edge: "top"
+        open: Popups.mediaOpen
+        onCloseRequested: Popups.mediaOpen = false
+    }
 
     // ── Player resolution (mirrors Media.qml logic) ───────────────────────────
     property var _players:       Mpris.players.values
@@ -74,30 +86,23 @@ PanelWindow {
         function onTrackTitleChanged() { win._position = 0 }
     }
 
-    // ── Slide animation ───────────────────────────────────────────────────────
-    PopupSlide {
-        id:   slide
-        open: Popups.mediaOpen
-        edge: "top"
-    }
-
     // ── Card ──────────────────────────────────────────────────────────────────
     Rectangle {
         id: card
 
-        width:  340
-        anchors.top:              parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.topMargin:        Theme.barMargin
+        anchors {
+            top:    parent.top
+            right:  parent.right
+            topMargin: Theme.barHeight + 8
+        }
 
+        width:  340
         implicitHeight: cardLayout.implicitHeight + 24
         radius:         Theme.popupRadius
         color:          Colors.surfaceContainer
         border.color:   Colors.outlineVariant
         border.width:   Theme.popupBorder
-
-        // Clip so album art bleed is contained to card shape
-        clip: false
+        clip:           true
 
         ColumnLayout {
             id:            cardLayout
