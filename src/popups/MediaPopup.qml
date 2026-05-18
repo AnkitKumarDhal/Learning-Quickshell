@@ -52,6 +52,13 @@ PanelWindow {
 
     property bool isPlaying: player?.playbackState === MprisPlaybackState.Playing ?? false
 
+    // ── Position tracking ─────────────────────────────────────────────────────
+    // Quickshell doesn't auto-emit positionChanged; we must drive it ourselves.
+    FrameAnimation {
+        running: win.isPlaying && (win.player?.positionSupported ?? false)
+        onTriggered: win.player?.positionChanged()
+    }
+
     // ── Slide ─────────────────────────────────────────────────────────────────
     PopupSlide {
         id:           slide
@@ -61,7 +68,7 @@ PanelWindow {
         onCloseRequested: Popups.mediaOpen = false
     }
 
-    // ── Card ──────────────────────────────────────────────────────────────────
+    // ── Card — row layout: art on left, everything else on right ──────────────
     Rectangle {
         id: card
 
@@ -71,71 +78,58 @@ PanelWindow {
             topMargin:        Theme.barHeight + 8
         }
 
-        width:        340
-        height:       cardCol.implicitHeight + 16
-        radius:       Theme.popupRadius
-        color:        Colors.surfaceContainer
-        border.color: Colors.outlineVariant
-        border.width: Theme.popupBorder
-        clip:         true
+        implicitWidth:  row.implicitWidth + 32
+        implicitHeight: Math.max(100, row.implicitHeight) + 32
+        radius:         Theme.popupRadius
+        color:          Colors.surfaceContainer
+        border.color:   Colors.outlineVariant
+        border.width:   Theme.popupBorder
+        clip:           true
 
-        ColumnLayout {
-            id: cardCol
+        RowLayout {
+            id: row
             anchors {
-                top:         parent.top
-                left:        parent.left
-                right:       parent.right
-                topMargin:   12
-                leftMargin:  12
-                rightMargin: 12
+                fill:    parent
+                margins: 16
             }
-            spacing: 10
+            spacing: 16
 
-            // ── Art + Info row ────────────────────────────────────────────────
-            RowLayout {
+            // ── Album art ─────────────────────────────────────────────────────
+            MediaArt {
+                player:                 win.player
+                Layout.preferredWidth:  100
+                Layout.preferredHeight: 100
+            }
+
+            // ── Info + progress + controls + volume ───────────────────────────
+            ColumnLayout {
                 Layout.fillWidth: true
-                spacing:          10
-
-                MediaArt {
-                    player:                win.player
-                    Layout.preferredWidth: 100
-                    Layout.preferredHeight: 100
-                }
+                spacing: 6
 
                 MediaInfo {
                     player:           win.player
                     Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignVCenter
                 }
-            }
 
-            // ── Progress ──────────────────────────────────────────────────────
-            MediaProgress {
-                player:           win.player
-                isPlaying:        win.isPlaying
-                Layout.fillWidth: true
-                visible:          win.player !== null
-            }
+                MediaProgress {
+                    player:           win.player
+                    isPlaying:        win.isPlaying
+                    Layout.fillWidth: true
+                    visible:          win.player !== null
+                }
 
-            // ── Controls ──────────────────────────────────────────────────────
-            MediaControls {
-                player:           win.player
-                isPlaying:        win.isPlaying
-                Layout.fillWidth: true
-            }
+                MediaControls {
+                    player:           win.player
+                    isPlaying:        win.isPlaying
+                    Layout.fillWidth: true
+                }
 
-            // ── Volume ────────────────────────────────────────────────────────
-            MediaVolume {
-                player:           win.player
-                Layout.fillWidth: true
-                visible:          win.player !== null
-                Layout.bottomMargin: 4
+                MediaVolume {
+                    player:           win.player
+                    Layout.fillWidth: true
+                    visible:          win.player !== null
+                }
             }
         }
     }
-
-    Timer {
-    interval: 2000; repeat: true; running: win.player !== null
-    onTriggered: console.log("pos:", win.player?.position, "len:", win.player?.trackLength, "supported:", win.player?.positionSupported)
-}
 }

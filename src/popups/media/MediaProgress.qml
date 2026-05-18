@@ -9,31 +9,9 @@ ColumnLayout {
     property var  player:   null
     property bool isPlaying: false
 
-    // Exposed so MediaPopup can bind seeking state if needed
     property bool seeking: false
 
-    // Internal normalized position in ms
-    property real _position: 0
-
     spacing: 4
-
-    // ── Position polling ──────────────────────────────────────────────────────
-    Timer {
-        interval: 1000
-        repeat:   true
-        running:  root.isPlaying && !root.seeking
-        onTriggered: {
-            if (!root.player) return
-            const raw = root.player.position
-            // Normalize: if value looks like µs (> 10 million for a >10s track), convert
-            root._position = raw > 10000000 ? raw / 1000 : raw
-        }
-    }
-
-    Connections {
-        target:  root.player ?? null
-        function onTrackTitleChanged() { root._position = 0 }
-    }
 
     // ── Scrubber ──────────────────────────────────────────────────────────────
     Item {
@@ -41,14 +19,13 @@ ColumnLayout {
         Layout.fillWidth:       true
         Layout.preferredHeight: 16
 
-        property real trackLen: {
-            if (!root.player) return 0
-            const raw = root.player.trackLength ?? 0
-            return raw > 10000000 ? raw / 1000 : raw
-        }
-        property real fraction: trackLen > 0
-                                 ? Math.min(root._position / trackLen, 1.0)
-                                 : 0
+        // Quickshell's `length` is in seconds. `position` is also in seconds.
+        property real trackLen: (root.player?.lengthSupported ?? false)
+                                      ? (root.player?.length ?? 0)
+                                      : 0
+        property real fraction: scrubber.trackLen > 0
+                                  ? Math.min((root.player?.position ?? 0) / scrubber.trackLen, 1.0)
+                                  : 0
 
         // Track background
         Rectangle {
@@ -95,16 +72,15 @@ ColumnLayout {
 
             onPressed: (mouse) => {
                 root.seeking   = true
-                root._position = (mouse.x / scrubber.width) * scrubber.trackLen
+                if (root.player)
+                    root.player.position = (mouse.x / scrubber.width) * scrubber.trackLen
             }
             onPositionChanged: (mouse) => {
-                if (pressed)
-                    root._position = Math.max(0,
+                if (pressed && root.player)
+                    root.player.position = Math.max(0,
                         Math.min(mouse.x / scrubber.width, 1.0) * scrubber.trackLen)
             }
             onReleased: {
-                if (root.player)
-                    root.player.position = root._position
                 root.seeking = false
             }
         }
@@ -116,7 +92,8 @@ ColumnLayout {
 
         Text {
             text: {
-                const s = Math.floor(root._position / 1000)
+                const pos = root.player?.position ?? 0
+                const s = Math.floor(pos)
                 return "%1:%2".arg(Math.floor(s / 60))
                               .arg(String(s % 60).padStart(2, "0"))
             }
@@ -129,7 +106,7 @@ ColumnLayout {
 
         Text {
             text: {
-                const s = Math.floor(scrubber.trackLen / 1000)
+                const s = Math.floor(scrubber.trackLen)
                 return "%1:%2".arg(Math.floor(s / 60))
                               .arg(String(s % 60).padStart(2, "0"))
             }
