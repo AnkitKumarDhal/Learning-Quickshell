@@ -1,0 +1,4797 @@
+==> ./src/state/ShellState.qml <==
+pragma Singleton
+import QtQuick
+import Quickshell
+import Quickshell.Hyprland
+
+Singleton {
+    id: root
+
+    // ── Top bar notch widths (written by TopBar, read by PopupDismiss) ─────────
+    property int topBarLWidth: 0
+    property int topBarCWidth: 0
+    property int topBarRWidth: 0
+
+    // ── Focus mode ────────────────────────────────────────────────────────────
+    // true = bar collapses to thin strip
+    readonly property bool focusMode: _isFullscreen && !_manualOverride
+
+    property bool _isFullscreen:   false
+    property bool _manualOverride: false
+
+    // Called by keybind via IPC or GlobalShortcut
+    function toggleManualOverride() {
+        // Only meaningful when fullscreen is active
+        if (_isFullscreen)
+            _manualOverride = !_manualOverride
+    }
+
+    // Reset override when fullscreen exits so bar returns to full automatically
+    on_IsFullscreenChanged: {
+        if (!_isFullscreen)
+            _manualOverride = false
+    }
+
+    // ── Hyprland fullscreen detection ─────────────────────────────────────────
+    Connections {
+        target: Hyprland
+
+        function onRawEvent(event) {
+            if (event.name === "fullscreen") {
+                // data is "1" when entering fullscreen, "0" when leaving
+                root._isFullscreen = (event.data === "1")
+            }
+        }
+    }
+}
+
+==> ./src/state/Popups.qml <==
+pragma Singleton
+
+import QtQuick
+import Quickshell
+
+Singleton {
+    id: root
+
+    // ── Timing Constants ──────────────────────────────────────────────────────
+    // Read by PopupSlide
+    readonly property int slideDuration:   400
+    readonly property int hoverCloseDelay: 300
+
+    // ── Popup States ──────────────────────────────────────────────────────────
+    property bool notificationsOpen: false
+    property bool systemOpen:        false
+    property bool archMenuOpen:      false
+    property bool calendarOpen:      false
+    property bool mediaOpen:         false
+    property bool idleInhibitorOpen: false
+    property bool volumeOpen:        false
+    property bool networkOpen: false
+    property int  networkTab:  0
+
+    // Note: Tray context menu is managed internally by TrayContextMenu.
+    // No open bool needed here; TrayContextMenu owns its own state.
+
+    // ── Aggregate State ───────────────────────────────────────────────────────
+    readonly property bool anyOpen:
+        notificationsOpen ||
+        systemOpen        ||
+        archMenuOpen      ||
+        calendarOpen      ||
+        mediaOpen         ||
+        idleInhibitorOpen ||
+        volumeOpen        ||
+        networkOpen
+
+    // ── Methods ───────────────────────────────────────────────────────────────
+    function closeAll() {
+        notificationsOpen = false
+        systemOpen        = false
+        archMenuOpen      = false
+        calendarOpen      = false
+        mediaOpen         = false
+        idleInhibitorOpen = false
+        volumeOpen        = false
+        networkOpen       = false
+    }
+    // onNetworkOpenChanged: NetworkService.scannerActive = networkOpen
+}
+
+==> ./src/state/qmldir <==
+singleton Popups Popups.qml
+singleton ShellState ShellState.qml
+
+==> ./src/services/BatteryService.qml <==
+pragma Singleton
+
+import QtQuick
+import Quickshell
+import Quickshell.Io
+
+Singleton {
+    id: root
+
+    // ── Battery State ─────────────────────────────────────────────────────────
+    property int    capacity:   0
+    property bool   charging:   false
+    property bool   full:       false
+    property string status:     "Unknown"
+    property bool   hasBattery: false
+
+    readonly property real fraction: capacity / 100
+
+    // ── Polling Processes ─────────────────────────────────────────────────────
+    Process {
+        id: _capProc
+        command: ["cat", "/sys/class/power_supply/BAT0/capacity"]
+        running: true
+
+        stdout: SplitParser {
+            onRead: (data) => {
+                const v = parseInt(data.trim())
+                if (!isNaN(v)) {
+                    root.capacity   = v
+                    root.hasBattery = true
+                }
+            }
+        }
+
+        onExited: (code) => {
+            if (code !== 0) {
+                root.hasBattery = false
+            }
+        }
+    }
+
+    Process {
+        id: _statProc
+        command: ["cat", "/sys/class/power_supply/BAT0/status"]
+        running: true
+
+        stdout: SplitParser {
+            onRead: (data) => {
+                const s       = data.trim()
+                root.status   = s
+                root.charging = (s === "Charging")
+                root.full     = (s === "Full")
+            }
+        }
+    }
+
+    // ── Polling Timer ─────────────────────────────────────────────────────────
+    Timer {
+        interval: 30000
+        repeat:   true
+        running:  true
+        
+        onTriggered: {
+            _capProc.running  = true
+            _statProc.running = true
+        }
+    }
+}
+
+==> ./src/services/NotificationService.qml <==
+pragma Singleton
+import QtQuick
+import Quickshell
+import Quickshell.Services.Notifications
+
+Singleton {
+    id: root
+
+    property bool panelVisible: false
+    property var  activeToasts: []
+    property var  _toastData:   []
+
+    property NotificationServer server: NotificationServer {
+        bodySupported:    true
+        actionsSupported: true
+
+        onNotification: (notif) => {
+            notif.tracked = true
+            let tData = root._toastData.slice()
+            tData.push({
+                id:        notif.id,
+                expires:   Date.now() + 4000,
+                arrivedAt: Date.now()        // ← timestamp stored here
+            })
+            root._toastData = tData
+            updateActiveToasts()
+        }
+    }
+
+    // Returns the arrivedAt timestamp for a given notification id
+    function getArrivalTime(id) {
+        const entry = root._toastData.find(t => t.id === id)
+        return entry ? entry.arrivedAt : Date.now()
+    }
+
+    // Also expose arrival time for panel — panel uses full tracked list
+    // so we keep a separate persistent map that survives toast expiry
+    property var _arrivalMap: ({})
+
+    onActiveToastsChanged: {
+        // Sync arrivals into persistent map
+        root._toastData.forEach(t => {
+            if (!root._arrivalMap[t.id])
+                root._arrivalMap[t.id] = t.arrivedAt
+        })
+    }
+
+    function getPanelArrivalTime(id) {
+        return root._arrivalMap[id] || Date.now()
+    }
+
+    function updateActiveToasts() {
+        root.activeToasts = root._toastData.map(t => t.id)
+    }
+
+    function removeToast(id) {
+        let tData = root._toastData.slice()
+        let idx   = tData.findIndex(t => t.id === id)
+        if (idx < 0) return
+        tData.splice(idx, 1)
+        root._toastData = tData
+        updateActiveToasts()
+    }
+
+    function clearAll() {
+        // FIX: Copy the live list into a static array before iterating
+        // so dismissing an item doesn't shift the indices underneath us!
+        const allNotifs = [...server.trackedNotifications.values]
+        allNotifs.forEach(n => n.dismiss())
+        root._arrivalMap = {}
+    }
+
+    readonly property var notifications: server.trackedNotifications.values
+
+    // Expiry timer
+    Timer {
+        interval:  500
+        running:   root._toastData.length > 0
+        repeat:    true
+        onTriggered: {
+            const now   = Date.now()
+            let tData   = root._toastData.slice()
+            let changed = false
+            for (let i = tData.length - 1; i >= 0; i--) {
+                if (now >= tData[i].expires) {
+                    tData.splice(i, 1)
+                    changed = true
+                }
+            }
+            if (changed) {
+                root._toastData = tData
+                updateActiveToasts()
+            }
+        }
+    }
+
+    // Timestamp refresh timer — drives relative time updates in UI
+    // Fires every 30s, fast enough for "just now" → "1 min ago" transitions
+    property int _tick: 0
+    Timer {
+        interval: 30000
+        running:  true
+        repeat:   true
+        onTriggered: root._tick++
+    }
+
+    // Formats a timestamp into relative or absolute string
+    // Any component that needs a timestamp binds to both the timestamp
+    // AND root._tick so it re-evaluates every 30s
+    function formatTimestamp(arrivedAt) {
+        const _ = root._tick  // creates binding dependency
+        const diff = Date.now() - arrivedAt
+        const mins = Math.floor(diff / 60000)
+        const hrs  = Math.floor(diff / 3600000)
+
+        if (mins < 1)   return "just now"
+        if (mins < 60)  return mins + " min" + (mins > 1 ? "s" : "") + " ago"
+
+        // Over an hour — show absolute time
+        const d = new Date(arrivedAt)
+        let h   = d.getHours()
+        const m = d.getMinutes().toString().padStart(2, "0")
+        const ampm = h >= 12 ? "PM" : "AM"
+        h = h % 12 || 12
+        return h + ":" + m + " " + ampm
+    }
+}
+
+==> ./src/services/system/SystemStats.qml <==
+pragma Singleton
+import QtQuick
+import Quickshell
+import Quickshell.Io
+
+Singleton {
+    id: root
+
+    // ── CPU ───────────────────────────────────────────────────────────────────
+    property real cpuUsage: 0.0
+    property var  _cpuPrev: ({})
+
+    // ── Memory ────────────────────────────────────────────────────────────────
+    property real memUsage: 0.0   // 0.0 - 1.0
+    property real memUsedGb:  0.0
+    property real memTotalGb: 0.0
+
+    // ── GPU ───────────────────────────────────────────────────────────────────
+    property real gpuUsage: 0.0
+    property bool hasGpu:   false
+
+    // ── Disk ──────────────────────────────────────────────────────────────────
+    // Array of { mount, used, total }
+    property var diskPartitions: []
+
+    // ── Network ───────────────────────────────────────────────────────────────
+    property string activeInterface: ""
+    property real   netUpRate:    0.0
+    property real   netDownRate:  0.0
+    property var    netUpHistory:   []
+    property var    netDownHistory: []
+    property var    _netPrev: ({})
+
+    readonly property int maxNetHistory: 60
+
+    // ── Temperature ───────────────────────────────────────────────────────────
+    property int temperature: 0
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function formatBytes(bps) {
+        if (bps >= 1e9) return (bps / 1e9).toFixed(1) + " GB/s"
+        if (bps >= 1e6) return (bps / 1e6).toFixed(1) + " MB/s"
+        if (bps >= 1e3) return (bps / 1e3).toFixed(1) + " KB/s"
+        return bps.toFixed(0) + " B/s"
+    }
+
+    // ── CPU polling ───────────────────────────────────────────────────────────
+    Process {
+        id: cpuProc
+        command: ["cat", "/proc/stat"]
+        running: false
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                const m = line.match(/^cpu\s+(.+)/)
+                if (!m) return
+                const parts = m[1].trim().split(/\s+/).map(Number)
+                const idle  = parts[3] + parts[4]
+                const total = parts.reduce((a, b) => a + b, 0)
+                const prev  = root._cpuPrev
+                const dIdle  = idle  - (prev.idle  || idle)
+                const dTotal = total - (prev.total || total)
+                root._cpuPrev = { idle, total }
+                root.cpuUsage = dTotal > 0
+                    ? Math.min((1.0 - dIdle / dTotal), 1.0)
+                    : 0.0
+            }
+        }
+    }
+
+    // ── Memory polling ────────────────────────────────────────────────────────
+    Process {
+        id: memProc
+        command: ["cat", "/proc/meminfo"]
+        running: false
+
+        stdout: SplitParser {
+            property int _total: 0
+
+            onRead: (line) => {
+                const val = parseInt(line.split(/\s+/)[1])
+                if      (line.startsWith("MemTotal:"))     _total = val
+                else if (line.startsWith("MemAvailable:")) {
+                    const usedKb      = _total - val
+                    root.memTotalGb   = _total   / 1024 / 1024
+                    root.memUsedGb    = usedKb   / 1024 / 1024
+                    root.memUsage     = _total > 0 ? usedKb / _total : 0
+                }
+            }
+        }
+    }
+
+    // ── GPU polling ───────────────────────────────────────────────────────────
+    // Checks for AMD gpu_busy_percent. If file doesn't exist, hasGpu = false.
+    Process {
+        id: gpuCheckProc
+        command: ["sh", "-c",
+            "f=$(ls /sys/class/drm/card*/device/gpu_busy_percent 2>/dev/null | head -1); " +
+            "[ -n \"$f\" ] && echo $f || echo NONE"]
+        running: true
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                const path = line.trim()
+                if (path === "NONE" || path === "") {
+                    root.hasGpu = false
+                } else {
+                    root.hasGpu    = true
+                    gpuReadProc.command = ["cat", path]
+                }
+            }
+        }
+    }
+
+    Process {
+        id: gpuReadProc
+        command: []
+        running: false
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                const v = parseInt(line.trim())
+                if (!isNaN(v)) root.gpuUsage = v / 100.0
+            }
+        }
+    }
+
+    // ── Disk polling ──────────────────────────────────────────────────────────
+    // df -B1 excludes tmpfs/devtmpfs/overlay/squashfs
+    Process {
+        id: diskProc
+        command: ["sh", "-c",
+            "df -B1 --output=target,used,size -x tmpfs -x devtmpfs -x overlay -x squashfs " +
+            "| tail -n +2"]
+        running: false
+
+        property var _diskLines: []
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                const parts = line.trim().split(/\s+/)
+                if (parts.length < 3) return
+                const mount = parts[0]
+                const used  = parseInt(parts[1])
+                const total = parseInt(parts[2])
+                if (isNaN(used) || isNaN(total) || total === 0) return
+
+                // Only show root and physical mounts (skip snap, boot etc.)
+                const skip = ["/boot", "/boot/efi", "/snap"]
+                if (skip.some(s => mount.startsWith(s))) return
+
+                diskProc._diskLines.push({ mount, used, total })
+            }
+        }
+
+        onExited: {
+            root.diskPartitions = diskProc._diskLines.slice()
+            diskProc._diskLines = []
+        }
+    }
+
+    // ── Network polling ───────────────────────────────────────────────────────
+    Process {
+        id: netProc
+        command: ["cat", "/proc/net/dev"]
+        running: false
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                const m = line.match(/^\s*(\w+):\s+(\d+).*\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)/)
+                if (!m) return
+                const iface = m[1]
+
+                // Skip loopback and virtual interfaces
+                if (iface === "lo" || iface.startsWith("vir") ||
+                    iface.startsWith("docker") || iface.startsWith("br-")) return
+
+                const rx = parseInt(m[2])
+                const tx = parseInt(m[4])
+
+                const prev = root._netPrev[iface]
+                if (prev) {
+                    const downRate = Math.max(0, rx - prev.rx)
+                    const upRate   = Math.max(0, tx - prev.tx)
+
+                    // Use the interface with the highest traffic as active
+                    if (downRate + upRate > (root._netPrev._bestRate || 0)) {
+                        root._netPrev._bestRate   = downRate + upRate
+                        root.activeInterface      = iface
+                        root.netDownRate          = downRate
+                        root.netUpRate            = upRate
+
+                        // Append to history, cap at maxNetHistory
+                        let dHist = root.netDownHistory.slice()
+                        let uHist = root.netUpHistory.slice()
+                        dHist.push(downRate)
+                        uHist.push(upRate)
+                        if (dHist.length > root.maxNetHistory) dHist.shift()
+                        if (uHist.length > root.maxNetHistory) uHist.shift()
+                        root.netDownHistory = dHist
+                        root.netUpHistory   = uHist
+                    }
+                }
+
+                root._netPrev[iface] = { rx, tx }
+            }
+        }
+
+        onExited: {
+            root._netPrev._bestRate = 0  // reset best rate each poll cycle
+        }
+    }
+
+    // ── Temperature polling ───────────────────────────────────────────────────
+    Process {
+        id: tempProc
+        command: ["sh", "-c",
+            "cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null | sort -n | tail -1"]
+        running: false
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                const v = parseInt(line.trim())
+                if (!isNaN(v)) root.temperature = Math.round(v / 1000)
+            }
+        }
+    }
+
+    // ── Main poll timer — 1s interval ─────────────────────────────────────────
+    Timer {
+        interval:        1000
+        running:         true
+        repeat:          true
+        triggeredOnStart: true
+
+        onTriggered: {
+            cpuProc.running  = true
+            memProc.running  = true
+            netProc.running  = true
+            tempProc.running = true
+            if (root.hasGpu) gpuReadProc.running = true
+            // Disk polls less frequently — every 10s
+            if (_diskTick % 10 === 0) diskProc.running = true
+            _diskTick++
+        }
+
+        property int _diskTick: 0
+    }
+}
+
+==> ./src/services/system/qmldir <==
+singleton SystemStats 1.0 SystemStats.qml
+# system submodule is imported as qs.src.services.system
+
+==> ./src/services/NetworkService.qml <==
+// src/services/NetworkService.qml
+pragma Singleton
+
+import QtQuick
+import Quickshell
+import Quickshell.Networking
+import Quickshell.Bluetooth
+
+Singleton {
+    id: root
+
+    // ── WiFi ─────────────────────────────────────────────────────────────────
+
+    /// The first WiFi device found, or null
+    readonly property var wifiDevice: {
+        const devs = Networking.devices.values;
+        for (let i = 0; i < devs.length; i++) {
+            if (devs[i].type === DeviceType.Wifi) return devs[i];
+        }
+        return null;
+    }
+
+    /// The currently connected WifiNetwork, or null
+    readonly property var activeNetwork: {
+        if (!root.wifiDevice) return null;
+        const nets = root.wifiDevice.networks.values;
+        for (let i = 0; i < nets.length; i++) {
+            if (nets[i].connected) return nets[i];
+        }
+        return null;
+    }
+
+    readonly property string ssid:          root.activeNetwork?.name         ?? ""
+    readonly property real   signalStrength: root.activeNetwork?.signalStrength ?? 0.0
+    readonly property bool   wifiConnected:  root.wifiDevice?.connected       ?? false
+    readonly property bool   wifiEnabled:    Networking.wifiEnabled
+
+    function setWifiEnabled(val) {
+        Networking.wifiEnabled = val;
+    }
+
+    /// Sorted list of all visible networks (connected first, then by signal strength)
+    readonly property var networks: {
+        if (!root.wifiDevice) return [];
+        const nets = root.wifiDevice.networks.values.slice();
+        nets.sort((a, b) => {
+            if (a.connected !== b.connected) return a.connected ? -1 : 1;
+            return b.signalStrength - a.signalStrength;
+        });
+        return nets;
+    }
+
+    // Enable scanner whenever the popup is open — caller sets this
+    property bool scannerActive: false
+    onScannerActiveChanged: {
+        if (root.wifiDevice) root.wifiDevice.scannerEnabled = root.scannerActive;
+    }
+    onWifiDeviceChanged: {
+        if (root.wifiDevice) root.wifiDevice.scannerEnabled = root.scannerActive;
+    }
+
+    // ── Bluetooth ─────────────────────────────────────────────────────────────
+
+    readonly property var btAdapter:       Bluetooth.defaultAdapter
+    readonly property bool btEnabled:      root.btAdapter?.enabled      ?? false
+    readonly property var btDevices:       Bluetooth.connectedDevices?.values ?? []
+
+    function setBtEnabled(val) {
+        if (root.btAdapter) root.btAdapter.enabled = val;
+    }
+}
+
+==> ./src/services/VolumeService.qml <==
+pragma Singleton
+import QtQuick
+import Quickshell
+import Quickshell.Services.Pipewire
+
+Singleton {
+    id: root
+
+    // ── Output ────────────────────────────────────────────────────────────────
+    PwObjectTracker { objects: [Pipewire.defaultAudioSink] }
+
+    property var  sink:   Pipewire.defaultAudioSink
+    property var  audio:  sink?.audio ?? null
+    property real volume: audio?.volume ?? 0.0
+    property bool muted:  audio?.muted  ?? false
+
+    function toggleMute() {
+        if (audio) audio.muted = !audio.muted
+    }
+
+    function changeVolume(step) {
+        if (audio)
+            audio.volume = Math.max(0.0, Math.min(1.0, audio.volume + step))
+    }
+
+    // ── Input ─────────────────────────────────────────────────────────────────
+    PwObjectTracker { objects: [Pipewire.defaultAudioSource] }
+
+    property var  source:      Pipewire.defaultAudioSource
+    property var  inputAudio:  source?.audio ?? null
+    property real inputVolume: inputAudio?.volume ?? 0.0
+    property bool inputMuted:  inputAudio?.muted  ?? false
+
+    function toggleInputMute() {
+        if (inputAudio) inputAudio.muted = !inputAudio.muted
+    }
+
+    function changeInputVolume(step) {
+        if (inputAudio)
+            inputAudio.volume = Math.max(0.0, Math.min(1.0, inputAudio.volume + step))
+    }
+}
+
+==> ./src/services/qmldir <==
+singleton BatteryService      1.0 BatteryService.qml
+singleton NotificationService 1.0 NotificationService.qml
+singleton VolumeService       1.0 VolumeService.qml
+singleton NetworkService      1.0 NetworkService.qml
+
+==> ./src/popups/NotificationPanel.qml <==
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
+import Quickshell
+import Quickshell.Wayland
+import qs.src.components
+import qs.src.theme
+import qs.src.state
+import qs.src.services
+
+PanelWindow {
+    id: root
+
+    property var screen
+
+    color:         "transparent"
+    exclusionMode: ExclusionMode.Ignore
+
+    anchors {
+        top:   true
+        right: true
+    }
+
+    implicitWidth:  380
+    implicitHeight: root.screen ? root.screen.height : 800
+
+    WlrLayershell.layer: WlrLayer.Overlay
+
+    visible: slidePanel.windowVisible
+
+    PopupSlide {
+        id: slidePanel
+        anchors.fill: parent
+        edge: "top"
+        open: Popups.notificationsOpen
+        onCloseRequested: Popups.notificationsOpen = false
+    }
+
+    // ── Panel card ────────────────────────────────────────────────────────────
+    Rectangle {
+        anchors {
+            top:         parent.top
+            right:       parent.right
+            topMargin:   Theme.barHeight + 2
+            rightMargin: Theme.barMargin
+        }
+        width:         360
+        height:        Math.min(
+                           notifCol.implicitHeight + 48,
+                           root.implicitHeight - Theme.barHeight - 24
+                       )
+        radius:        Theme.popupRadius
+        color:         Colors.background
+        border.color:  Colors.outlineVariant
+        border.width:  Theme.popupBorder
+        clip:          true
+
+        // ── Header ────────────────────────────────────────────────────────────
+        Rectangle {
+            id: panelHeader
+            anchors { top: parent.top; left: parent.left; right: parent.right }
+            height: 48
+            color:  "transparent"
+
+            RowLayout {
+                anchors { fill: parent; topMargin: 8; leftMargin: 16; rightMargin: 16; bottomMargin: 8 }
+
+                Text {
+                    text:           "Notifications"
+                    color:          Colors.on_Surface
+                    font.pixelSize: 14
+                    font.bold:      true
+                    font.family:    Fonts.font
+                    Layout.fillWidth: true
+                }
+
+                // Clear all button
+                Rectangle {
+                    visible:      NotificationService.notifications.length > 0
+                    width:        90
+                    height:       26
+                    radius:       13
+                    color:        "transparent"
+                    border.color: Colors.outline
+                    border.width: 1
+
+                    Rectangle {
+                        width: 90
+                        height: 26
+                        radius: 15
+                        color: Colors.primary
+                        opacity: clearHov.containsMouse ? 0.25 : 0
+
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                    }
+
+                    Text {
+                        id:               clearText
+                        anchors.centerIn: parent
+                        text:             "Clear all"
+                        color:            Colors.on_Surface
+                        font.pixelSize:   11
+                        font.family:      Fonts.font
+                    }
+
+                    MouseArea {
+                        id:           clearHov
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape:  Qt.PointingHandCursor
+                        onClicked:    NotificationService.clearAll()
+                    }
+                }
+            }
+
+            // Divider
+            Rectangle {
+                anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+                height:  1
+                color:   Colors.outlineVariant
+                opacity: 0.5
+            }
+        }
+
+        // ── Notification list ─────────────────────────────────────────────────
+        Flickable {
+            anchors {
+                top:    panelHeader.bottom
+                left:   parent.left
+                right:  parent.right
+                bottom: parent.bottom
+            }
+            contentHeight: notifCol.implicitHeight
+            clip:          true
+            boundsBehavior: Flickable.StopAtBounds
+
+            // ScrollBar.vertical: ScrollBar {
+            //     policy: ScrollBar.AsNeeded
+            //     contentItem: Rectangle {
+            //         implicitWidth:  3
+            //         implicitHeight: 40
+            //         radius:         1.5
+            //         color:          Qt.rgba(1, 1, 1, 0.25)
+            //     }
+            //     background: Item {}
+            // }
+
+            Column {
+                id:       notifCol
+                anchors { top: parent.top; left: parent.left; right: parent.right }
+                spacing:  4
+                padding:  8
+
+                // Empty state
+                Item {
+                    visible: NotificationService.notifications.length === 0
+                    width:   parent.width - 16
+                    height:  80
+
+                    ColumnLayout {
+                        anchors.centerIn: parent
+                        spacing: 6
+
+                        Text {
+                            Layout.alignment: Qt.AlignHCenter
+                            text:             "󰂚"
+                            font.pixelSize:   28
+                            font.family:      Fonts.font
+                            color:            Colors.outline
+                        }
+
+                        Text {
+                            Layout.alignment: Qt.AlignHCenter
+                            text:             "No notifications"
+                            font.pixelSize:   12
+                            font.family:      Fonts.font
+                            color:            Colors.outline
+                        }
+                    }
+                }
+
+                // Notification items
+                Repeater {
+                    model: NotificationService.notifications
+
+                    delegate: Rectangle {
+                        id:           notifItem
+                        required property var modelData
+
+                        width:   notifCol.width - 16
+                        height:  notifBody.implicitHeight + 24
+                        radius:  10
+                        color:   itemHov.containsMouse
+                                     ? Colors.surfaceContainerHighest
+                                     : Colors.surfaceContainerHigh
+                        border.width: 1
+                        border.color: Colors.outlineVariant
+                        Behavior on color { ColorAnimation { duration: 120 } }
+
+                        RowLayout {
+                            id:      notifBody
+                            anchors { fill: parent; margins: 12 }
+                            spacing: 10
+
+                            // App icon
+                            Rectangle {
+                                width:  36
+                                height: 36
+                                radius: 8
+                                color:  Colors.primaryContainer
+                                Layout.alignment: Qt.AlignTop
+
+                                Image {
+                                    anchors.centerIn: parent
+                                    width:   22
+                                    height:  22
+                                    source:  notifItem.modelData && notifItem.modelData.appIcon
+                                                 ? "image://icon/" + notifItem.modelData.appIcon
+                                                 : ""
+                                    visible: source !== ""
+                                    fillMode: Image.PreserveAspectFit
+                                    smooth:   true
+                                }
+
+                                // Fallback icon when no app icon available
+                                Text {
+                                    anchors.centerIn: parent
+                                    visible:          !(notifItem.modelData && notifItem.modelData.appIcon)
+                                    text:             "󰂚"
+                                    font.pixelSize:   16
+                                    font.family:      Fonts.font
+                                    color:            Colors.on_PrimaryContainer
+                                }
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+
+                                    Text {
+                                        text:           notifItem.modelData.appName || ""
+                                        color:          Colors.on_SurfaceVariant
+                                        font.pixelSize: 10
+                                        font.family:    Fonts.font
+                                        Layout.fillWidth: true
+                                        elide:          Text.ElideRight
+                                    }
+
+                                    Text {
+                                        text: NotificationService.formatTimestamp(
+                                            NotificationService.getPanelArrivalTime(
+                                                notifItem.modelData.id))
+                                        color:          Colors.outline
+                                        font.pixelSize: 10
+                                        font.family:    Fonts.font
+                                    }
+                                }
+
+                                Text {
+                                    text:           notifItem.modelData.summary || ""
+                                    color:          Colors.on_Surface
+                                    font.pixelSize: 12
+                                    font.bold:      true
+                                    font.family:    Fonts.font
+                                    Layout.fillWidth: true
+                                    elide:          Text.ElideRight
+                                }
+
+                                Text {
+                                    visible:        notifItem.modelData.body !== ""
+                                    text:           notifItem.modelData.body || ""
+                                    color:          Colors.on_SurfaceVariant
+                                    font.pixelSize: 11
+                                    font.family:    Fonts.font
+                                    Layout.fillWidth: true
+                                    wrapMode:       Text.WordWrap
+                                    maximumLineCount: 3
+                                    elide:          Text.ElideRight
+                                }
+                            }
+
+                            // Dismiss
+                            Rectangle {
+                                width:  20
+                                height: 20
+                                radius: 10
+                                color:  dimissItemHov.containsMouse
+                                            ? Qt.rgba(1, 1, 1, 0.12)
+                                            : "transparent"
+                                Layout.alignment: Qt.AlignTop
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text:             "󰅖"
+                                    font.pixelSize:   11
+                                    font.family:      Fonts.font
+                                    color:            Colors.on_SurfaceVariant
+                                }
+
+                                MouseArea {
+                                    id:           dimissItemHov
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape:  Qt.PointingHandCursor
+                                    onClicked:    notifItem.modelData.dismiss()
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            id:           itemHov
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape:  Qt.PointingHandCursor
+                            // Clicking item dismisses it
+                            onClicked:    notifItem.modelData.dismiss()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+==> ./src/popups/VolumePopup.qml <==
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Wayland
+import Quickshell.Services.Pipewire
+import qs.src.components
+import qs.src.theme
+import qs.src.state
+import qs.src.services
+
+PanelWindow {
+    id: root
+    property var screen
+
+    PwObjectTracker {
+        objects: Pipewire.nodes.values.filter(n => n.audio !== null && !n.isStream && n.isSink)
+    }
+    PwObjectTracker {
+        objects: Pipewire.nodes.values.filter(n => n.audio !== null && !n.isStream && !n.isSink)
+    }
+
+    color:         "transparent"
+    exclusionMode: ExclusionMode.Ignore
+
+    anchors {
+        top:   true
+        right: true
+    }
+
+    implicitWidth:  380
+    implicitHeight: root.screen ? root.screen.height : 800
+
+    WlrLayershell.layer: WlrLayer.Overlay
+    visible: slidePanel.windowVisible
+
+    PopupSlide {
+        id: slidePanel
+        anchors.fill: parent
+        edge: "top"
+        open: Popups.volumeOpen
+        onCloseRequested: Popups.volumeOpen = false
+    }
+
+    // ── Popup card ────────────────────────────────────────────────────────────
+    Rectangle {
+        id: card
+        anchors {
+            top:         parent.top
+            right:       parent.right
+            topMargin:   Theme.barHeight + 8
+            rightMargin: Theme.barMargin
+        }
+        width:        360
+        height:       cardCol.implicitHeight + 18
+        radius:       Theme.popupRadius
+        color:        Colors.surfaceContainer
+        border.color: Colors.outlineVariant
+        border.width: Theme.popupBorder
+        clip:         true
+
+        ColumnLayout {
+            id: cardCol
+            anchors {
+                top:     parent.top
+                left:    parent.left
+                right:   parent.right
+                topMargin: 10
+                rightMargin: 16
+                leftMargin: 16
+                bottomMargin: 16
+            }
+            spacing: 12
+
+            // ── Tab bar ───────────────────────────────────────────────────────
+            TabBar {
+                id: tabs
+                Layout.fillWidth: true
+                orientation: "horizontal"
+
+                model: [
+                    { key: "output",  icon: "󰕾", label: "Output"  },
+                    { key: "input",   icon: "󰍬", label: "Input"   },
+                    { key: "devices", icon: "󰓃", label: "Devices" }
+                ]
+
+                currentPage: "output"
+                onPageChanged: (key) => currentPage = key
+            }
+
+            // ── Output tab ────────────────────────────────────────────────────
+            ColumnLayout {
+                visible:          tabs.currentPage === "output"
+                Layout.fillWidth: true
+                spacing:          12
+
+                // Volume row
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    // Mute button
+                    Rectangle {
+                        width:  36
+                        height: 36
+                        radius: 18
+                        color:  VolumeService.muted
+                                    ? Colors.errorContainer
+                                    : (muteOutHov.containsMouse
+                                        ? Qt.rgba(1,1,1,0.08)
+                                        : Colors.surfaceContainerHighest)
+                        Behavior on color { ColorAnimation { duration: 120 } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: VolumeService.muted ? "󰝟" : "󰕾"
+                            color: VolumeService.muted
+                                       ? Colors.on_ErrorContainer
+                                       : Colors.primary
+                            font.pixelSize: 16
+                            font.family:    Fonts.font
+                        }
+
+                        MouseArea {
+                            id:           muteOutHov
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape:  Qt.PointingHandCursor
+                            onClicked:    VolumeService.toggleMute()
+                        }
+                    }
+
+                    // Slider
+                    VolumeSlider {
+                        Layout.fillWidth: true
+                        value:    VolumeService.volume
+                        muted:    VolumeService.muted
+                        onMoved:  (v) => {
+                            if (VolumeService.audio)
+                                VolumeService.audio.volume = v
+                        }
+                    }
+
+                    // Percentage label
+                    Text {
+                        text:           Math.round(VolumeService.volume * 100) + "%"
+                        color:          Colors.on_Surface
+                        font.pixelSize: 12
+                        font.bold:      true
+                        font.family:    Fonts.font
+                        horizontalAlignment: Text.AlignRight
+                        width: 36
+                    }
+                }
+
+                // Current output device — click to go to devices tab
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: 8
+                    height:  44
+                    radius:  10
+                    color:   outDevHov.containsMouse
+                                 ? Colors.surfaceContainerHighest
+                                 : Colors.surfaceContainerHigh
+                    Behavior on color { ColorAnimation { duration: 120 } }
+
+                    RowLayout {
+                        anchors { fill: parent; rightMargin: 12; leftMargin: 12 }
+                        spacing: 8
+
+                        Text {
+                            text:           "󰓃"
+                            color:          Colors.primary
+                            font.pixelSize: 16
+                            font.family:    Fonts.font
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing:          0
+
+                            Text {
+                                text:              "Output device"
+                                color:             Colors.on_SurfaceVariant
+                                font.pixelSize:    10
+                                font.family:       Fonts.font
+                                Layout.fillWidth:  true
+                            }
+
+                            Text {
+                                text:             VolumeService.sink
+                                                      ? (VolumeService.sink.description || "Unknown")
+                                                      : "None"
+                                color:            Colors.on_Surface
+                                font.pixelSize:   12
+                                font.bold:        true
+                                font.family:      Fonts.font
+                                elide:            Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+                        }
+
+                        Text {
+                            text:           "󰄾"
+                            color:          Colors.on_SurfaceVariant
+                            font.pixelSize: 14
+                            font.family:    Fonts.font
+                        }
+                    }
+
+                    MouseArea {
+                        id:           outDevHov
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape:  Qt.PointingHandCursor
+                        onClicked:    tabs.currentPage = "devices"
+                    }
+                }
+            }
+
+            // ── Input tab ─────────────────────────────────────────────────────
+            ColumnLayout {
+                visible:          tabs.currentPage === "input"
+                Layout.fillWidth: true
+                spacing:          12
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    // Mute button
+                    Rectangle {
+                        width:  36
+                        height: 36
+                        radius: 18
+                        color:  VolumeService.inputMuted
+                                    ? Colors.errorContainer
+                                    : (muteInHov.containsMouse
+                                        ? Qt.rgba(1,1,1,0.08)
+                                        : Colors.surfaceContainerHighest)
+                        Behavior on color { ColorAnimation { duration: 120 } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text:  VolumeService.inputMuted ? "󰍭" : "󰍬"
+                            color: VolumeService.inputMuted
+                                       ? Colors.on_ErrorContainer
+                                       : Colors.primary
+                            font.pixelSize: 16
+                            font.family:    Fonts.font
+                        }
+
+                        MouseArea {
+                            id:           muteInHov
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape:  Qt.PointingHandCursor
+                            onClicked:    VolumeService.toggleInputMute()
+                        }
+                    }
+
+                    VolumeSlider {
+                        Layout.fillWidth: true
+                        value:   VolumeService.inputVolume
+                        muted:   VolumeService.inputMuted
+                        onMoved: (v) => {
+                            if (VolumeService.inputAudio)
+                                VolumeService.inputAudio.volume = v
+                        }
+                    }
+
+                    Text {
+                        text:           Math.round(VolumeService.inputVolume * 100) + "%"
+                        color:          Colors.on_Surface
+                        font.pixelSize: 12
+                        font.bold:      true
+                        font.family:    Fonts.font
+                        horizontalAlignment: Text.AlignRight
+                        width: 36
+                    }
+                }
+
+                // Current input device
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: 8
+                    height:  44
+                    radius:  10
+                    color:   inDevHov.containsMouse
+                                 ? Colors.surfaceContainerHighest
+                                 : Colors.surfaceContainerHigh
+                    Behavior on color { ColorAnimation { duration: 120 } }
+
+                    RowLayout {
+                        anchors { fill: parent; rightMargin: 12; leftMargin: 12 }
+                        spacing: 8
+
+                        Text {
+                            text:           "󰍬"
+                            color:          Colors.primary
+                            font.pixelSize: 16
+                            font.family:    Fonts.font
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 0
+
+                            Text {
+                                text:           "Input device"
+                                color:          Colors.on_SurfaceVariant
+                                font.pixelSize: 10
+                                font.family:    Fonts.font
+                            }
+
+                            Text {
+                                text: VolumeService.source
+                                          ? (VolumeService.source.description || "Unknown")
+                                          : "None"
+                                color:          Colors.on_Surface
+                                font.pixelSize: 12
+                                font.bold:      true
+                                font.family:    Fonts.font
+                                elide:          Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+                        }
+
+                        Text {
+                            text:           "󰄾"
+                            color:          Colors.on_SurfaceVariant
+                            font.pixelSize: 14
+                            font.family:    Fonts.font
+                        }
+                    }
+
+                    MouseArea {
+                        id:           inDevHov
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape:  Qt.PointingHandCursor
+                        onClicked:    tabs.currentPage = "devices"
+                    }
+                }
+            }
+
+            // ── Devices tab ───────────────────────────────────────────────────
+            ColumnLayout {
+                visible:          tabs.currentPage === "devices"
+                Layout.fillWidth: true
+                spacing:          8
+
+                // Output devices section
+                Text {
+                    text:           "Output"
+                    color:          Colors.on_SurfaceVariant
+                    font.pixelSize: 11
+                    font.bold:      true
+                    font.family:    Fonts.font
+                    leftPadding:    4
+                }
+
+                Repeater {
+                    model: Pipewire.nodes.values.filter(n =>
+                        n.audio !== null &&
+                        !n.isStream &&
+                        n.isSink
+                    )
+                    delegate: DeviceRow {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        deviceName:  modelData.description || modelData.name || "Unknown"
+                        isDefault:   VolumeService.sink && VolumeService.sink.id === modelData.id
+                        icon:        "󰓃"
+                        onActivated: Pipewire.preferredDefaultAudioSink = modelData
+                    }
+                }
+
+                // Divider between output and input
+                Rectangle {
+                    Layout.fillWidth: true
+                    height:  1
+                    color:   Colors.outlineVariant
+                    opacity: 0.5
+                }
+
+                // Input devices section
+                Text {
+                    text:           "Input"
+                    color:          Colors.on_SurfaceVariant
+                    font.pixelSize: 11
+                    font.bold:      true
+                    font.family:    Fonts.font
+                    leftPadding:    4
+                }
+
+                Repeater {
+                    model: Pipewire.nodes.values.filter(n =>
+                        n.audio !== null &&
+                        !n.isStream &&
+                        !n.isSink
+                    )
+                    delegate: DeviceRow {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        deviceName: modelData.description || modelData.name || "Unknown"
+                        isDefault:  VolumeService.source && VolumeService.source.id === modelData.id
+                        icon:       "󰍬"
+                        onActivated: Pipewire.preferredDefaultAudioSource = modelData
+                    }
+                }
+
+                Layout.bottomMargin: 4
+            }
+        }
+    }
+}
+
+==> ./src/popups/SystemPopup.qml <==
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Wayland
+import Quickshell.Io
+import qs.src.components
+import qs.src.theme
+import qs.src.state
+import qs.src.services.system
+import qs.src.services
+
+PanelWindow {
+    id: root
+
+    property var screen
+
+    color:         "transparent"
+    exclusionMode: ExclusionMode.Ignore
+
+    anchors {
+        top:   true
+        right: true
+    }
+
+    implicitWidth:  420
+    implicitHeight: root.screen ? root.screen.height : 800
+
+    WlrLayershell.layer: WlrLayer.Overlay
+    visible: slidePanel.windowVisible
+
+    PopupSlide {
+        id: slidePanel
+        anchors.fill: parent
+        edge: "top"
+        open: Popups.systemOpen
+        onCloseRequested: Popups.systemOpen = false
+    }
+
+    // ── Popup card ────────────────────────────────────────────────────────────
+    Rectangle {
+        anchors {
+            top:         parent.top
+            right:       parent.right
+            topMargin:   Theme.barHeight + 8
+            rightMargin: Theme.barMargin
+        }
+        width:        400
+        height:       cardCol.implicitHeight + 24
+        radius:       Theme.popupRadius
+        color:        Colors.surfaceContainer
+        border.color: Colors.outlineVariant
+        border.width: Theme.popupBorder
+        clip:         true
+
+        ColumnLayout {
+            id: cardCol
+            anchors {
+                top:   parent.top
+                left:  parent.left
+                right: parent.right
+                margins: 16
+            }
+            spacing: 16
+
+            // ── Header ────────────────────────────────────────────────────────
+            Text {
+                text:           "System"
+                color:          Colors.on_Surface
+                font.pixelSize: 14
+                font.bold:      true
+                font.family:    Fonts.font
+                Layout.topMargin: 4
+            }
+
+            // Divider
+            Rectangle {
+                Layout.fillWidth: true
+                height:  1
+                color:   Colors.outlineVariant
+                opacity: 0.5
+            }
+
+            // ── Speedometers row ──────────────────────────────────────────────
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Speedometer {
+                    label:   "CPU"
+                    value:   SystemStats.cpuUsage
+                    color:   Colors.primary
+                    Layout.fillWidth: true
+                }
+
+                Speedometer {
+                    label:   "RAM"
+                    value:   SystemStats.memUsage
+                    color:   Colors.secondary
+                    Layout.fillWidth: true
+                }
+
+                // GPU — only shown on AMD
+                Speedometer {
+                    visible: SystemStats.hasGpu
+                    label:   "GPU"
+                    value:   SystemStats.gpuUsage
+                    color:   Colors.tertiary
+                    Layout.fillWidth: true
+                }
+            }
+
+            // ── Disk bars ─────────────────────────────────────────────────────
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Repeater {
+                    model: SystemStats.diskPartitions
+
+                    delegate: DiskBar {
+                        required property var modelData
+                        Layout.fillWidth: true
+
+                        mountPoint: modelData.mount
+                        usedBytes:  modelData.used
+                        totalBytes: modelData.total
+                        label:      modelData.mount === "/" ? "Root" : modelData.mount
+                    }
+                }
+            }
+
+            // Divider
+            Rectangle {
+                Layout.fillWidth: true
+                height:  1
+                color:   Colors.outlineVariant
+                opacity: 0.5
+            }
+
+            // ── Network graph ─────────────────────────────────────────────────
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 6
+
+                RowLayout {
+                    Layout.fillWidth: true
+
+                    Text {
+                        text:           "Network  " + SystemStats.activeInterface
+                        color:          Colors.on_SurfaceVariant
+                        font.pixelSize: 11
+                        font.family:    Fonts.font
+                        Layout.fillWidth: true
+                    }
+
+                    Text {
+                        text:           "↑ " + SystemStats.formatBytes(SystemStats.netUpRate)
+                                      + "  ↓ " + SystemStats.formatBytes(SystemStats.netDownRate)
+                        color:          Colors.on_Surface
+                        font.pixelSize: 11
+                        font.bold:      true
+                        font.family:    Fonts.font
+                    }
+                }
+
+                NetworkGraph {
+                    Layout.fillWidth: true
+                    height:           60
+                    upHistory:        SystemStats.netUpHistory
+                    downHistory:      SystemStats.netDownHistory
+                }
+            }
+
+            // Divider
+            Rectangle {
+                Layout.fillWidth: true
+                height:  1
+                color:   Colors.outlineVariant
+                opacity: 0.5
+            }
+
+            // ── Temperature ───────────────────────────────────────────────────
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.bottomMargin: 4
+
+                Text {
+                    text:           "󰔏  Temperature"
+                    color:          Colors.on_SurfaceVariant
+                    font.pixelSize: 11
+                    font.family:    Fonts.font
+                    Layout.fillWidth: true
+                }
+
+                Text {
+                    text: SystemStats.temperature > 0
+                              ? SystemStats.temperature + " °C"
+                              : "N/A"
+                    color: SystemStats.temperature >= 80
+                               ? Colors.error
+                               : SystemStats.temperature >= 60
+                                   ? Colors.tertiary
+                                   : Colors.on_Surface
+                    font.pixelSize: 12
+                    font.bold:      true
+                    font.family:    Fonts.font
+
+                    Behavior on color { ColorAnimation { duration: 300 } }
+                }
+            }
+        }
+    }
+}
+
+==> ./src/popups/Speedometer.qml <==
+import QtQuick
+import QtQuick.Layouts
+import qs.src.theme
+
+Item {
+    id: root
+
+    property real   value: 0.0
+    property string label: ""
+    property color  color: Colors.primary
+
+    implicitWidth:  100
+    implicitHeight: 100
+
+    Canvas {
+        id: canvas
+        anchors.fill: parent
+
+        onPaint: {
+            const ctx        = getContext("2d")
+            const cx         = width  / 2
+            const cy         = height / 2 + 10
+            const radius     = Math.min(width, height) / 2 - 10
+            const startAngle = 150 * Math.PI / 180
+            const endAngle   = 390 * Math.PI / 180
+            const valueAngle = startAngle + (endAngle - startAngle) * Math.min(root._animValue, 1.0)
+
+            ctx.clearRect(0, 0, width, height)
+
+            ctx.beginPath()
+            ctx.arc(cx, cy, radius, startAngle, endAngle)
+            ctx.strokeStyle = Qt.rgba(
+                Colors.outlineVariant.r,
+                Colors.outlineVariant.g,
+                Colors.outlineVariant.b, 0.4)
+            ctx.lineWidth = 8
+            ctx.lineCap   = "round"
+            ctx.stroke()
+
+            if (root._animValue > 0) {
+                ctx.beginPath()
+                ctx.arc(cx, cy, radius, startAngle, valueAngle)
+                ctx.strokeStyle = root.color
+                ctx.lineWidth   = 8
+                ctx.lineCap     = "round"
+                ctx.stroke()
+            }
+
+            const ticks = [0.25, 0.5, 0.75]
+            ticks.forEach(t => {
+                const angle = startAngle + (endAngle - startAngle) * t
+                const inner = radius - 12
+                const outer = radius - 6
+                ctx.beginPath()
+                ctx.moveTo(cx + inner * Math.cos(angle), cy + inner * Math.sin(angle))
+                ctx.lineTo(cx + outer * Math.cos(angle), cy + outer * Math.sin(angle))
+                ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.2)
+                ctx.lineWidth   = 1.5
+                ctx.stroke()
+            })
+        }
+    }
+
+    property real _animValue: 0.0
+
+    onValueChanged: _animValue = value
+    on_AnimValueChanged: canvas.requestPaint()
+
+    Behavior on _animValue {
+        NumberAnimation {
+            duration:    800
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    ColumnLayout {
+        anchors.centerIn:            parent
+        anchors.verticalCenterOffset: 8
+        spacing: 0
+
+        Text {
+            Layout.alignment: Qt.AlignHCenter
+            text:           Math.round(root._animValue * 100) + "%"
+            color:          root.color
+            font.pixelSize: 16
+            font.bold:      true
+            font.family:    Fonts.font
+        }
+
+        Text {
+            Layout.alignment: Qt.AlignHCenter
+            text:           root.label
+            color:          Colors.on_SurfaceVariant
+            font.pixelSize: 10
+            font.family:    Fonts.font
+        }
+    }
+}
+
+==> ./src/popups/ToastItem.qml <==
+import QtQuick
+import QtQuick.Layouts
+import Quickshell.Services.Notifications
+import qs.src.theme
+import qs.src.services
+
+Item {
+    id: root
+
+    property int notifId:     0
+    property int toastIndex:  0
+    property int totalToasts: 1
+
+    // Find the actual notification object
+    property var notif: {
+        const all = NotificationService.server.trackedNotifications.values
+        for (let i = 0; i < all.length; i++) {
+            if (all[i].id === root.notifId) return all[i]
+        }
+        return null
+    }
+
+    readonly property int toastHeight: 80
+    readonly property int toastSpacing: 8
+
+    // Position: bottom of stack = index 0, stacks upward
+    // Each toast sits at: bottom - (index * (height + spacing))
+    width:  360
+    height: toastHeight
+
+    anchors {
+        bottom:       parent.bottom
+        right:        parent.right
+        bottomMargin: root.toastIndex * (root.toastHeight + root.toastSpacing)
+    }
+
+    Behavior on anchors.bottomMargin {
+        NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+    }
+
+    // ── Slide in from right ───────────────────────────────────────────────────
+    property bool _visible: false
+
+    Component.onCompleted: {
+        slideInTimer.start()
+    }
+
+    Timer {
+        id: slideInTimer
+        interval: 16  // one frame delay so anchor is set before animation starts
+        onTriggered: root._visible = true
+    }
+
+    x:       root._visible ? 0 : root.width + 20
+    opacity: root._visible ? 1 : 0
+
+    Behavior on x {
+        NumberAnimation { duration: 350; easing.type: Easing.OutCubic }
+    }
+    Behavior on opacity {
+        NumberAnimation { duration: 250 }
+    }
+
+    // ── Toast card ────────────────────────────────────────────────────────────
+    Rectangle {
+        anchors.fill: parent
+        radius:       Theme.popupRadius
+        color:        Colors.surfaceContainerHigh
+        border.color: Colors.outlineVariant
+        border.width: Theme.popupBorder
+
+        // Drop shadow feel via layered rectangles
+        Rectangle {
+            anchors {
+                fill:        parent
+                topMargin:   2
+                leftMargin:  2
+                rightMargin: -2
+                bottomMargin: -2
+            }
+            radius: parent.radius
+            color:  Colors.shadow
+            opacity: 0.3
+            z: -1
+        }
+
+        RowLayout {
+            anchors {
+                fill:    parent
+                margins: 12
+            }
+            spacing: 10
+
+            // App icon
+            Rectangle {
+                width:  36
+                height: 36
+                radius: 8
+                color:  Colors.primaryContainer
+                Layout.alignment: Qt.AlignTop
+
+                Image {
+                    anchors.centerIn: parent
+                    width:   22
+                    height:  22
+                    source:  root.notif && root.notif.appIcon
+                                 ? "image://icon/" + root.notif.appIcon
+                                 : ""
+                    visible: source !== ""
+                    fillMode: Image.PreserveAspectFit
+                    smooth:   true
+                }
+
+                // Fallback icon when no app icon available
+                Text {
+                    anchors.centerIn: parent
+                    visible:          !(root.notif && root.notif.appIcon)
+                    text:             "󰂚"
+                    font.pixelSize:   16
+                    font.family:      Fonts.font
+                    color:            Colors.on_PrimaryContainer
+                }
+            }
+
+            // Text content
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 2
+
+                RowLayout {
+                    Layout.fillWidth: true
+
+                    Text {
+                        text:           root.notif ? (root.notif.appName || "") : ""
+                        color:          Colors.on_SurfaceVariant
+                        font.pixelSize: 10
+                        font.family:    Fonts.font
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
+                    }
+
+                    // Timestamp — binds to _tick so updates every 30s
+                    Text {
+                        text: root.notif
+                            ? NotificationService.formatTimestamp(
+                                NotificationService.getPanelArrivalTime(root.notifId))
+                            : ""
+                        color:          Colors.outline
+                        font.pixelSize: 10
+                        font.family:    Fonts.font
+                    }
+                }
+
+                Text {
+                    text:           root.notif ? (root.notif.summary || "") : ""
+                    color:          Colors.on_Surface
+                    font.pixelSize: 12
+                    font.bold:      true
+                    font.family:    Fonts.font
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    visible:        root.notif ? (root.notif.body !== "") : false
+                    text:           root.notif ? root.notif.body : ""
+                    color:          Colors.on_SurfaceVariant
+                    font.pixelSize: 11
+                    font.family:    Fonts.font
+                    Layout.fillWidth: true
+                    elide:          Text.ElideRight
+                    maximumLineCount: 2
+                    wrapMode:       Text.WordWrap
+                }
+            }
+
+            // Dismiss button
+            Rectangle {
+                width:  20
+                height: 20
+                radius: 10
+                color:  dismissHov.containsMouse
+                            ? Qt.rgba(1, 1, 1, 0.12)
+                            : "transparent"
+                Layout.alignment: Qt.AlignTop
+
+                Text {
+                    anchors.centerIn: parent
+                    text:             "󰅖"
+                    font.pixelSize:   11
+                    font.family:      Fonts.font
+                    color:            Colors.on_SurfaceVariant
+                }
+
+                MouseArea {
+                    id:           dismissHov
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape:  Qt.PointingHandCursor
+                    onClicked: {
+                        if (root.notif) root.notif.dismiss()
+                        NotificationService.removeToast(root.notifId)
+                    }
+                }
+            }
+        }
+    }
+}
+
+==> ./src/popups/NotificationToast.qml <==
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Wayland
+import Quickshell.Services.Notifications
+import qs.src.theme
+import qs.src.state
+import qs.src.services
+
+// Fixed-size PanelWindow — surface never resizes, only content animates
+PanelWindow {
+    id: root
+
+    property var screen
+
+    color:         "transparent"
+    exclusionMode: ExclusionMode.Ignore
+
+    anchors {
+        bottom: true
+        right:  true
+    }
+
+    // Fixed dimensions — large enough for max 5 toasts stacked
+    // Never bind these to content or the surface will jump
+    implicitWidth:  380
+    implicitHeight: 500
+
+    mask: Region {
+        Region {
+            x: root.width - 360 - 12
+            y: root.height - 2 - (NotificationService.activeToasts.length * 88)
+            width: 360
+            height: NotificationService.activeToasts.length * 88
+        }
+    }
+
+    WlrLayershell.layer: WlrLayer.Overlay
+
+    // ── Toast stack ───────────────────────────────────────────────────────────
+    // Toasts anchor to the bottom, stack upward
+    // New toast slides in from the right, existing ones animate upward
+
+    Item {
+        anchors {
+            bottom: parent.bottom
+            right:  parent.right
+            bottomMargin: 12
+            rightMargin:  12
+        }
+        width:  360
+        height: parent.height - 24
+
+        Repeater {
+            id: toastRepeater
+            model: NotificationService.activeToasts
+
+            delegate: ToastItem {
+                required property var modelData
+                required property int index
+
+                notifId:     modelData
+                toastIndex:  index
+                totalToasts: NotificationService.activeToasts.length
+            }
+        }
+    }
+}
+
+==> ./src/popups/DeviceRow.qml <==
+import QtQuick
+import QtQuick.Layouts
+import qs.src.theme
+
+// Single device row for the Devices tab
+// Shows device name, default indicator chip, and sets default on click
+
+Item {
+    id: root
+
+    property string deviceName: ""
+    property bool   isDefault:  false
+    property string icon:       "󰓃"
+
+    signal activated()
+
+    implicitHeight: 44
+
+    Rectangle {
+        anchors.fill: parent
+        radius:       10
+        color:        rowHov.containsMouse
+                          ? Colors.surfaceContainerHighest
+                          : (root.isDefault
+                              ? Qt.rgba(
+                                    Colors.primaryContainer.r,
+                                    Colors.primaryContainer.g,
+                                    Colors.primaryContainer.b, 0.3)
+                              : "transparent")
+        Behavior on color { ColorAnimation { duration: 120 } }
+
+        RowLayout {
+            anchors { fill: parent; margins: 12 }
+            spacing: 10
+
+            // Device icon
+            Text {
+                text:           root.icon
+                color:          root.isDefault ? Colors.primary : Colors.on_SurfaceVariant
+                font.pixelSize: 16
+                font.family:    Fonts.font
+                Behavior on color { ColorAnimation { duration: 120 } }
+            }
+
+            // Device name
+            Text {
+                text:           root.deviceName
+                color:          root.isDefault ? Colors.on_Surface : Colors.on_SurfaceVariant
+                font.pixelSize: 12
+                font.bold:      root.isDefault
+                font.family:    Fonts.font
+                elide:          Text.ElideRight
+                Layout.fillWidth: true
+                Behavior on color { ColorAnimation { duration: 120 } }
+            }
+
+            // Default chip — filled pill with checkmark
+            Rectangle {
+                visible: root.isDefault
+                width:   chipRow.implicitWidth + 16
+                height:  22
+                radius:  11
+                color:   Colors.primary
+
+                Row {
+                    id:       chipRow
+                    anchors.centerIn: parent
+                    spacing:  4
+
+                    Text {
+                        text:           "󰄵"
+                        color:          Colors.on_Primary
+                        font.pixelSize: 10
+                        font.family:    Fonts.font
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Text {
+                        text:           "Default"
+                        color:          Colors.on_Primary
+                        font.pixelSize: 10
+                        font.bold:      true
+                        font.family:    Fonts.font
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+        }
+
+        MouseArea {
+            id:           rowHov
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape:  Qt.PointingHandCursor
+            onClicked:    if (!root.isDefault) root.activated()
+        }
+    }
+}
+
+==> ./src/popups/NetworkGraph.qml <==
+import QtQuick
+import qs.src.theme
+
+Canvas {
+    id: root
+
+    property var upHistory:   []
+    property var downHistory: []
+    property real slideOffset: 0.0
+
+    // Drives the fluid 60FPS scrolling to match the 1000ms data polling
+    NumberAnimation {
+        id: slideAnim
+        target: root
+        property: "slideOffset"
+        from: 1.0
+        to: 0.0
+        duration: 1000 
+    }
+
+    onUpHistoryChanged: slideAnim.restart()
+    onSlideOffsetChanged: requestPaint()
+
+    onPaint: {
+        const ctx = getContext("2d")
+        ctx.clearRect(0, 0, width, height)
+
+        if (!root.upHistory || !root.downHistory ||
+            root.upHistory.length < 2 || root.downHistory.length < 2) return
+
+        const allVals = root.upHistory.concat(root.downHistory)
+        const maxVal  = Math.max(...allVals, 1024) 
+
+        // 1. Save state and create a clipping mask so the graph doesn't bleed out
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(0, 0, width, height)
+        ctx.clip()
+
+        // 2. Translate the canvas horizontally to animate the scroll
+        const step = width / Math.max(root.upHistory.length - 2, 1)
+        ctx.translate(slideOffset * step, 0)
+
+        function drawLine(history, color) {
+            ctx.beginPath()
+            ctx.strokeStyle = color
+            ctx.lineWidth   = 2.0
+            ctx.lineJoin    = "round"
+
+            // Shift initial X coordinate to the left by 1 step (-1) to hide data popping in
+            const points = history.map((v, i) => ({
+                x: (i - 1) * step, 
+                y: height - (v / maxVal) * height * 0.85 
+            }))
+
+            ctx.moveTo(points[0].x, points[0].y)
+
+            for (let i = 0; i < points.length - 1; i++) {
+                const p1 = points[i]
+                const p2 = points[i + 1]
+                const midX = (p1.x + p2.x) / 2
+                const midY = (p1.y + p2.y) / 2
+
+                if (i === points.length - 2) {
+                    ctx.quadraticCurveTo(p1.x, p1.y, p2.x, p2.y)
+                } else {
+                    ctx.quadraticCurveTo(p1.x, p1.y, midX, midY)
+                }
+            }
+            ctx.stroke()
+
+            // Fill under line safely using Qt.rgba
+            ctx.lineTo(points[points.length - 1].x, height)
+            ctx.lineTo(points[0].x, height)
+            ctx.closePath()
+            ctx.fillStyle = Qt.rgba(color.r, color.g, color.b, 0.2)
+            ctx.fill()
+        }
+
+        drawLine(root.upHistory, Colors.tertiary)
+        drawLine(root.downHistory, Colors.primary)
+
+        // 3. Restore state so the legend doesn't scroll or get clipped
+        ctx.restore()
+        const drawRoundedRect = (x, y, w, h, r) => {
+            ctx.beginPath()
+            ctx.moveTo(x + r, y)
+            ctx.lineTo(x + w - r, y)
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+            ctx.lineTo(x + w, y + h - r)
+            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+            ctx.lineTo(x + r, y + h)
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+            ctx.lineTo(x, y + r)
+            ctx.quadraticCurveTo(x, y, x + r, y)
+            ctx.closePath()
+        }
+        // 4. Draw a highly visible static legend card on top
+        ctx.fillStyle = Qt.rgba(Colors.surfaceContainerHighest.r, Colors.surfaceContainerHighest.g, Colors.surfaceContainerHighest.b, 0.9)
+        ctx.beginPath()
+        drawRoundedRect(8, 8, 76, 44, 8)
+        ctx.fill()
+        
+        ctx.strokeStyle = Qt.rgba(Colors.outlineVariant.r, Colors.outlineVariant.g, Colors.outlineVariant.b, 0.5)
+        ctx.lineWidth = 1
+        ctx.stroke()
+
+        ctx.font = "bold 11px '" + Fonts.font + "'"
+        
+        // Up label
+        ctx.fillStyle = Colors.tertiary
+        ctx.beginPath()
+        ctx.arc(20, 20, 4, 0, 2 * Math.PI)
+        ctx.fill()
+        ctx.fillStyle = Colors.on_Surface
+        ctx.fillText("Up", 32, 24)
+
+        // Down label
+        ctx.fillStyle = Colors.primary
+        ctx.beginPath()
+        ctx.arc(20, 36, 4, 0, 2 * Math.PI)
+        ctx.fill()
+        ctx.fillStyle = Colors.on_Surface
+        ctx.fillText("Down", 32, 40)
+    }
+}
+
+==> ./src/popups/qmldir <==
+NotificationToast 1.0 NotificationToast.qml
+NotificationPanel 1.0 NotificationPanel.qml
+ToastItem 1.0 ToastItem.qml
+SystemPopup 1.0 SystemPopup.qml
+Speedometer 1.0 Speedometer.qml
+DiskBar 1.0 DiskBar.qml
+NetworkGraph 1.0 NetworkGraph.qml
+VolumePopup 1.0 VolumePopup.qml
+VolumeSlider 1.0 VolumeSlider.qml
+DeviceRow 1.0 DeviceRow.qml
+NetworkPopup 1.0 NetworkPopup.qml
+NetworkRow   1.0 NetworkRow.qml
+
+==> ./src/popups/NetworkRow.qml <==
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import Quickshell.Networking
+import qs.src.theme
+import qs.src.components
+
+Item {
+    id: root
+    required property var network
+
+    implicitHeight: innerCol.implicitHeight + 24
+    property bool _showPsk: false
+
+    Connections {
+        target: root.network
+        function onConnectionFailed(reason) {
+            if (reason === ConnectionFailReason.NoSecrets) {
+                root._showPsk = true;
+            }
+        }
+    }
+
+    // Background and full-row click handler (Normal 1-click connect)
+    Rectangle {
+        anchors.fill: parent
+        radius: 10
+        color: rowHover.containsMouse
+            ? Colors.surfaceContainerHighest
+            : (root.network.connected 
+                ? Qt.rgba(Colors.primaryContainer.r, Colors.primaryContainer.g, Colors.primaryContainer.b, 0.3) 
+                : "transparent")
+        
+        Behavior on color { ColorAnimation { duration: 120 } }
+
+        MouseArea {
+            id: rowHover
+            anchors.fill: parent
+            enabled: !root.network.stateChanging
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                if (root.network.connected) {
+                    root.network.disconnect();
+                    root._showPsk = false;
+                } else {
+                    root._showPsk = false;
+                    root.network.connect();
+                }
+            }
+        }
+    }
+
+    // Content sits on top so the TextField and Lock button consume clicks safely
+    ColumnLayout {
+        id: innerCol
+        anchors { top: parent.top; left: parent.left; right: parent.right; margins: 12 }
+        spacing: 10
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+
+            // Signal strength icon
+            Text {
+                text: {
+                    if (!root.network.connected && root.network.state === ConnectionState.Connecting) return "󱑤";
+                    const s = root.network.signalStrength ?? 0;
+                    if (s < 0.25) return "󰤟";
+                    if (s < 0.50) return "󰤢";
+                    if (s < 0.75) return "󰤥";
+                    return "󰤨";
+                }
+                color: root.network.connected ? Colors.primary : Colors.on_SurfaceVariant
+                font.pixelSize: 16
+                font.family: Fonts.fontM
+                Behavior on color { ColorAnimation { duration: 120 } }
+            }
+
+            // SSID
+            Text {
+                text: root.network.name
+                color: root.network.connected ? Colors.on_Surface : Colors.on_SurfaceVariant
+                font.pixelSize: 12
+                font.bold: root.network.connected
+                font.family: Fonts.font
+                elide: Text.ElideRight
+                Layout.fillWidth: true
+                Behavior on color { ColorAnimation { duration: 120 } }
+            }
+
+            // Interactive Lock icon / Manual Password Toggle
+            Rectangle {
+                visible: root.network.security !== WifiSecurityType.Open && !root.network.connected
+                width: 24; height: 24; radius: 12
+                color: lockHover.containsMouse ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.1) : "transparent"
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: root._showPsk ? "󰌑" : "󰌾" // Swaps from a lock to a key when open
+                    font.family: Fonts.fontM
+                    font.pixelSize: 14
+                    color: lockHover.containsMouse || root._showPsk ? Colors.primary : Colors.outline
+                    Behavior on color { ColorAnimation { duration: 120 } }
+                }
+
+                HoverHandler { id: lockHover }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        root._showPsk = !root._showPsk;
+                        if (root._showPsk) pskField.forceActiveFocus();
+                    }
+                }
+            }
+
+            // "Connected" chip
+            Rectangle {
+                visible: root.network.connected || root.network.stateChanging
+                width: chipRow.implicitWidth + 16
+                height: 22
+                radius: 11
+                color: root.network.connected ? Colors.primary : Colors.surfaceContainerHighest
+
+                Row {
+                    id: chipRow
+                    anchors.centerIn: parent
+                    spacing: 4
+                    Text {
+                        text: root.network.connected ? "󰄵" : "󱑤"
+                        color: root.network.connected ? Colors.on_Primary : Colors.on_SurfaceVariant
+                        font.pixelSize: 10
+                        font.family: Fonts.font
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        text: root.network.connected ? "Connected" : "Connecting"
+                        color: root.network.connected ? Colors.on_Primary : Colors.on_SurfaceVariant
+                        font.pixelSize: 10
+                        font.bold: true
+                        font.family: Fonts.font
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+        }
+
+        // Password Row
+        RowLayout {
+            visible: root._showPsk
+            Layout.fillWidth: true
+            Layout.topMargin: 4
+            spacing: 8
+
+            TextField {
+                id: pskField
+                Layout.fillWidth: true
+                height: 32
+                placeholderText: "Password"
+                echoMode: TextInput.Password
+                font.family: Fonts.font
+                font.pixelSize: 12
+                color: Colors.on_Surface
+                placeholderTextColor: Colors.outline
+                
+                background: Rectangle {
+                    radius: 8
+                    color: Colors.surfaceContainerHigh
+                    border.width: 1
+                    border.color: pskField.activeFocus ? Colors.primary : Colors.outline
+                    Behavior on border.color { ColorAnimation { duration: Theme.hoverFadeDuration } }
+                }
+                Keys.onReturnPressed: {
+                    if (text.length > 0) {
+                        root.network.connectWithPsk(text);
+                        text = "";
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 32; height: 32; radius: 8
+                color: confirmHover.containsMouse 
+                    ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.2) 
+                    : Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.1)
+                Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
+                HoverHandler { id: confirmHover }
+                
+                Text { anchors.centerIn: parent; text: "󰌑"; font.family: Fonts.fontM; font.pixelSize: 14; color: Colors.primary }
+                
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (pskField.text.length > 0) {
+                            root.network.connectWithPsk(pskField.text);
+                            pskField.text = "";
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+==> ./src/popups/DiskBar.qml <==
+import QtQuick
+import QtQuick.Layouts
+import qs.src.theme
+
+Item {
+    id: root
+
+    property string label:      "/"
+    property string mountPoint: "/"
+    property real   usedBytes:  0
+    property real   totalBytes: 1
+
+    readonly property real fraction: totalBytes > 0 ? usedBytes / totalBytes : 0
+
+    function formatSize(bytes) {
+        if (bytes >= 1e12) return (bytes / 1e12).toFixed(1) + " TB"
+        if (bytes >= 1e9)  return (bytes / 1e9).toFixed(1)  + " GB"
+        if (bytes >= 1e6)  return (bytes / 1e6).toFixed(1)  + " MB"
+        return bytes + " B"
+    }
+
+    implicitHeight: 36
+
+    ColumnLayout {
+        anchors.fill: parent
+        spacing: 4
+
+        RowLayout {
+            Layout.fillWidth: true
+
+            Text {
+                text:           root.label
+                color:          Colors.on_SurfaceVariant
+                font.pixelSize: 11
+                font.family:    Fonts.font
+                Layout.fillWidth: true
+            }
+
+            Text {
+                text:           root.formatSize(root.usedBytes)
+                              + " / "
+                              + root.formatSize(root.totalBytes)
+                color:          Colors.on_Surface
+                font.pixelSize: 11
+                font.bold:      true
+                font.family:    Fonts.font
+            }
+        }
+
+        // Track
+        Rectangle {
+            Layout.fillWidth: true
+            height:  6
+            radius:  3
+            color:   Colors.surfaceContainerHighest
+
+            // Fill
+            Rectangle {
+                width:  parent.width * root.fraction
+                height: parent.height
+                radius: parent.radius
+                color:  root.fraction >= 0.9
+                            ? Colors.error
+                            : root.fraction >= 0.7
+                                ? Colors.tertiary
+                                : Colors.primary
+
+                Behavior on width { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+                Behavior on color { ColorAnimation  { duration: 300 } }
+            }
+        }
+    }
+}
+
+==> ./src/popups/NetworkPopup.qml <==
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Wayland
+import Quickshell.Networking
+import qs.src.services
+import qs.src.state
+import qs.src.theme
+import qs.src.components
+
+PanelWindow {
+    id: root
+
+    property var screen
+
+    color:         "transparent"
+    exclusionMode: ExclusionMode.Ignore
+
+    anchors {
+        top:   true
+        right: true
+    }
+
+    implicitWidth:  380
+    implicitHeight: root.screen ? root.screen.height : 800
+
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+    visible: slide.windowVisible
+
+    PopupSlide {
+        id: slide
+        anchors.fill: parent
+        edge: "top"
+        open: Popups.networkOpen
+        onCloseRequested: Popups.networkOpen = false
+    }
+
+    Binding {
+        target: NetworkService
+        property: "scannerActive"
+        value: Popups.networkOpen
+    }
+
+    // ── Popup card ────────────────────────────────────────────────────────────
+    Rectangle {
+        anchors {
+            top:        parent.top
+            right:      parent.right
+            topMargin:  Theme.barHeight + 8
+            rightMargin: Theme.barMargin
+        }
+
+        width:        360
+        height:       mainCol.implicitHeight + 18
+        radius:       Theme.popupRadius
+        color:        Colors.surfaceContainer
+        border.color: Colors.outlineVariant
+        border.width: Theme.popupBorder
+        clip:         true
+
+        ColumnLayout {
+            id: mainCol
+            anchors {
+                top:          parent.top
+                left:         parent.left
+                right:        parent.right
+                topMargin:    10
+                leftMargin:   16
+                rightMargin:  16
+                bottomMargin: 16
+            }
+            spacing: 12
+
+            // ── Tab bar ──────────────────────────────────────────────────────
+            TabBar {
+                id: tabs
+                Layout.fillWidth: true
+                orientation: "horizontal"
+                currentPage: ["wifi", "bluetooth", "hotspot"][Popups.networkTab]
+                model: [
+                    { key: "wifi",      icon: "󰤨", label: "Wi-Fi"    },
+                    { key: "bluetooth", icon: "󰂯", label: "Bluetooth" },
+                    { key: "hotspot",   icon: "󰀂", label: "Hotspot"   }
+                ]
+                onPageChanged: (key) => {
+                    const idx = ["wifi", "bluetooth", "hotspot"].indexOf(key)
+                    if (idx >= 0) Popups.networkTab = idx
+                }
+            }
+
+            // ── WiFi tab ─────────────────────────────────────────────────────
+            ColumnLayout {
+                visible: Popups.networkTab === 0
+                Layout.fillWidth: true
+                spacing: 8
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: 4
+
+                    Text {
+                        text: "Wi-Fi"
+                        color: Colors.on_SurfaceVariant
+                        font.pixelSize: 11
+                        font.bold: true
+                        font.family: Fonts.font
+                        leftPadding: 4
+                        Layout.fillWidth: true
+                    }
+
+                    Rectangle {
+                        width: 40; height: 22; radius: 11
+                        color: NetworkService.wifiEnabled ? Colors.primary : Colors.surfaceContainerHighest
+                        border.width: NetworkService.wifiEnabled ? 0 : 1
+                        border.color: Colors.outlineVariant
+                        opacity: (NetworkService.wifiHardwareEnabled ?? true) ? 1.0 : 0.4
+                        
+                        Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
+
+                        Rectangle {
+                            width: 16; height: 16; radius: 8
+                            color: NetworkService.wifiEnabled ? Colors.on_Primary : Colors.outline
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: NetworkService.wifiEnabled ? 20 : 4
+                            Behavior on x { NumberAnimation { duration: Theme.hoverFadeDuration; easing.type: Easing.OutCubic } }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            enabled: NetworkService.wifiHardwareEnabled ?? true
+                            onClicked: NetworkService.setWifiEnabled(!NetworkService.wifiEnabled)
+                            cursorShape: Qt.PointingHandCursor
+                        }
+                    }
+                }
+
+                Flickable {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Math.min(networkCol.implicitHeight, 280)
+                    contentHeight: networkCol.implicitHeight
+                    clip: true
+                    visible: NetworkService.wifiEnabled
+                    boundsBehavior: Flickable.StopAtBounds
+
+                    ColumnLayout {
+                        id: networkCol
+                        width: parent.width
+                        spacing: 4
+
+                        Repeater {
+                            model: NetworkService.networks
+
+                            delegate: NetworkRow {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                network: modelData
+                            }
+                        }
+
+                        Text {
+                            visible: NetworkService.networks.length === 0
+                            Layout.alignment: Qt.AlignHCenter
+                            text: "Scanning…"
+                            font.family: Fonts.font
+                            font.pixelSize: 11
+                            color: Colors.outline
+                            topPadding: 8; bottomPadding: 8
+                        }
+                    }
+                }
+
+                Text {
+                    visible: !NetworkService.wifiEnabled
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "Wi-Fi is disabled"
+                    font.family: Fonts.font
+                    font.pixelSize: 11
+                    color: Colors.outline
+                    topPadding: 8; bottomPadding: 8
+                }
+            }
+
+            // ── Bluetooth tab ─────────────────────────────────────────────────
+            ColumnLayout {
+                visible: Popups.networkTab === 1
+                Layout.fillWidth: true
+                spacing: 8
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: 4
+
+                    Text {
+                        text: "Bluetooth"
+                        color: Colors.on_SurfaceVariant
+                        font.pixelSize: 11
+                        font.bold: true
+                        font.family: Fonts.font
+                        leftPadding: 4
+                        Layout.fillWidth: true
+                    }
+
+                    Rectangle {
+                        width: 40; height: 22; radius: 11
+                        color: NetworkService.btEnabled ? Colors.primary : Colors.surfaceContainerHighest
+                        border.width: NetworkService.btEnabled ? 0 : 1
+                        border.color: Colors.outlineVariant
+                        opacity: NetworkService.btAdapter ? 1.0 : 0.4
+                        
+                        Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
+
+                        Rectangle {
+                            width: 16; height: 16; radius: 8
+                            color: NetworkService.btEnabled ? Colors.on_Primary : Colors.outline
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: NetworkService.btEnabled ? 20 : 4
+                            Behavior on x { NumberAnimation { duration: Theme.hoverFadeDuration; easing.type: Easing.OutCubic } }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            enabled: NetworkService.btAdapter !== null
+                            onClicked: NetworkService.setBtEnabled(!NetworkService.btEnabled)
+                            cursorShape: Qt.PointingHandCursor
+                        }
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    visible: NetworkService.btEnabled
+
+                    Repeater {
+                        model: NetworkService.btDevices
+
+                        delegate: Item {
+                            required property var modelData
+
+                            Layout.fillWidth: true
+                            implicitHeight: 44
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: 10
+                                color: btHov.containsMouse ? Colors.surfaceContainerHighest : Qt.rgba(Colors.primaryContainer.r, Colors.primaryContainer.g, Colors.primaryContainer.b, 0.3)
+                                Behavior on color { ColorAnimation { duration: 120 } }
+
+                                MouseArea {
+                                    id: btHov
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: modelData.connected = false
+                                }
+                            }
+
+                            RowLayout {
+                                anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+                                spacing: 10
+
+                                Text {
+                                    text: {
+                                        const ic = modelData.icon ?? "";
+                                        if (ic.includes("headphone") || ic.includes("headset")) return "󰋋";
+                                        if (ic.includes("phone"))    return "󰄜";
+                                        if (ic.includes("keyboard")) return "󰌌";
+                                        if (ic.includes("mouse"))    return "󰍽";
+                                        if (ic.includes("speaker"))  return "󰓃";
+                                        if (ic.includes("computer")) return "󰇄";
+                                        return "󰂯";
+                                    }
+                                    font.family: Fonts.fontM
+                                    font.pixelSize: 16
+                                    color: Colors.primary
+                                }
+
+                                Text {
+                                    text: modelData.name
+                                    font.family: Fonts.font
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    color: Colors.on_Surface
+                                    elide: Text.ElideRight
+                                    Layout.fillWidth: true
+                                }
+
+                                Text {
+                                    visible: modelData.hasBattery
+                                    text: Math.round((modelData.battery ?? 0) * 100) + "%"
+                                    font.family: Fonts.font
+                                    font.pixelSize: 10
+                                    color: Colors.outline
+                                }
+
+                                // Connected chip (mirrors DeviceRow's "Default" chip)
+                                Rectangle {
+                                    width: btChip.implicitWidth + 16
+                                    height: 22
+                                    radius: 11
+                                    color: Colors.primary
+
+                                    Row {
+                                        id: btChip
+                                        anchors.centerIn: parent
+                                        spacing: 4
+                                        Text {
+                                            text: "󰄵"
+                                            color: Colors.on_Primary
+                                            font.pixelSize: 10
+                                            font.family: Fonts.font
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                        Text {
+                                            text: "Connected"
+                                            color: Colors.on_Primary
+                                            font.pixelSize: 10
+                                            font.bold: true
+                                            font.family: Fonts.font
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Text {
+                        visible: (NetworkService.btDevices?.length ?? 0) === 0
+                        Layout.alignment: Qt.AlignHCenter
+                        text: "No devices connected"
+                        font.family: Fonts.font
+                        font.pixelSize: 11
+                        color: Colors.outline
+                        topPadding: 8; bottomPadding: 8
+                    }
+                }
+
+                Text {
+                    visible: !NetworkService.btEnabled
+                    Layout.alignment: Qt.AlignHCenter
+                    text: NetworkService.btAdapter ? "Bluetooth is disabled" : "No Bluetooth adapter found"
+                    font.family: Fonts.font
+                    font.pixelSize: 11
+                    color: Colors.outline
+                    topPadding: 8; bottomPadding: 8
+                }
+            }
+
+            // ── Hotspot tab ───────────────────────────────────────────────────
+            ColumnLayout {
+                visible: Popups.networkTab === 2
+                Layout.fillWidth: true
+                spacing: 6
+
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "󰀂"
+                    font.family: Fonts.fontM
+                    font.pixelSize: 32
+                    color: Colors.outline
+                    topPadding: 12
+                }
+
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "Hotspot coming soon"
+                    font.family: Fonts.font
+                    font.pixelSize: 11
+                    color: Colors.outline
+                    bottomPadding: 12
+                }
+            }
+        }
+    }
+}
+
+==> ./src/popups/VolumeSlider.qml <==
+import QtQuick
+import qs.src.theme
+
+// Horizontal volume slider
+// Emits onMoved(value) when user drags or clicks
+
+Item {
+    id: root
+
+    property real value: 0.0
+    property bool muted: false
+
+    signal moved(real value)
+
+    implicitHeight: 36
+
+    // Track
+    Rectangle {
+        id: track
+        anchors.verticalCenter: parent.verticalCenter
+        width:  parent.width
+        height: 4
+        radius: 2
+        color:  Colors.surfaceContainerHighest
+
+        // Fill
+        Rectangle {
+            width:  Math.max(handle.width / 2, track.width * root.value)
+            height: parent.height
+            radius: parent.radius
+            color:  root.muted ? Colors.error : Colors.primary
+            Behavior on width { NumberAnimation { duration: 80 } }
+            Behavior on color { ColorAnimation  { duration: 120 } }
+        }
+    }
+
+    // Handle
+    Rectangle {
+        id: handle
+        width:  16
+        height: 16
+        radius: 8
+        color:  root.muted ? Colors.error : Colors.primary
+        anchors.verticalCenter: parent.verticalCenter
+        x: Math.min(track.width - width, Math.max(0, track.width * root.value - width / 2))
+
+        Behavior on color { ColorAnimation { duration: 120 } }
+
+        // Glow when dragging
+        Rectangle {
+            anchors.centerIn: parent
+            width:   parent.width + 8
+            height:  parent.height + 8
+            radius:  width / 2
+            color:   Colors.primary
+            opacity: dragArea.pressed ? 0.2 : 0
+            Behavior on opacity { NumberAnimation { duration: 100 } }
+        }
+    }
+
+    // Input
+    MouseArea {
+        id:           dragArea
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape:  Qt.PointingHandCursor
+
+        function valueFromMouse(mouseX) {
+            return Math.max(0.0, Math.min(1.0, mouseX / track.width))
+        }
+
+        onPressed:      (mouse) => root.moved(valueFromMouse(mouse.x))
+        onPositionChanged: (mouse) => {
+            if (pressed) root.moved(valueFromMouse(mouse.x))
+        }
+
+        onWheel: (wheel) => {
+            root.moved(Math.max(0.0, Math.min(1.0,
+                root.value + (wheel.angleDelta.y > 0 ? 0.05 : -0.05))))
+        }
+    }
+}
+
+==> ./src/modules/Center/IdleInhibitor.qml <==
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import qs.src.components
+import qs.src.theme
+import qs.src.state
+
+PillBase {
+    id: root
+
+    hoverExpand: true
+
+    property bool inhibiting: false
+
+    Process {
+        id: inhibitProc
+        command: ["systemd-inhibit",
+                  "--what=idle",
+                  "--who=Quickshell",
+                  "--why=User requested",
+                  "--mode=block",
+                  "sleep", "infinity"]
+        running: false
+
+        onExited: root.inhibiting = false
+    }
+
+    Text {
+        text:  root.inhibiting ? "󰛨" : "󰾪"
+        color: root.inhibiting ? Colors.tertiary : Colors.primary
+        font.pixelSize: 12
+        font.family:    Fonts.font
+        verticalAlignment: Text.AlignVCenter
+
+        Behavior on color { ColorAnimation { duration: 150 } }
+    }
+
+    onClicked: {
+        if (root.inhibiting) {
+            inhibitProc.running  = false
+        } else {
+            inhibitProc.running  = true
+        }
+        root.inhibiting          = !root.inhibiting
+        Popups.idleInhibitorOpen = !Popups.idleInhibitorOpen
+    }
+}
+
+==> ./src/modules/Center/ClockDate.qml <==
+import QtQuick
+import Quickshell
+import qs.src.components
+import qs.src.theme
+import qs.src.state
+
+PillBase {
+    id: root
+
+    hoverExpand: true
+
+    property bool showDate: false
+
+    SystemClock {
+        id: sysClock
+        precision: SystemClock.Minutes
+    }
+
+    Text {
+        text: root.showDate
+            ? Qt.formatDateTime(sysClock.date, "ddd, MMM d")
+            : Qt.formatDateTime(sysClock.date, "hh:mm A")
+        color: Colors.primary
+        font.pointSize: 11
+        font.bold: true
+        font.family: Fonts.font
+        verticalAlignment: Text.AlignVCenter
+    }
+
+    onClicked:      root.showDate = !root.showDate
+    onRightClicked: Popups.calendarOpen = !Popups.calendarOpen
+}
+
+==> ./src/modules/Center/Media.qml <==
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Services.Mpris
+import Qt5Compat.GraphicalEffects
+import qs.src.components
+import qs.src.theme
+import qs.src.state
+
+Row {
+    id: root
+
+    spacing: 6
+
+    property var players: Mpris.players.values
+    property var _lastActive: null
+
+    property var _currentlyPlaying: {
+        if (players.length === 0) return null
+
+        let bestMatch = null
+
+        for (let i = 0; i < players.length; i++) {
+            let state = players[i].playbackState
+
+            if (state === MprisPlaybackState.Playing && bestMatch === null) {
+                bestMatch = players[i]
+            }
+        }
+        return bestMatch
+    }
+
+    on_CurrentlyPlayingChanged: {
+        if (_currentlyPlaying) {
+            _lastActive = _currentlyPlaying
+        }
+    }
+
+    property var activePlayer: {
+        if (players.length === 0) return null
+
+        if (_currentlyPlaying) return _currentlyPlaying
+
+        if (_lastActive) {
+            for (let i = 0; i < players.length; i++) {
+                if (players[i] === _lastActive) return _lastActive
+            }
+        }
+
+        return players[0]
+    }
+    property bool hasArt:       activePlayer && activePlayer.trackArtUrl !== ""
+    property bool isPlaying:    activePlayer?.playbackState === MprisPlaybackState.Playing ?? false
+
+    visible: activePlayer !== null
+
+    // ── Prev button ───────────────────────────────────────────────────────────
+    PillBase {
+        hoverExpand:   true
+        implicitWidth: Theme.pillHeight
+
+        Text {
+            text:             "󰒮"
+            color:            Colors.primary
+            font.pointSize:   12
+            font.family:      Fonts.font
+            Layout.alignment: Qt.AlignVCenter
+        }
+
+        onClicked: if (root.activePlayer) root.activePlayer.previous()
+    }
+
+    // ── Center pill — art + title ─────────────────────────────────────────────
+    PillBase {
+        hoverExpand: false
+
+        onClicked:      Popups.mediaOpen = !Popups.mediaOpen
+        onRightClicked: if (root.activePlayer) root.activePlayer.togglePlaying()
+
+        Row {
+            spacing: 8
+
+            // Rotating disc
+            Item {
+                visible: root.hasArt
+                width:   20
+                height:  20
+
+                Rectangle {
+                    id:           artMask
+                    anchors.fill: parent
+                    radius:       width / 2
+                    visible:      false
+                }
+
+                Image {
+                    anchors.fill: parent
+                    source:       root.activePlayer ? root.activePlayer.trackArtUrl : ""
+                    fillMode:     Image.PreserveAspectCrop
+                    layer.enabled: true
+                    layer.effect: OpacityMask { maskSource: artMask }
+
+                    NumberAnimation on rotation {
+                        from:     0
+                        to:       360
+                        duration: 5000
+                        loops:    Animation.Infinite
+                        running:  true
+                        paused:   !root.isPlaying
+                    }
+                }
+            }
+
+            Text {
+                text:          root.activePlayer
+                                   ? (root.activePlayer.trackTitle || "Unknown Track")
+                                   : ""
+                color:         Colors.primary
+                font.pointSize: 11
+                font.bold:     true
+                font.italic:   root.isPlaying
+                font.family:   Fonts.font
+                elide:         Text.ElideRight
+                width:         Math.min(implicitWidth, 150)
+            }
+        }
+    }
+
+    // ── Next button ───────────────────────────────────────────────────────────
+    PillBase {
+        hoverExpand:   true
+        implicitWidth: Theme.pillHeight
+
+        Text {
+            text:             "󰒭"
+            color:            Colors.primary
+            font.pointSize:   12
+            font.family:      Fonts.font
+            Layout.alignment: Qt.AlignVCenter
+        }
+
+        onClicked: if (root.activePlayer) root.activePlayer.next()
+    }
+}
+
+==> ./src/modules/Center/qmldir <==
+ClockDate 1.0 ClockDate.qml
+Media 1.0 Media.qml
+IdleInhibitor 1.0 IdleInhibitor.qml
+
+==> ./src/modules/Left/Workspaces.qml <==
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Hyprland
+import qs.src.components
+import qs.src.theme
+
+PillBase {
+    id: root
+
+    hoverExpand: false  // fixed width, dots handle their own sizing
+    hoverEnabled: false
+
+    onClicked: (mouse) => {
+        // find which dot was clicked by x position
+        const dotWidth   = 12
+        const activeDotW = 30
+        let x = mouse.x - Theme.pillPadding / 2
+        for (let i = 0; i < root.dotCount; i++) {
+            const w = (dotsRow.itemAt(i)?.isActive ? activeDotW : dotWidth)
+            if (x <= w + 4 || i == root.dotCount - 1) {
+                Hyprland.dispatch("hl.dsp.focus({ workspace = " + (i + 1) + " })")
+                return
+            }
+            x -= w + 8  // 8 = spacing
+        }
+    }
+
+    property int dotCount: {
+        let highest = 3
+        let wss = Hyprland.workspaces.values
+        for (let i = 0; i < wss.length; i++) {
+            if (wss[i].id > highest) highest = wss[i].id
+        }
+        return highest
+    }
+
+    Row {
+        id: dotsRow
+        spacing: 8
+
+        Repeater {
+            model: root.dotCount
+
+            delegate: Rectangle {
+                readonly property int wsId: index + 1
+
+                property var hyprWs: {
+                    let wss = Hyprland.workspaces.values
+                    for (let i = 0; i < wss.length; i++) {
+                        if (wss[i].id === wsId) return wss[i]
+                    }
+                    return null
+                }
+
+                readonly property bool isActive:   hyprWs ? hyprWs.active : false
+                readonly property bool isOccupied: hyprWs !== null
+
+                width:   isActive ? 30 : 12
+                height:  12
+                radius:  6
+                color:   isActive ? Colors.primary : Colors.outline
+                opacity: (isActive || isOccupied) ? 1.0 : 0.3
+
+                Behavior on width  { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                Behavior on color  { ColorAnimation  { duration: 200 } }
+                Behavior on opacity { NumberAnimation { duration: 200 } }
+            }
+        }
+    }
+}
+
+==> ./src/modules/Left/ArchLogo.qml <==
+import QtQuick
+import Quickshell
+import qs.src.components
+import qs.src.theme
+import qs.src.state
+
+PillBase {
+    id: root
+
+    hoverExpand: true
+
+    Text {
+        text: "󰣇"
+        color: Colors.primary
+        font.pointSize: 14
+        font.family: "JetBrains Mono"
+        verticalAlignment: Text.AlignVCenter
+    }
+
+    onClicked: Popups.archMenuOpen = !Popups.archMenuOpen
+}
+
+==> ./src/modules/Left/qmldir <==
+ArchLogo 1.0 ArchLogo.qml
+Workspaces 1.0 Workspaces.qml
+WindowName 1.0 WindowName.qml
+
+==> ./src/modules/Left/WindowName.qml <==
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Hyprland
+import qs.src.components
+import qs.src.theme
+
+PillBase {
+    id: root
+
+    hoverExpand: false
+
+    property string windowTitle: Hyprland.activeToplevel
+        ? Hyprland.activeToplevel.title
+        : "Desktop"
+
+    Text {
+        text:              root.windowTitle
+        color:             Colors.primary
+        font.pointSize:    11
+        font.bold:         true
+        font.family:       Fonts.font
+        elide:             Text.ElideRight
+        Layout.fillWidth:  true
+        Layout.maximumWidth: 250
+        Layout.alignment:  Qt.AlignVCenter
+    }
+}
+
+==> ./src/modules/Right/Volume.qml <==
+import QtQuick
+import Quickshell
+import qs.src.components
+import qs.src.theme
+import qs.src.state
+import qs.src.services
+
+PillBase {
+    id: root
+
+    hoverExpand: true
+
+    function getIcon(): string {
+        if (VolumeService.muted || VolumeService.volume <= 0.0) return "󰝟"
+        if (VolumeService.volume >= 0.7) return "󰕾"
+        if (VolumeService.volume >= 0.3) return "󰖀"
+        return "󰕿"
+    }
+
+    Text {
+        text: root.getIcon() + "  " + Math.round(VolumeService.volume * 100) + "%"
+        color: VolumeService.muted ? Colors.error : Colors.primary
+        font.pointSize: 11
+        font.bold: true
+        font.family: Fonts.font
+        verticalAlignment: Text.AlignVCenter
+    }
+
+    onClicked:      Popups.volumeOpen = !Popups.volumeOpen
+    onRightClicked: VolumeService.toggleMute()
+    onScrolled: (wheel) => {
+        VolumeService.changeVolume(wheel.angleDelta.y > 0 ? 0.05 : -0.05)
+    }
+}
+
+==> ./src/modules/Right/NotificationButton.qml <==
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import qs.src.components
+import qs.src.theme
+import qs.src.state
+import qs.src.services
+
+PillBase {
+    id: root
+
+    hoverExpand: true
+
+    // Highlight border when panel is open
+    border.color: Colors.primary
+    border.width: Popups.notificationsOpen ? 1 : 0
+    Behavior on border.width { NumberAnimation { duration: 150 } }
+
+    Row {
+        spacing: 8
+
+        Text {
+            text: "󰂚"
+            color: Colors.primary
+            font.pointSize: 11
+            font.family: Fonts.font
+            verticalAlignment: Text.AlignVCenter
+        }
+
+        Text {
+            visible: NotificationService.notifications.length > 0
+            text:    NotificationService.notifications.length
+            color:   Colors.primary
+            font.pointSize: 11
+            font.bold: true
+            font.family: Fonts.font
+            verticalAlignment: Text.AlignVCenter
+        }
+    }
+
+    onClicked: Popups.notificationsOpen = !Popups.notificationsOpen
+}
+
+==> ./src/modules/Right/Network.qml <==
+import QtQuick
+import QtQuick.Layouts
+import qs.src.services
+import qs.src.services.system
+import qs.src.state
+import qs.src.theme
+import qs.src.components
+
+PillBase {
+    id: root
+
+    readonly property bool hasWifi: NetworkService.wifiDevice !== null
+    readonly property bool hasEthernet: SystemStats.activeInterface !== ""
+
+    visible: hasWifi || NetworkService.btAdapter !== null || hasEthernet
+
+    readonly property string _icon: {
+        if (hasWifi) {
+            if (!NetworkService.wifiEnabled || !NetworkService.wifiConnected)
+                return "󰤭";
+            const s = NetworkService.signalStrength;
+            if (s < 0.25) return "󰤟";
+            if (s < 0.50) return "󰤢";
+            if (s < 0.75) return "󰤥";
+            return "󰤨";
+        }
+        return hasEthernet ? "󰈀" : "󰈂";
+    }
+
+    readonly property bool _showLabel: (hasWifi && NetworkService.wifiEnabled && NetworkService.wifiConnected) || (!hasWifi && hasEthernet)
+
+    onClicked: {
+        Popups.networkOpen = !Popups.networkOpen;
+        if (Popups.networkOpen) {
+            Popups.networkTab = hasWifi ? 0 : 1;
+        }
+    }
+
+    onRightClicked: {
+        Popups.networkOpen = true;
+        Popups.networkTab  = 2;
+    }
+
+    Text {
+        text: root._icon
+        font.family: Fonts.fontM
+        font.pixelSize: 14
+        color: (hasWifi && NetworkService.wifiConnected) || (!hasWifi && hasEthernet) ? Colors.primary : Colors.outline
+    }
+
+    Text {
+        text: hasWifi ? (NetworkService.ssid || "Unknown") : SystemStats.activeInterface
+        font.family: Fonts.font
+        font.pixelSize: 13
+        color: Colors.primary
+        visible: root._showLabel
+    }
+}
+
+==> ./src/modules/Right/Battery.qml <==
+import QtQuick
+import Quickshell
+import qs.src.components
+import qs.src.theme
+import qs.src.services
+
+PillBase {
+    id: root
+
+    visible: BatteryService.hasBattery
+    hoverExpand: true
+
+    function getIcon(): string {
+        if (BatteryService.full)     return "󰁹 "
+        if (BatteryService.charging) {
+            if (BatteryService.capacity >= 90) return "󰂅 "
+            if (BatteryService.capacity >= 80) return "󰂄 "
+            if (BatteryService.capacity >= 70) return "󰂃 "
+            if (BatteryService.capacity >= 60) return "󰂂 "
+            if (BatteryService.capacity >= 50) return "󰂁 "
+            if (BatteryService.capacity >= 40) return "󰂀 "
+            if (BatteryService.capacity >= 30) return "󰁿 "
+            if (BatteryService.capacity >= 20) return "󰁾 "
+            if (BatteryService.capacity >= 10) return "󰁽 "
+            return "󰁻 "
+        }
+        if (BatteryService.capacity >= 90) return "󰁹 "
+        if (BatteryService.capacity >= 80) return "󰂀 "
+        if (BatteryService.capacity >= 60) return "󰁿 "
+        if (BatteryService.capacity >= 40) return "󰁼 "
+        if (BatteryService.capacity >= 20) return "󰁻 "
+        if (BatteryService.capacity >= 10) return "󰁺 "
+        return "󰂎 "
+    }
+
+    function getColor(): string {
+        if (BatteryService.charging || BatteryService.full) return Colors.tertiary
+        if (BatteryService.capacity <= 10) return Colors.error
+        return Colors.primary
+    }
+
+    Text {
+        id: batteryText
+        text: root.getIcon() + BatteryService.capacity + "%"
+        color: root.getColor()
+        font.pointSize: 11
+        font.bold: true
+        font.family: Fonts.font
+        verticalAlignment: Text.AlignVCenter
+
+        SequentialAnimation on opacity {
+            running: BatteryService.capacity <= 10 && !BatteryService.charging
+            loops:   Animation.Infinite
+
+            NumberAnimation { to: 0.3; duration: 600; easing.type: Easing.InOutSine }
+            NumberAnimation { to: 1.0; duration: 600; easing.type: Easing.InOutSine }
+        }
+    }
+}
+
+==> ./src/modules/Right/qmldir <==
+SystemMonitor 1.0 SystemMonitor.qml
+Volume 1.0 Volume.qml
+Battery 1.0 Battery.qml
+Tray 1.0 Tray.qml
+NotificationButton 1.0 NotificationButton.qml
+Network 1.0 Network.qml
+
+==> ./src/modules/Right/SystemMonitor.qml <==
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import qs.src.components
+import qs.src.theme
+import qs.src.state
+import qs.src.services
+
+PillBase {
+    id: root
+
+    hoverExpand: true
+
+    property real cpuUsage: 0.0
+    property real memUsed:  0.0
+    property real memTotal: 0.0
+
+    // ── CPU polling ───────────────────────────────────────────────────────────
+    property var _prev: ({})
+
+    Process {
+        id: cpuProc
+        command: ["cat", "/proc/stat"]
+        running: false
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                const m = line.match(/^(cpu\d*)\s+(.+)/)
+                if (!m) return
+                const id    = m[1]
+                if (id !== "cpu") return   // pill only shows overall
+
+                const parts = m[2].trim().split(/\s+/).map(Number)
+                const idle  = parts[3] + parts[4]
+                const busy  = parts[0] + parts[1] + parts[2] + parts[5] + parts[6]
+                const total = idle + busy
+
+                const prev   = root._prev["cpu"] || { idle, total }
+                const dIdle  = idle  - prev.idle
+                const dTotal = total - prev.total
+                root._prev["cpu"] = { idle, total }
+                root.cpuUsage = dTotal > 0 ? (1.0 - dIdle / dTotal) * 100.0 : 0.0
+            }
+        }
+    }
+
+    // ── Memory polling ────────────────────────────────────────────────────────
+    Process {
+        id: memProc
+        command: ["cat", "/proc/meminfo"]
+        running: false
+
+        stdout: SplitParser {
+            property var _t: 0
+
+            onRead: (line) => {
+                const val = parseInt(line.split(/\s+/)[1])
+                if      (line.startsWith("MemTotal:"))     _t = val
+                else if (line.startsWith("MemAvailable:")) {
+                    root.memTotal = _t / 1024 / 1024
+                    root.memUsed  = (_t - val) / 1024 / 1024
+                }
+            }
+        }
+    }
+
+    Timer {
+        interval: 1000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: {
+            cpuProc.running = true
+            memProc.running = true
+        }
+    }
+
+    // ── Display ───────────────────────────────────────────────────────────────
+    Row {
+        spacing: 8
+
+        Text {
+            text:           "CPU " + Math.round(root.cpuUsage) + "%"
+            color:          Colors.primary
+            font.pointSize: 11
+            font.bold:      true
+            font.family:    Fonts.font
+            verticalAlignment: Text.AlignVCenter
+        }
+
+        Rectangle {
+            width:  1
+            height: 14
+            color:  Colors.outline
+            opacity: 0.5
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        Text {
+            text:           "MEM " + root.memUsed.toFixed(1) + "G"
+            color:          Colors.primary
+            font.pointSize: 11
+            font.bold:      true
+            font.family:    Fonts.font
+            verticalAlignment: Text.AlignVCenter
+        }
+    }
+
+    onClicked:      Popups.systemOpen = !Popups.systemOpen
+    onRightClicked: Popups.systemOpen = !Popups.systemOpen
+}
+
+==> ./src/modules/Right/Tray.qml <==
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Services.SystemTray
+import qs.src.components
+import qs.src.theme
+
+PillBase {
+    id: root
+
+    property var window
+
+    hoverExpand: false  // tray expands differently via its own toggle
+    hoverEnabled: false
+    mouseEnabled: false
+    visible: SystemTray.items.values.length > 0
+
+    Row {
+        id: trayRow
+        spacing: 10
+
+        Repeater {
+            model: SystemTray.items.values
+
+            delegate: Item {
+                id: trayDelegate
+                required property var modelData
+
+                width:  20
+                height: 20
+
+                Image {
+                    anchors.fill: parent
+                    source: modelData.icon || ""
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+
+                    onClicked: (mouse) => {
+                        if (mouse.button === Qt.LeftButton)
+                            modelData.activate()
+                        else if (mouse.button === Qt.MiddleButton)
+                            modelData.secondaryActivate()
+                        else if (mouse.button === Qt.RightButton) {
+                            var pos = mapToItem(null, mouse.x, mouse.y)
+                            modelData.display(root.window, pos.x, pos.y)
+                        }
+                    }
+
+                    onWheel: (wheel) => {
+                        modelData.scroll(wheel.angleDelta.y > 0 ? 1 : -1, false)
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+==> ./src/components/PillBase.qml <==
+import QtQuick
+import QtQuick.Layouts
+import qs.src.theme
+
+Rectangle {
+    id: root
+
+    // ── Content ───────────────────────────────────────────────────────────────
+    default property alias contentData: innerLayout.data
+
+    // ── Behaviour Flags ───────────────────────────────────────────────────────
+    property bool hoverExpand:  true // +10px width on hover
+    property bool hoverEnabled: true // show bg highlight on hover
+    property bool mouseEnabled: true
+
+    // ── Signals ───────────────────────────────────────────────────────────────
+    signal clicked(var mouse)
+    signal rightClicked(var mouse)
+    signal scrolled(var wheel)
+
+    // ── Geometry ──────────────────────────────────────────────────────────────
+    implicitWidth:  innerLayout.implicitWidth + Theme.pillPadding + (hoverExpand && hov.containsMouse ? Theme.hoverWidthGain : 0)
+    implicitHeight: Theme.pillHeight
+    radius:         Theme.pillRadius
+    color:          Colors.background
+
+    Behavior on implicitWidth {
+        NumberAnimation { duration: Theme.hoverFadeDuration; easing.type: Easing.OutCubic }
+    }
+
+    // ── Hover Highlight ───────────────────────────────────────────────────────
+    Rectangle {
+        anchors.fill: parent
+        radius:       parent.radius
+        color:        Colors.primary
+        opacity:      hoverEnabled && hov.containsMouse ? Theme.hoverOpacity : 0
+        
+        Behavior on opacity { NumberAnimation { duration: Theme.hoverFadeDuration } }
+    }
+
+    // ── Content Layout ────────────────────────────────────────────────────────
+    RowLayout {
+        id: innerLayout
+        anchors.centerIn: parent
+        spacing:          8
+    }
+
+    // ── Input ─────────────────────────────────────────────────────────────────
+    MouseArea {
+        id:              hov
+        anchors.fill:    parent
+        enabled:         root.mouseEnabled
+        hoverEnabled:    true
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        cursorShape:     Qt.PointingHandCursor
+
+        onClicked: (mouse) => mouse.button === Qt.RightButton ? root.rightClicked(mouse) : root.clicked(mouse)
+        onWheel:   (wheel) => root.scrolled(wheel)
+    }
+}
+
+==> ./src/components/PopupSlide.qml <==
+import QtQuick
+import qs.src.state
+
+// Slide-in/out animation container for all popups.
+// Always bind your PopupWindow.visible to slide.windowVisible
+
+Item {
+    id: root
+
+    // ── Required ──────────────────────────────────────────────────────────────
+    property string edge: "top" // "top" | "bottom" | "left" | "right"
+    property bool   open: false
+
+    // ── Hover-to-open (Optional) ──────────────────────────────────────────────
+    property bool hoverEnabled:   false
+    property bool triggerHovered: false
+
+    // ── Timing ────────────────────────────────────────────────────────────────
+    property int slideDuration: Popups.slideDuration
+    property int closeDelay:    Popups.hoverCloseDelay
+
+    // ── Output ────────────────────────────────────────────────────────────────
+    // Bind your PopupWindow.visible to this
+    property bool windowVisible: false
+
+    signal closeRequested()
+
+    // ── Internal ──────────────────────────────────────────────────────────────
+    property bool _selfHovered: false
+
+    readonly property bool _effectiveOpen: open || (hoverEnabled && (triggerHovered || _selfHovered))
+
+    default property alias content: inner.data
+
+    clip: true
+
+    on_EffectiveOpenChanged: {
+        if (_effectiveOpen) { hoverCloseTimer.stop(); windowVisible = true } 
+        else { hoverEnabled ? hoverCloseTimer.restart() : slideCloseTimer.restart() }
+    }
+
+    // Wait for slide animation to finish before hiding the window
+    Timer {
+        id:          slideCloseTimer
+        interval:    root.slideDuration + 20
+        onTriggered: root.windowVisible = false
+    }
+
+    // Hover leave — wait then emit closeRequested
+    Timer {
+        id:          hoverCloseTimer
+        interval:    root.closeDelay
+        onTriggered: {
+            if (!root.triggerHovered && !root._selfHovered) {
+                root.windowVisible = false
+                root.closeRequested()
+            }
+        }
+    }
+
+    // ── Sliding Item ──────────────────────────────────────────────────────────
+    Item {
+        id:     inner
+        width:  parent.width
+        height: parent.height
+
+        x: root._effectiveOpen ? 0 : (root.edge === "left" ? -width : root.edge === "right" ? width : 0)
+        y: root._effectiveOpen ? 0 : (root.edge === "top" ? -height : root.edge === "bottom" ? height : 0)
+
+        Behavior on x { NumberAnimation { duration: root.slideDuration; easing.type: Easing.OutCubic } }
+        Behavior on y { NumberAnimation { duration: root.slideDuration; easing.type: Easing.OutCubic } }
+
+        HoverHandler {
+            onHoveredChanged: root._selfHovered = hovered
+        }
+    }
+}
+
+==> ./src/components/PopupPage.qml <==
+import QtQuick
+import QtQuick.Controls
+import qs.src.theme
+
+// Scrollable content container for popup pages.
+// Wrap your popup's inner content in this instead of a plain Column.
+//
+// Usage:
+//   PopupPage {
+//       anchors.fill: parent
+//       // children go here
+//   }
+
+Item {
+    id: root
+
+    default property alias content: contentCol.data
+
+    property int padH: 8
+    property int padV: 8
+
+    clip: true
+
+    Flickable {
+        id: flick
+        anchors.fill:   parent
+        contentWidth:   width
+        contentHeight:  contentCol.implicitHeight + root.padV * 2
+        boundsBehavior: Flickable.StopAtBounds
+        clip:           true
+
+        ScrollBar.vertical: ScrollBar {
+            policy: contentCol.implicitHeight + root.padV * 2 > flick.height ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+            
+            contentItem: Rectangle {
+                implicitWidth:  3
+                implicitHeight: 40
+                radius:         1.5
+                color:          Qt.rgba(1, 1, 1, 0.25)
+            }
+            background: Item {}
+        }
+
+        Column {
+            id: contentCol
+            spacing: 8
+            anchors {
+                top:         parent.top
+                topMargin:   root.padV
+                left:        parent.left
+                leftMargin:  root.padH
+                right:       parent.right
+                rightMargin: root.padH + 6
+            }
+        }
+    }
+}
+
+==> ./src/components/TabBar.qml <==
+import QtQuick
+import qs.src.theme
+
+// Reusable tab switcher — horizontal or vertical.
+// Horizontal: icon + label pill row with bottom divider. Used by multi-tab popups.
+// Vertical:   icon-only solid pill column. Reserved for future use.
+
+Item {
+    id: root
+
+    property var    model:       []
+    property string currentPage: ""
+    property string orientation: "horizontal"
+
+    signal pageChanged(string key)
+
+    property string defaultPage: model.length > 0 ? model[0].key : ""
+    function reset() { pageChanged(defaultPage) }
+
+    implicitWidth:  orientation === "vertical"   ? 40 : 0
+    implicitHeight: orientation === "horizontal" ? 40 : 0
+
+    // ── Scroll to Cycle Tabs ──────────────────────────────────────────────────
+    property bool _scrollBusy: false
+
+    Timer {
+        id:          scrollCooldown
+        interval:    300
+        onTriggered: root._scrollBusy = false
+    }
+
+    WheelHandler {
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        onWheel: (event) => {
+            if (root._scrollBusy) return
+            root._scrollBusy = true; scrollCooldown.restart()
+            const keys = root.model.map(m => m.key)
+            const dir  = event.angleDelta.y < 0 ? 1 : -1
+            const idx  = (keys.indexOf(root.currentPage) + dir + keys.length) % keys.length
+            root.pageChanged(keys[idx])
+        }
+    }
+
+    // ── Horizontal ────────────────────────────────────────────────────────────
+    Row {
+        id:           hRow
+        anchors.fill: parent
+        visible:      root.orientation === "horizontal"
+
+        Repeater {
+            model: root.orientation === "horizontal" ? root.model : []
+
+            delegate: Item {
+                id: hTab
+                readonly property bool isActive: root.currentPage === modelData.key
+
+                width:  hRow.width / root.model.length
+                height: hRow.height
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width:            Math.min(parent.width - 4, hIcon.implicitWidth + (hLabel.visible ? hLabel.implicitWidth + 8 : 0) + 24)
+                    height:           parent.height - 8
+                    radius:           height / 2
+                    color:            hTab.isActive ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.18) 
+                                                    : (hHov.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent")
+                    
+                    Behavior on color { ColorAnimation { duration: 120 } }
+                }
+
+                Row {
+                    anchors.centerIn: parent
+                    spacing:          6
+
+                    Text {
+                        id:                     hIcon
+                        text:                   modelData.icon
+                        font.pixelSize:         14
+                        font.family:            Fonts.font
+                        anchors.verticalCenter: parent.verticalCenter
+                        color:                  hTab.isActive ? Colors.primary : (hHov.containsMouse ? Qt.rgba(1,1,1,0.75) : Qt.rgba(1,1,1,0.4))
+                        
+                        Behavior on color { ColorAnimation { duration: 120 } }
+                    }
+
+                    Text {
+                        id:                     hLabel
+                        visible:                modelData.label !== undefined
+                        text:                   modelData.label ?? ""
+                        font.pixelSize:         12
+                        font.bold:              hTab.isActive
+                        font.family:            Fonts.font
+                        anchors.verticalCenter: parent.verticalCenter
+                        color:                  hTab.isActive ? Colors.primary : (hHov.containsMouse ? Qt.rgba(1,1,1,0.75) : Qt.rgba(1,1,1,0.4))
+                        
+                        Behavior on color { ColorAnimation { duration: 120 } }
+                    }
+                }
+
+                MouseArea {
+                    id:           hHov
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape:  Qt.PointingHandCursor
+                    onClicked:    root.pageChanged(modelData.key)
+                }
+            }
+        }
+    }
+
+    // Bottom divider — horizontal only
+    Rectangle {
+        visible:        root.orientation === "horizontal"
+        anchors.bottom: parent.bottom
+        anchors.left:   parent.left
+        anchors.right:  parent.right
+        height:         1
+        color:          Colors.outlineVariant
+        opacity:        0.5
+    }
+
+    // ── Vertical ──────────────────────────────────────────────────────────────
+    Column {
+        id:               vCol
+        anchors.centerIn: parent
+        visible:          root.orientation === "vertical"
+
+        readonly property int tabH: 60
+        spacing: root.model.length > 1 ? (root.height - root.model.length * tabH) / (root.model.length - 1) : 0
+
+        Repeater {
+            model: root.orientation === "vertical" ? root.model : []
+
+            delegate: Rectangle {
+                id: vTab
+                readonly property bool isActive: root.currentPage === modelData.key
+
+                width:  40
+                height: vCol.tabH
+                radius: Theme.pillRadius
+                color:  vTab.isActive ? Colors.primary : (vHov.containsMouse ? Qt.rgba(1,1,1,0.08) : "transparent")
+                
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                Text {
+                    anchors.centerIn: parent
+                    text:             modelData.icon
+                    font.pixelSize:   16
+                    font.family:      Fonts.font
+                    color:            vTab.isActive ? Colors.on_Primary : Colors.primary
+                    
+                    Behavior on color { ColorAnimation { duration: 120 } }
+                }
+
+                MouseArea {
+                    id:           vHov
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape:  Qt.PointingHandCursor
+                    onClicked:    root.pageChanged(modelData.key)
+                }
+            }
+        }
+    }
+}
+
+==> ./src/components/TrayContextMenu.qml <==
+import Qt5Compat.GraphicalEffects
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Hyprland
+import Quickshell.Wayland
+import qs.src.theme
+
+PanelWindow {
+    id: root
+
+    // ── Properties ────────────────────────────────────────────────────────────
+    property var  menuHandle: null
+    property real menuX:      0
+    property real menuY:      0
+    property bool hasCurrent: false
+    property int  animLength: 400
+    property var  animCurve:  [0.05, 0, 0.133, 0.06, 0.166, 0.4, 0.208, 0.82, 0.25, 1, 1, 1]
+
+    // ── Methods ───────────────────────────────────────────────────────────────
+    function open(handle, x, y) {
+        menuHandle = handle
+        const safeX = Math.max(8, Math.min(x - 120, Screen.width - 248))
+        menuX = safeX
+        menuY = y - 32
+        hasCurrent = true
+        grabTimer.restart()
+    }
+
+    function close() {
+        hasCurrent       = false
+        focusGrab.active = false
+        grabTimer.stop()
+    }
+
+    // ── Window Config ─────────────────────────────────────────────────────────
+    color: "transparent"
+    anchors { top: true; bottom: true; left: true; right: true }
+    
+    WlrLayershell.layer:         WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: hasCurrent ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+    mask: Region {
+        item: hasCurrent ? root.contentItem : null
+    }
+
+    HyprlandFocusGrab {
+        id:        focusGrab
+        windows:   [root]
+        onCleared: root.close()
+    }
+
+    Timer {
+        id:          grabTimer
+        interval:    50
+        onTriggered: focusGrab.active = true
+    }
+
+    // Click outside to close
+    MouseArea {
+        anchors.fill: parent
+        enabled:      root.hasCurrent
+        onClicked:    root.close()
+    }
+
+    // ── Menu Wrapper ──────────────────────────────────────────────────────────
+    Item {
+        id: wrapper
+
+        readonly property real topPad:        8
+        readonly property real bottomPad:     8
+        readonly property real contentHeight: topPad + menuColumn.implicitHeight + bottomPad
+
+        x:              root.menuX
+        y:              root.menuY
+        width:          240
+        visible:        height > 0
+        clip:           true
+        implicitHeight: root.hasCurrent ? Math.max(contentHeight, 52) : 0
+
+        Behavior on implicitHeight {
+            NumberAnimation {
+                duration:           root.animLength
+                easing.type:        Easing.BezierSpline
+                easing.bezierCurve: root.animCurve
+            }
+        }
+
+        Rectangle {
+            id:                menuBg
+            anchors.fill:      parent
+            color:             Colors.background
+            clip:              true
+            bottomLeftRadius:  14
+            bottomRightRadius: 14
+
+            QsMenuOpener {
+                id:   opener
+                menu: root.menuHandle
+            }
+
+            Rectangle {
+                id: highlight
+
+                property real targetY: 0
+                property bool active:  false
+
+                x:       8
+                y:       menuColumn.y + targetY
+                width:   parent.width - 16
+                height:  36
+                radius:  8
+                color:   Colors.primary
+                opacity: active ? 0.15 : 0
+
+                Behavior on y       { NumberAnimation { duration: 200; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
+                Behavior on opacity { NumberAnimation { duration: 150 } }
+            }
+
+            Column {
+                id: menuColumn
+                spacing: 2
+                anchors {
+                    top:         parent.top
+                    left:        parent.left
+                    right:       parent.right
+                    topMargin:   8
+                    leftMargin:  8
+                    rightMargin: 8
+                }
+
+                onChildrenChanged: highlight.active = false
+
+                Repeater {
+                    model: opener.children
+
+                    delegate: Item {
+                        id: menuItem
+
+                        required property var modelData
+                        required property int index
+
+                        property bool isSeparator: modelData.isSeparator
+                        property bool hasChildren: modelData.hasChildren
+
+                        width:  menuColumn.width
+                        height: isSeparator ? 12 : 36
+
+                        // Separator line
+                        Rectangle {
+                            visible:          isSeparator
+                            anchors.centerIn: parent
+                            width:            parent.width - 16
+                            height:           1
+                            color:            Colors.primary
+                            opacity:          0.5
+                        }
+
+                        // Active indicator bar
+                        Rectangle {
+                            visible: !isSeparator && highlight.active && highlight.targetY === menuItem.y
+                            width:   3
+                            height:  16
+                            radius:  2
+                            color:   Colors.primary
+                            anchors {
+                                left:           parent.left
+                                leftMargin:     4
+                                verticalCenter: parent.verticalCenter
+                            }
+                        }
+
+                        RowLayout {
+                            visible: !isSeparator
+                            spacing: 12
+                            anchors {
+                                fill:        parent
+                                leftMargin:  12
+                                rightMargin: 12
+                            }
+
+                            Item {
+                                Layout.preferredWidth:  20
+                                Layout.preferredHeight: 20
+
+                                Image {
+                                    anchors.centerIn: parent
+                                    width:            16
+                                    height:           16
+                                    source:           modelData.icon || ""
+                                    fillMode:         Image.PreserveAspectFit
+                                    visible:          modelData.icon !== undefined && modelData.icon !== ""
+                                    layer.enabled:    true
+                                    layer.effect:     ColorOverlay { color: Colors.primary }
+                                }
+                            }
+
+                            Text {
+                                text:              modelData.text || ""
+                                color:             Colors.primary
+                                font.pixelSize:    13
+                                font.bold:         true
+                                font.family:       Fonts.font
+                                verticalAlignment: Text.AlignVCenter
+                                elide:             Text.ElideRight
+                                Layout.fillWidth:  true
+                            }
+
+                            Text {
+                                visible:           menuItem.hasChildren
+                                text:              "›"
+                                color:             Colors.primary
+                                font.pixelSize:    16
+                                font.bold:         true
+                                opacity:           0.7
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+
+                        // QsMenuAnchor for native submenu display
+                        QsMenuAnchor {
+                            id:   anchor
+                            menu: menuItem.hasChildren ? menuItem.modelData : null
+
+                            anchor.window:      root
+                            anchor.rect.x:      menuItem.x + wrapper.x + menuBg.x + menuColumn.x + menuItem.width
+                            anchor.rect.y:      menuItem.y + wrapper.y + menuBg.y + menuColumn.y
+                            anchor.rect.width:  0
+                            anchor.rect.height: menuItem.height
+                            anchor.edges:       Edges.Right | Edges.Top
+                        }
+
+                        MouseArea {
+                            id:           itemMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape:  isSeparator ? Qt.ArrowCursor : Qt.PointingHandCursor
+
+                            onEntered: { if (!menuItem.isSeparator) { highlight.targetY = menuItem.y; highlight.active = true } }
+                            onClicked: {
+                                if (menuItem.isSeparator) return
+                                menuItem.hasChildren ? anchor.open() : (menuItem.modelData.triggered(), root.close())
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+==> ./src/components/qmldir <==
+PillBase   1.0 PillBase.qml
+PopupPage  1.0 PopupPage.qml
+PopupSlide 1.0 PopupSlide.qml
+TabBar     1.0 TabBar.qml
+
+==> ./src/windows/PopupDismiss.qml <==
+import QtQuick
+import Quickshell
+import Quickshell.Wayland
+import Quickshell.Hyprland
+import qs.src.state
+import qs.src.theme
+
+// Transparent fullscreen overlay that dismisses all popups when:
+//   - User clicks anywhere outside a popup
+//   - User presses Escape
+//
+// Only active when at least one popup is open.
+
+PanelWindow {
+    id: root
+
+    color: "transparent"
+
+    anchors {
+        top:    true
+        left:   true
+        right:  true
+        bottom: true
+    }
+
+    // Carve out the bar and notch regions so clicks pass through to the bar
+    mask: Region {
+        // Main screen area below the bar
+        Region {
+            x:      0
+            y:      Theme.barHeight
+            width:  root.width
+            height: root.height - Theme.barHeight
+        }
+        // Gap between left notch and center
+        Region {
+            x:      ShellState.topBarLWidth
+            y:      0
+            width:  (root.width - ShellState.topBarCWidth) / 2 - ShellState.topBarLWidth
+            height: Theme.barHeight
+        }
+        // Gap between center and right notch
+        Region {
+            x:      (root.width + ShellState.topBarCWidth) / 2
+            y:      0
+            width:  (root.width - ShellState.topBarCWidth) / 2 - ShellState.topBarRWidth
+            height: Theme.barHeight
+        }
+    }
+
+    // Don't push windows away
+    exclusionMode: ExclusionMode.Ignore
+
+    // Only grab input when a popup is open
+    visible: Popups.anyOpen
+
+    WlrLayershell.layer:         WlrLayer.Top
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+
+    // Click outside → close all
+    MouseArea {
+        anchors.fill: parent
+        onClicked:    Popups.closeAll()
+    }
+
+    // Escape → close all
+    Item {
+        anchors.fill: parent
+        focus:        root.visible
+
+        Keys.onEscapePressed: Popups.closeAll()
+    }
+
+    // Workspace/window change → close all
+    Connections {
+        target: Hyprland
+
+        function onRawEvent(event) {
+            const triggers = ["workspace", "activemonitor", "activespecial", "openwindow"]
+            if (triggers.includes(event.name))
+                Popups.closeAll()
+        }
+    }
+}
+
+==> ./src/windows/TopBar.qml <==
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Wayland
+import Quickshell.Hyprland
+import qs.src.components
+import qs.src.modules.Left
+import qs.src.modules.Center
+import qs.src.modules.Right
+import qs.src.theme
+import qs.src.state
+
+PanelWindow {
+    id: root
+
+    property var screen
+
+    color:         "transparent"
+    exclusionMode: ExclusionMode.Auto
+
+    anchors {
+        top:   true
+        left:  true
+        right: true
+    }
+
+    // ── Height animates between full bar and thin strip ───────────────────────
+    implicitHeight: ShellState.focusMode ? Theme.borderWidth : Theme.barHeight
+    Behavior on implicitHeight {
+        NumberAnimation { duration: Theme.animDuration; easing.type: Easing.InOutCubic }
+    }
+
+    // ── Write notch widths to ShellState for PopupDismiss ────────────────────
+    Binding { target: ShellState; property: "topBarLWidth"; value: leftRow.implicitWidth  + Theme.barMargin }
+    Binding { target: ShellState; property: "topBarCWidth"; value: centerRow.implicitWidth }
+    Binding { target: ShellState; property: "topBarRWidth"; value: rightRow.implicitWidth + Theme.barMargin }
+
+    // ── Thin strip background — visible only in focus mode ────────────────────
+    Rectangle {
+        anchors.fill: parent
+        color:        Colors.background
+        opacity:      ShellState.focusMode ? 1 : 0
+        Behavior on opacity {
+            NumberAnimation { duration: Theme.animDuration; easing.type: Easing.InOutCubic }
+        }
+    }
+
+    // ── Full bar content — fades out in focus mode ────────────────────────────
+    Item {
+        anchors.fill: parent
+        opacity: ShellState.focusMode ? 0 : 1
+        Behavior on opacity {
+            NumberAnimation { duration: Theme.animDuration; easing.type: Easing.InOutCubic }
+        }
+
+        // Left modules
+        RowLayout {
+            id: leftRow
+            anchors.left:           parent.left
+            anchors.leftMargin:     Theme.barMargin
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.barSpacing
+
+            ArchLogo    {}
+            Workspaces  {}
+            WindowName  {}
+        }
+
+        // Center modules
+        RowLayout {
+            id: centerRow
+            anchors.centerIn:       parent
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.barSpacing
+
+            ClockDate       {}
+            Media           {}
+            IdleInhibitor   {}
+        }
+
+        // Right modules
+        RowLayout {
+            id: rightRow
+            anchors.right:          parent.right
+            anchors.rightMargin:    Theme.barMargin
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.barSpacing
+
+            SystemMonitor       {}
+            Network             {}
+            Volume              {}
+            Battery             {}
+            Tray                { window: root }
+            NotificationButton  {}
+        }
+    }
+}
+
+==> ./src/windows/qmldir <==
+TopBar 1.0 TopBar.qml
+PopupDismiss 1.0 PopupDismiss.qml
+
+==> ./src/theme/Colors.json <==
+{
+  "background": "#1a1111",
+  "on_background": "#f1dedd",
+  "primary": "#ffb3af",
+  "on_primary": "#571d1c",
+  "primary_container": "#733331",
+  "on_primary_container": "#ffdad7",
+  "primary_fixed": "#ffdad7",
+  "primary_fixed_dim": "#ffb3af",
+  "on_primary_fixed": "#3b080a",
+  "on_primary_fixed_variant": "#733331",
+  "inverse_primary": "#904a47",
+  "secondary": "#e7bdba",
+  "on_secondary": "#442928",
+  "secondary_container": "#5d3f3d",
+  "on_secondary_container": "#ffdad7",
+  "secondary_fixed": "#ffdad7",
+  "secondary_fixed_dim": "#e7bdba",
+  "on_secondary_fixed": "#2c1514",
+  "on_secondary_fixed_variant": "#5d3f3d",
+  "tertiary": "#e2c28c",
+  "on_tertiary": "#402d05",
+  "tertiary_container": "#594319",
+  "on_tertiary_container": "#ffdea8",
+  "tertiary_fixed": "#ffdea8",
+  "tertiary_fixed_dim": "#e2c28c",
+  "on_tertiary_fixed": "#271900",
+  "on_tertiary_fixed_variant": "#594319",
+  "error": "#ffb4ab",
+  "on_error": "#690005",
+  "error_container": "#93000a",
+  "on_error_container": "#ffdad6",
+  "surface": "#1a1111",
+  "on_surface": "#f1dedd",
+  "surface_variant": "#534342",
+  "on_surface_variant": "#d8c2c0",
+  "surface_dim": "#1a1111",
+  "surface_bright": "#423736",
+  "surface_container_lowest": "#140c0c",
+  "surface_container_low": "#231919",
+  "surface_container": "#271d1d",
+  "surface_container_high": "#322827",
+  "surface_container_highest": "#3d3231",
+  "surface_tint": "#ffb3af",
+  "inverse_surface": "#f1dedd",
+  "inverse_on_surface": "#382e2d",
+  "outline": "#a08c8b",
+  "outline_variant": "#534342",
+  "shadow": "#000000",
+  "scrim": "#000000",
+  "source_color": "#c61728"
+}
+
+==> ./src/theme/Fonts.qml <==
+pragma Singleton
+import QtQuick
+import Quickshell
+
+QtObject {
+    id: root
+
+    readonly property string font: "Space Mono"
+    readonly property string fontM: "JetBrains Mono"
+}
+
+==> ./src/theme/Theme.qml <==
+pragma Singleton
+import QtQuick
+import Quickshell
+
+QtObject {
+    id: root
+
+    // ── Pill geometry ─────────────────────────────────────────────────────────
+    readonly property int borderWidth:   3
+    readonly property int barHeight:     36
+    readonly property int pillHeight:    30
+    readonly property int pillRadius:    15
+    readonly property int pillPadding:   32   // added to content width
+    readonly property int barSpacing:    10   // spacing between pills
+    readonly property int barMargin:     8    // outer margin inside bar
+
+    // ── Popup geometry ────────────────────────────────────────────────────────
+    readonly property int popupRadius:   14
+    readonly property int popupBorder:   1
+
+    // ── Animation ─────────────────────────────────────────────────────────────
+    readonly property int animDuration:      250
+    readonly property int hoverFadeDuration: 150
+    readonly property int slideInDuration:   400
+
+    // Bezier curve used on popup open/close (matches your SystemPopup)
+    readonly property var slideCurve: [0.05, 0, 0.133, 0.06, 0.166, 0.4, 0.208, 0.82, 0.25, 1, 1, 1]
+
+    // ── Hover ─────────────────────────────────────────────────────────────────
+    readonly property real hoverOpacity:     0.15  // primary at 15% for pill hover bg
+    readonly property int  hoverWidthGain:   10    // pill expands by this on hover
+}
+
+==> ./src/theme/Colors.qml <==
+pragma Singleton
+import QtQuick
+import Quickshell
+import Quickshell.Io
+
+QtObject {
+    id: root
+
+    property var palette: ({})
+
+    property FileView watcher: FileView {
+        path: Quickshell.shellPath("src/theme/Colors.json")
+        watchChanges: true
+        onFileChanged: reload()
+
+        onTextChanged: {
+            try {
+                if (text() !== "") {
+                    root.palette = JSON.parse(text())
+                }
+            } catch (e) {}
+        }
+    }
+
+    // --- Background & Surface ---
+    readonly property color background:              palette.background                || "#1a1111"
+    readonly property color on_Background:           palette.on_background             || "#f1dedd"
+    readonly property color surface:                 palette.surface                   || "#1a1111"
+    readonly property color on_Surface:              palette.on_surface                || "#f1dedd"
+    readonly property color surfaceVariant:          palette.surface_variant           || "#534342"
+    readonly property color on_SurfaceVariant:       palette.on_surface_variant        || "#d8c2c0"
+    readonly property color surfaceContainer:        palette.surface_container         || "#271d1d"
+    readonly property color surfaceContainerHigh:    palette.surface_container_high    || "#322827"
+    readonly property color surfaceContainerHighest: palette.surface_container_highest || "#3d3231"
+
+    // --- Primary ---
+    readonly property color primary:                 palette.primary                   || "#ffb3af"
+    readonly property color on_Primary:              palette.on_primary                || "#571d1c"
+    readonly property color primaryContainer:        palette.primary_container         || "#733331"
+    readonly property color on_PrimaryContainer:     palette.on_primary_container      || "#ffdad7"
+
+    // --- Secondary ---
+    readonly property color secondary:               palette.secondary                 || "#e7bdba"
+    readonly property color on_Secondary:            palette.on_secondary              || "#442928"
+    readonly property color secondaryContainer:      palette.secondary_container       || "#5d3f3d"
+    readonly property color on_SecondaryContainer:   palette.on_secondary_container    || "#ffdad7"
+
+    // --- Tertiary ---
+    readonly property color tertiary:                palette.tertiary                  || "#e2c28c"
+    readonly property color on_Tertiary:             palette.on_tertiary               || "#402d05"
+    readonly property color tertiaryContainer:       palette.tertiary_container        || "#594319"
+    readonly property color on_TertiaryContainer:    palette.on_tertiary_container     || "#ffdea8"
+
+    // --- Error & Utility ---
+    readonly property color error:                   palette.error                     || "#ffb4ab"
+    readonly property color on_Error:                palette.on_error                  || "#690005"
+    readonly property color errorContainer:          palette.error_container           || "#93000a"
+    readonly property color on_ErrorContainer:       palette.on_error_container        || "#ffdad6"
+    readonly property color outline:                 palette.outline                   || "#a08c8b"
+    readonly property color outlineVariant:          palette.outline_variant           || "#534342"
+    readonly property color shadow:                  palette.shadow                    || "#000000"
+}
+
+==> ./src/theme/qmldir <==
+singleton Colors 1.0 Colors.qml
+singleton Theme 1.0 Theme.qml
+singleton Fonts 1.0 Fonts.qml
+
+==> ./shell.qml <==
+//@ pragma UseQApplication
+import QtQuick
+import Quickshell
+import Quickshell.Hyprland
+import Quickshell.Wayland
+import qs.src.windows
+import qs.src.popups
+import qs.src.state
+
+ShellRoot {
+    // ── Per-screen scope ──────────────────────────────────────────────────────
+    Variants {
+        model: Quickshell.screens
+
+        delegate: Component {
+            Scope {
+                required property var modelData
+
+                // ── Bar ───────────────────────────────────────────────────────
+                TopBar { screen: modelData }
+
+                // ── Popup dismiss overlay ─────────────────────────────────────
+                PopupDismiss { screen: modelData }
+
+                // ── Toasts ────────────────────────────────────────────────────
+                NotificationToast { screen: modelData }
+
+                // ── Popups ────────────────────────────────────────────────────
+                // All popups are instantiated here and nowhere else.
+                // Add new popups to this list as they are built.
+
+                NotificationPanel   { screen: modelData }
+                SystemPopup         { screen: modelData }
+                VolumePopup         { screen: modelData }
+                NetworkPopup        { screen: modelData }
+            }
+        }
+    }
+
+    // ── Focus mode keybind (SUPER+Z) ──────────────────────────────────────────
+    // Hyprland lua config bind:
+    //   bind = SUPER, Z, global, quickshell:focusModeToggle
+    GlobalShortcut {
+        appid:       "quickshell"
+        name:        "focusModeToggle"
+        description: "Toggle bar visibility in fullscreen"
+        onPressed:   ShellState.toggleManualOverride()
+    }
+}

@@ -33,6 +33,7 @@ ShellRoot {
                 SystemPopup         { screen: modelData }
                 VolumePopup         { screen: modelData }
                 NetworkPopup        { screen: modelData }
+                MediaPopup          { screen: modelData }
             }
         }
     }
