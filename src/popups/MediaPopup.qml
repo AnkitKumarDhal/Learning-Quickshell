@@ -18,7 +18,7 @@ PanelWindow {
 
     anchors {
         top:   true
-        right: true
+        // right: true
     }
 
     implicitWidth:  380
