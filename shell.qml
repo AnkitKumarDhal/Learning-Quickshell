@@ -47,4 +47,10 @@ ShellRoot {
         description: "Toggle bar visibility in fullscreen"
         onPressed:   ShellState.toggleManualOverride()
     }
+    GlobalShortcut {
+        appid:       "quickshell"
+        name:        "barHideToggle"
+        description: "Toggle bar visibility anytime"
+        onPressed:   ShellState.toggleManualHide()
+    }
 }

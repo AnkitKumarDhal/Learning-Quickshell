@@ -146,7 +146,7 @@ Singleton {
                 if (isNaN(used) || isNaN(total) || total === 0) return
 
                 // Only show root and physical mounts (skip snap, boot etc.)
-                const skip = ["/boot", "/boot/efi", "/snap"]
+                const skip = ["/boot", "/boot/efi", "/snap", "/sys/firmware/efi/efivars", "/.snapshots", "/var/cache", "/home", "/var/log"]
                 if (skip.some(s => mount.startsWith(s))) return
 
                 diskProc._diskLines.push({ mount, used, total })

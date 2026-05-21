@@ -9,6 +9,7 @@ Item {
     property string mountPoint: "/"
     property real   usedBytes:  0
     property real   totalBytes: 1
+    property real   freeBytes:  1
 
     readonly property real fraction: totalBytes > 0 ? usedBytes / totalBytes : 0
 
@@ -40,6 +41,14 @@ Item {
                 text:           root.formatSize(root.usedBytes)
                               + " / "
                               + root.formatSize(root.totalBytes)
+                color:          Colors.on_Surface
+                font.pixelSize: 11
+                font.bold:      true
+                font.family:    Fonts.font
+            }
+
+            Text {
+                text:           "(" + root.formatSize(root.freeBytes) + " Free)"
                 color:          Colors.on_Surface
                 font.pixelSize: 11
                 font.bold:      true

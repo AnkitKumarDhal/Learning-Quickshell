@@ -52,7 +52,10 @@ PillBase {
         text: hasWifi ? (NetworkService.ssid || "Unknown") : SystemStats.activeInterface
         font.family: Fonts.font
         font.pixelSize: 13
+        font.bold: true
         color: Colors.primary
         visible: root._showLabel
+        elide: Text.ElideRight
+        Layout.maximumWidth: 100
     }
 }

@@ -13,16 +13,22 @@ Singleton {
 
     // ── Focus mode ────────────────────────────────────────────────────────────
     // true = bar collapses to thin strip
-    readonly property bool focusMode: _isFullscreen && !_manualOverride
+    readonly property bool focusMode: (_isFullscreen || _manualHide) && !_manualOverride
 
     property bool _isFullscreen:   false
+    property bool _manualHide:     false
     property bool _manualOverride: false
 
     // Called by keybind via IPC or GlobalShortcut
     function toggleManualOverride() {
         // Only meaningful when fullscreen is active
-        if (_isFullscreen)
+        if (_isFullscreen || _manualHide)
             _manualOverride = !_manualOverride
+    }
+
+    function toggleManualHide() {
+        _manualHide = !_manualHide
+        _manualOverride = false
     }
 
     // Reset override when fullscreen exits so bar returns to full automatically

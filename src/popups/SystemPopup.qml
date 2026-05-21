@@ -124,6 +124,7 @@ PanelWindow {
                         mountPoint: modelData.mount
                         usedBytes:  modelData.used
                         totalBytes: modelData.total
+                        freeBytes:  modelData.total - modelData.used
                         label:      modelData.mount === "/" ? "Root" : modelData.mount
                     }
                 }
