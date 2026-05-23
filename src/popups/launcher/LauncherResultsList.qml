@@ -37,7 +37,7 @@ Item {
             anchors.centerIn: parent
             text:             root.searchText === ""
                                   ? "Loading applications…"
-                                  : "No results for  " + root.searchText + ""
+                                  : "No results for " + root.searchText + ""
             color:            Colors.on_SurfaceVariant
             font.pixelSize:   13
             font.family:      Fonts.font

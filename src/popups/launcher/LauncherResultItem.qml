@@ -18,6 +18,8 @@ Item {
     // ── Selection background ──────────────────────────────────────────────
     Rectangle {
         anchors.fill: parent
+        topRightRadius: 15
+        bottomRightRadius: 15
         color: root.isSelected
                    ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.18)
                    : hov.containsMouse

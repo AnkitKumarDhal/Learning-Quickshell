@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
+import Qt5Compat.GraphicalEffects
 import qs.src.theme
 import qs.src.state
 import qs.src.popups.launcher
@@ -179,6 +180,16 @@ PanelWindow {
 
             onLaunched:         (idx) => root.launch(idx)
             onSelectionChanged: (idx) => root.selectedIndex = idx
+
+            layer.enabled: true
+            layer.effect: OpacityMask {
+                maskSource: Rectangle {
+                    width: resultsList.width
+                    height: resultsList.height
+                    bottomLeftRadius: Theme.popupRadius + 6
+                    bottomRightRadius: Theme.popupRadius + 6
+                }
+            }
         }
     }
 }
