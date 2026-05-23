@@ -17,10 +17,11 @@ PanelWindow {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
     anchors.top:   true
-    anchors.left:  true
-    anchors.right: true
+    // anchors.left:  true
+    // anchors.right: true
 
     implicitHeight: win.screen ? win.screen.height : 800
+    implicitWidth:  340
     color:          "transparent"
     exclusionMode:  ExclusionMode.Ignore
     visible:        slide.windowVisible
