@@ -17,8 +17,6 @@ PanelWindow {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
     anchors.top:   true
-    // anchors.left:  true
-    // anchors.right: true
 
     implicitHeight: win.screen ? win.screen.height : 800
     implicitWidth:  340
