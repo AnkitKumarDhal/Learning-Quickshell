@@ -105,6 +105,39 @@ PanelWindow {
         property Process loaderProc: Process {
             command: ["python3", "-c",
                 "import os,json,configparser,glob\n" +
+                "\n" +
+                "def find_icon(name,size=48):\n" +
+                "  if not name: return ''\n" +
+                "  if os.path.isabs(name):\n" +
+                "    if os.path.exists(name): return name\n" +
+                "    for e in ['.png','.svg','.xpm']:\n" +
+                "      if os.path.exists(name+e): return name+e\n" +
+                "    return ''\n" +
+                "  base=name\n" +
+                "  for s in ['.png','.svg','.xpm']:\n" +
+                "    if base.endswith(s): base=base[:-len(s)]; break\n" +
+                "  roots=[os.path.expanduser('~/.local/share/icons'),'/usr/share/icons']\n" +
+                "  themes=['hicolor']\n" +
+                "  for cfg in [os.path.expanduser('~/.config/gtk-4.0/settings.ini'),\n" +
+                "              os.path.expanduser('~/.config/gtk-3.0/settings.ini')]:\n" +
+                "    try:\n" +
+                "      for line in open(cfg):\n" +
+                "        if 'gtk-icon-theme-name' in line:\n" +
+                "          themes.insert(0,line.split('=',1)[1].strip()); break\n" +
+                "    except: pass\n" +
+                "  for root in roots:\n" +
+                "    for theme in themes:\n" +
+                "      for sz in [str(size)+'x'+str(size),'scalable','48x48','32x32','64x64','128x128','256x256','22x22']:\n" +
+                "        for cat in ['apps','applications']:\n" +
+                "          for ext in ['svg','png','xpm']:\n" +
+                "            p=root+'/'+theme+'/'+sz+'/'+cat+'/'+base+'.'+ext\n" +
+                "            if os.path.exists(p): return p\n" +
+                "  for d in ['/usr/share/pixmaps',os.path.expanduser('~/.local/share/pixmaps')]:\n" +
+                "    for ext in ['svg','png','xpm']:\n" +
+                "      p=d+'/'+base+'.'+ext\n" +
+                "      if os.path.exists(p): return p\n" +
+                "  return ''\n" +
+                "\n" +
                 "apps=[]\n" +
                 "seen=set()\n" +
                 "dirs=['/usr/share/applications',os.path.expanduser('~/.local/share/applications')]\n" +
@@ -120,7 +153,8 @@ PanelWindow {
                 "    n=e.get('Name','')\n" +
                 "    if not n or n in seen: continue\n" +
                 "    seen.add(n)\n" +
-                "    apps.append({'name':n,'exec':e.get('Exec',''),'icon':e.get('Icon',''),'comment':e.get('Comment','')})\n" +
+                "    ic=find_icon(e.get('Icon',''))\n" +
+                "    apps.append({'name':n,'exec':e.get('Exec',''),'icon':ic,'comment':e.get('Comment','')})\n" +
                 "apps.sort(key=lambda x:x['name'].lower())\n" +
                 "print(json.dumps(apps))"
             ]
@@ -364,26 +398,44 @@ PanelWindow {
                     anchors { fill: parent; leftMargin: 16; rightMargin: 14 }
                     spacing: 12
 
-                    // Letter avatar
+                    // App icon — real icon with letter fallback
                     Rectangle {
                         width:  36
                         height: 36
                         radius: 9
-                        color:  index === root.selectedIndex
-                                    ? Colors.primaryContainer
-                                    : Colors.surfaceContainerHigh
+                        // background only visible when icon fails / hasn't loaded
+                        color: iconImg.status === Image.Ready
+                                   ? "transparent"
+                                   : (index === root.selectedIndex
+                                       ? Colors.primaryContainer
+                                       : Colors.surfaceContainerHigh)
                         Layout.alignment: Qt.AlignVCenter
                         Behavior on color { ColorAnimation { duration: 120 } }
 
+                        // Real icon
+                        Image {
+                            id:           iconImg
+                            anchors.fill: parent
+                            anchors.margins: 3
+                            source:       modelData.icon ? ("file://" + modelData.icon) : ""
+                            fillMode:     Image.PreserveAspectFit
+                            smooth:       true
+                            mipmap:       true
+                            visible:      status === Image.Ready
+                            asynchronous: true
+                        }
+
+                        // Letter fallback — shown while loading or when no icon found
                         Text {
                             anchors.centerIn: parent
-                            text:             (modelData.name || "?").charAt(0).toUpperCase()
-                            color:            index === root.selectedIndex
-                                                  ? Colors.on_PrimaryContainer
-                                                  : Colors.on_SurfaceVariant
-                            font.pixelSize:   15
-                            font.bold:        true
-                            font.family:      Fonts.fontM
+                            visible:     iconImg.status !== Image.Ready
+                            text:        (modelData.name || "?").charAt(0).toUpperCase()
+                            color:       index === root.selectedIndex
+                                             ? Colors.on_PrimaryContainer
+                                             : Colors.on_SurfaceVariant
+                            font.pixelSize: 15
+                            font.bold:   true
+                            font.family: Fonts.fontM
                             Behavior on color { ColorAnimation { duration: 120 } }
                         }
                     }
