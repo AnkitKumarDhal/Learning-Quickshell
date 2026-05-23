@@ -19,8 +19,9 @@ Singleton {
     property bool mediaOpen:         false
     property bool idleInhibitorOpen: false
     property bool volumeOpen:        false
-    property bool networkOpen: false
-    property int  networkTab:  0
+    property bool launcherOpen:      false
+    property bool networkOpen:       false
+    property int  networkTab:        0
 
     // Note: Tray context menu is managed internally by TrayContextMenu.
     // No open bool needed here; TrayContextMenu owns its own state.
@@ -46,6 +47,7 @@ Singleton {
         idleInhibitorOpen = false
         volumeOpen        = false
         networkOpen       = false
+        launcherOpen      = false
     }
     // onNetworkOpenChanged: NetworkService.scannerActive = networkOpen
 }

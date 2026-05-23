@@ -34,6 +34,7 @@ ShellRoot {
                 VolumePopup         { screen: modelData }
                 NetworkPopup        { screen: modelData }
                 MediaPopup          { screen: modelData }
+                Launcher            { screen: modelData }
             }
         }
     }
@@ -52,5 +53,11 @@ ShellRoot {
         name:        "barHideToggle"
         description: "Toggle bar visibility anytime"
         onPressed:   ShellState.toggleManualHide()
+    }
+    GlobalShortcut {
+        appid:       "quickshell"
+        name:        "launcherToggle"
+        description: "Toggle app launcher"
+        onPressed:   Popups.launcherOpen = !Popups.launcherOpen
     }
 }
