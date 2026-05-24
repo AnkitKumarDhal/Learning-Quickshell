@@ -1,4 +1,3 @@
-// src/services/NetworkService.qml
 pragma Singleton
 
 import QtQuick
