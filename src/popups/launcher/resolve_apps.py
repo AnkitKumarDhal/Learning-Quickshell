@@ -84,7 +84,7 @@ def load_apps():
 
     for d in dirs:
         for f in sorted(glob.glob(os.path.join(d, "*.desktop"))):
-            parser = configparser.RawConfigParser()
+            parser = configparser.RawConfigParser(strict=False)
             try:
                 parser.read(f)
             except Exception:

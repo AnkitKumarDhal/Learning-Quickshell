@@ -22,7 +22,7 @@ PillBase {
                 Hyprland.dispatch("hl.dsp.focus({ workspace = " + (i + 1) + " })")
                 return
             }
-            x -= w + 8  // 8 = spacing
+            x -= w + Theme.barSpacing  // 8 = spacing
         }
     }
 
