@@ -20,6 +20,7 @@ Singleton {
     property bool idleInhibitorOpen: false
     property bool volumeOpen:        false
     property bool launcherOpen:      false
+    property bool clipboardOpen:     false
     property bool networkOpen:       false
     property int  networkTab:        0
 
@@ -35,6 +36,8 @@ Singleton {
         mediaOpen         ||
         idleInhibitorOpen ||
         volumeOpen        ||
+        clipboardOpen     ||
+        launcherOpen      ||
         networkOpen
 
     // ── Methods ───────────────────────────────────────────────────────────────
@@ -47,6 +50,7 @@ Singleton {
         idleInhibitorOpen = false
         volumeOpen        = false
         networkOpen       = false
+        clipboardOpen     = false
         launcherOpen      = false
     }
     // onNetworkOpenChanged: NetworkService.scannerActive = networkOpen

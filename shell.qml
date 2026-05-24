@@ -35,6 +35,7 @@ ShellRoot {
                 NetworkPopup        { screen: modelData }
                 MediaPopup          { screen: modelData }
                 Launcher            { screen: modelData }
+                ClipboardPopup      { screen: modelData }
             }
         }
     }
@@ -59,5 +60,11 @@ ShellRoot {
         name:        "launcherToggle"
         description: "Toggle app launcher"
         onPressed:   Popups.launcherOpen = !Popups.launcherOpen
+    }
+    GlobalShortcut {
+        appid:       "quickshell"
+        name:        "clipboardToggle"
+        description: "Toggle Clipboard Manager overlay"
+        onPressed:   Popups.clipboardOpen = !Popups.clipboardOpen
     }
 }

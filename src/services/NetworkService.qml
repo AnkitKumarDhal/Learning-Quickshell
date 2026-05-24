@@ -10,6 +10,7 @@ Singleton {
     id: root
 
     // ── WiFi ─────────────────────────────────────────────────────────────────
+    readonly property var wifiHardwareEnabled: Networking.wifiHardwareEnabled
 
     /// The first WiFi device found, or null
     readonly property var wifiDevice: {

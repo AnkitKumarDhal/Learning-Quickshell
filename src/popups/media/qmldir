@@ -1,4 +1,4 @@
-module qs.src.popups.media
+# module qs.src.popups.media
 MediaArt        1.0 MediaArt.qml
 MediaTrackInfo  1.0 MediaTrackInfo.qml
 MediaProgress   1.0 MediaProgress.qml
