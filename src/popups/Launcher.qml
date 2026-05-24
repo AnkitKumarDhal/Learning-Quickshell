@@ -44,7 +44,7 @@ PanelWindow {
         if (visible) {
             searchBar.clear()
             root.selectedIndex = 0
-            if (!appLoader.loading) appLoader.reload()
+            appLoader.reload()
             searchBar.forceActiveFocus()
         }
     }
