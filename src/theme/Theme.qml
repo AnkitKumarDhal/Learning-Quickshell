@@ -22,6 +22,7 @@ QtObject {
     readonly property int animDuration:      250
     readonly property int hoverFadeDuration: 150
     readonly property int slideInDuration:   400
+    readonly property int hoverCloseDelay:   300
 
     // Bezier curve used on popup open/close (matches your SystemPopup)
     readonly property var slideCurve: [0.05, 0, 0.133, 0.06, 0.166, 0.4, 0.208, 0.82, 0.25, 1, 1, 1]

@@ -236,23 +236,21 @@ PanelWindow {
 
                             delegate: Item {
                                 required property var modelData
-
                                 Layout.fillWidth: true
                                 implicitHeight: 44
+
+                                // Row hover detection — HoverHandler doesn't consume click events
+                                HoverHandler { id: rowHover }
 
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: 10
-                                    color: btHov.containsMouse ? Colors.surfaceContainerHighest : Qt.rgba(Colors.primaryContainer.r, Colors.primaryContainer.g, Colors.primaryContainer.b, 0.3)
+                                    color: rowHover.hovered
+                                        ? Colors.surfaceContainerHighest
+                                        : modelData.connected
+                                            ? Qt.rgba(Colors.primaryContainer.r, Colors.primaryContainer.g, Colors.primaryContainer.b, 0.3)
+                                            : Colors.surfaceContainerHigh
                                     Behavior on color { ColorAnimation { duration: 120 } }
-
-                                    MouseArea {
-                                        id: btHov
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: modelData.connected = false
-                                    }
                                 }
 
                                 RowLayout {
@@ -261,18 +259,18 @@ PanelWindow {
 
                                     Text {
                                         text: {
-                                            const ic = modelData.icon ?? "";
-                                            if (ic.includes("headphone") || ic.includes("headset")) return "󰋋";
-                                            if (ic.includes("phone"))    return "󰄜";
-                                            if (ic.includes("keyboard")) return "󰌌";
-                                            if (ic.includes("mouse"))    return "󰍽";
-                                            if (ic.includes("speaker"))  return "󰓃";
-                                            if (ic.includes("computer")) return "󰇄";
-                                            return "󰂯";
+                                            const ic = modelData.icon ?? ""
+                                            if (ic.includes("headphone") || ic.includes("headset")) return "󰋋"
+                                            if (ic.includes("phone"))    return "󰄜"
+                                            if (ic.includes("keyboard")) return "󰌌"
+                                            if (ic.includes("mouse"))    return "󰍽"
+                                            if (ic.includes("speaker"))  return "󰓃"
+                                            if (ic.includes("computer")) return "󰇄"
+                                            return "󰂯"
                                         }
                                         font.family: Fonts.fontM
                                         font.pixelSize: 16
-                                        color: Colors.primary
+                                        color: modelData.connected ? Colors.primary : Colors.outline
                                     }
 
                                     Text {
@@ -286,39 +284,37 @@ PanelWindow {
                                     }
 
                                     Text {
-                                        visible: modelData.hasBattery
+                                        visible: modelData.hasBattery ?? false
                                         text: Math.round((modelData.battery ?? 0) * 100) + "%"
                                         font.family: Fonts.font
                                         font.pixelSize: 10
                                         color: Colors.outline
                                     }
 
-                                    // Connected chip (mirrors DeviceRow's "Default" chip)
+                                    // Connect / Connected chip button
                                     Rectangle {
-                                        width: btChip.implicitWidth + 16
-                                        height: 22
-                                        radius: 11
-                                        color: Colors.primary
+                                        width: chipLabel.implicitWidth + 20
+                                        height: 24
+                                        radius: 12
+                                        color: modelData.connected ? Colors.primary : Colors.surfaceContainerHighest
+                                        border.width: modelData.connected ? 0 : 1
+                                        border.color: Colors.outline
+                                        Behavior on color { ColorAnimation { duration: 120 } }
 
-                                        Row {
-                                            id: btChip
+                                        Text {
+                                            id: chipLabel
                                             anchors.centerIn: parent
-                                            spacing: 4
-                                            Text {
-                                                text: "󰄵"
-                                                color: Colors.on_Primary
-                                                font.pixelSize: 10
-                                                font.family: Fonts.font
-                                                anchors.verticalCenter: parent.verticalCenter
-                                            }
-                                            Text {
-                                                text: "Connected"
-                                                color: Colors.on_Primary
-                                                font.pixelSize: 10
-                                                font.bold: true
-                                                font.family: Fonts.font
-                                                anchors.verticalCenter: parent.verticalCenter
-                                            }
+                                            text: modelData.connected ? "Connected" : "Connect"
+                                            color: modelData.connected ? Colors.on_Primary : Colors.on_Surface
+                                            font.pixelSize: 10
+                                            font.bold: true
+                                            font.family: Fonts.font
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: modelData.connected = !modelData.connected
                                         }
                                     }
                                 }

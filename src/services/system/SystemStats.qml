@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.src.state
 
 Singleton {
     id: root
@@ -237,13 +238,17 @@ Singleton {
             cpuProc.running  = true
             memProc.running  = true
             netProc.running  = true
-            tempProc.running = true
-            if (root.hasGpu) gpuReadProc.running = true
-            // Disk polls less frequently — every 10s
-            if (_diskTick % 10 === 0) diskProc.running = true
-            _diskTick++
+            if (Popups.systemOpen) {
+                tempProc.running = true
+                if (root.hasGpu) gpuReadProc.running = true
+            }
         }
+    }
 
-        property int _diskTick: 0
+    Connections {
+        target: Popups
+        function onSystemOpenChanged() {
+            if (Popups.systemOpen) diskProc.running = true
+        }
     }
 }

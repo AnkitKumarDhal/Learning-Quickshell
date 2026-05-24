@@ -1,5 +1,4 @@
 pragma Singleton
-
 import QtQuick
 import Quickshell
 
@@ -7,9 +6,6 @@ Singleton {
     id: root
 
     // ── Timing Constants ──────────────────────────────────────────────────────
-    // Read by PopupSlide
-    readonly property int slideDuration:   400
-    readonly property int hoverCloseDelay: 300
 
     // ── Popup States ──────────────────────────────────────────────────────────
     property bool notificationsOpen: false
@@ -53,5 +49,4 @@ Singleton {
         clipboardOpen     = false
         launcherOpen      = false
     }
-    // onNetworkOpenChanged: NetworkService.scannerActive = networkOpen
 }
