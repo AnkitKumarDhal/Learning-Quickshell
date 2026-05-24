@@ -62,8 +62,8 @@ PanelWindow {
                 bottom: parent.bottom
                 right: parent.right
 
-                bottomMargin: 18
-                rightMargin: 18
+                bottomMargin: 10
+                rightMargin: 10
             }
 
             width: 700
