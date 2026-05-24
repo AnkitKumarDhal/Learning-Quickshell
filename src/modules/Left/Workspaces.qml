@@ -37,7 +37,7 @@ PillBase {
 
     Row {
         id: dotsRow
-        spacing: 8
+        spacing: Theme.barSpacing
 
         Repeater {
             model: root.dotCount

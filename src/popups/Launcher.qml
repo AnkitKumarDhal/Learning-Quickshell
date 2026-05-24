@@ -44,7 +44,7 @@ PanelWindow {
         if (visible) {
             searchBar.clear()
             root.selectedIndex = 0
-            appLoader.reload()
+            if (!appLoader.loading) appLoader.reload()
             searchBar.forceActiveFocus()
         }
     }
@@ -191,5 +191,11 @@ PanelWindow {
                 }
             }
         }
+    }
+
+    Timer {
+        id: focusTimer
+        interval: 32
+        onTriggered: searchBar.forceActiveFocus()
     }
 }

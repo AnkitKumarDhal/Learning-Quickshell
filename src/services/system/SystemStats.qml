@@ -208,7 +208,10 @@ Singleton {
         }
 
         onExited: {
-            root._netPrev._bestRate = 0  // reset best rate each poll cycle
+            // Hysteresis: only reset if active interface dropped near-zero
+            if (root.netDownRate < 512 && root.netUpRate < 512) {
+                root._netPrev._bestRate = 0
+            }
         }
     }
 

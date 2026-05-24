@@ -11,7 +11,7 @@ QtObject {
     readonly property int pillHeight:    30
     readonly property int pillRadius:    15
     readonly property int pillPadding:   32   // added to content width
-    readonly property int barSpacing:    10   // spacing between pills
+    readonly property int barSpacing:    8  // spacing between pills
     readonly property int barMargin:     8    // outer margin inside bar
 
     // ── Popup geometry ────────────────────────────────────────────────────────

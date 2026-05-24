@@ -18,40 +18,50 @@ Singleton {
 
     // ── Polling Processes ─────────────────────────────────────────────────────
     Process {
-        id: _capProc
-        command: ["cat", "/sys/class/power_supply/BAT0/capacity"]
+        id: _finder
+        command: ["sh", "-c", "ls /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n 1"]
         running: true
-
         stdout: SplitParser {
-            onRead: (data) => {
-                const v = parseInt(data.trim())
-                if (!isNaN(v)) {
-                    root.capacity   = v
+            onRead: (line) => {
+                const path = line.trim()
+                if (path) {
+                    _capProc.command = ["cat", path]
+                    _statProc.command = ["cat", path.replace("/capacity", "/status")]
                     root.hasBattery = true
+                    _capProc.running = true
+                    _statProc.running = true
                 }
-            }
-        }
-
-        onExited: (code) => {
-            if (code !== 0) {
-                root.hasBattery = false
             }
         }
     }
 
-    Process {
-        id: _statProc
-        command: ["cat", "/sys/class/power_supply/BAT0/status"]
-        running: true
+    Process { 
+        id: _capProc
+        command: ["cat", "/dev/null"]
+        running: false
+        stdout: SplitParser { 
+            onRead: (d) => { 
+                const v = parseInt(d)
+                if (!isNaN(v)) { 
+                    root.capacity = v
+                    root.hasBattery = true 
+                } 
+            } 
+        } 
+    }
 
-        stdout: SplitParser {
-            onRead: (data) => {
-                const s       = data.trim()
-                root.status   = s
-                root.charging = (s === "Charging")
-                root.full     = (s === "Full")
-            }
-        }
+    Process { 
+        id: _statProc
+        command: ["cat", "/dev/null"]
+        running: false
+        stdout: SplitParser { 
+            onRead: (d) => { 
+                const s = d.trim()
+                root.status = s
+                root.charging = s === "Charging"
+                root.full = s === "Full" 
+            } 
+        } 
     }
 
     // ── Polling Timer ─────────────────────────────────────────────────────────
