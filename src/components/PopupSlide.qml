@@ -1,5 +1,6 @@
 import QtQuick
 import qs.src.state
+import qs.src.theme
 
 // Slide-in/out animation container for all popups.
 // Always bind your PopupWindow.visible to slide.windowVisible
@@ -16,8 +17,8 @@ Item {
     property bool triggerHovered: false
 
     // ── Timing ────────────────────────────────────────────────────────────────
-    property int slideDuration: Popups.slideDuration
-    property int closeDelay:    Popups.hoverCloseDelay
+    property int slideDuration: Theme.slideInDuration
+    property int closeDelay:    Theme.hoverCloseDelay
 
     // ── Output ────────────────────────────────────────────────────────────────
     // Bind your PopupWindow.visible to this

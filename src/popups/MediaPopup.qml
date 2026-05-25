@@ -17,8 +17,6 @@ PanelWindow {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
     anchors.top:   true
-    // anchors.left:  true
-    // anchors.right: true
 
     implicitHeight: win.screen ? win.screen.height : 800
     implicitWidth:  340
@@ -82,63 +80,63 @@ PanelWindow {
         open:         Popups.mediaOpen
         edge:         "top"
         onCloseRequested: Popups.mediaOpen = false
-    }
 
-    // ── Card ──────────────────────────────────────────────────────────────────
-    Rectangle {
-        width:  340
-        anchors.top:              parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.topMargin:        Theme.barHeight + 8
+        // ── Card ──────────────────────────────────────────────────────────────────
+        Rectangle {
+            width:  340
+            anchors.top:              parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.topMargin:        Theme.barHeight + 8
 
-        implicitHeight: cardLayout.implicitHeight + 24
-        radius:         Theme.popupRadius
-        color:          Colors.surfaceContainer
-        border.color:   Colors.outlineVariant
-        border.width:   Theme.popupBorder
+            implicitHeight: cardLayout.implicitHeight + 24
+            radius:         Theme.popupRadius
+            color:          Colors.surfaceContainer
+            border.color:   Colors.outlineVariant
+            border.width:   Theme.popupBorder
 
-        ColumnLayout {
-            id: cardLayout
-            anchors {
-                top:          parent.top
-                left:         parent.left
-                right:        parent.right
-                topMargin:    12
-                leftMargin:   16
-                rightMargin:  16
-                bottomMargin: 12
-            }
-            spacing: 12
-
-            MediaArt {
-                player: win.player
-                hasArt: win.hasArt
-            }
-
-            MediaTrackInfo {
-                player: win.player
-            }
-
-            MediaProgress {
-                player:   win.player
-                position: win._position
-                seeking:  win._seeking
-
-                onSeekStarted: (pos) => { win._seeking = true;  win._position = pos }
-                onSeekMoved:   (pos) => { win._position = pos }
-                onSeekReleased: (pos) => {
-                    if (win.player) win.player.position = pos
-                    win._seeking = false
+            ColumnLayout {
+                id: cardLayout
+                anchors {
+                    top:          parent.top
+                    left:         parent.left
+                    right:        parent.right
+                    topMargin:    12
+                    leftMargin:   16
+                    rightMargin:  16
+                    bottomMargin: 12
                 }
-            }
+                spacing: 12
 
-            MediaControls {
-                player:    win.player
-                isPlaying: win.isPlaying
-            }
+                MediaArt {
+                    player: win.player
+                    hasArt: win.hasArt
+                }
 
-            MediaVolumeRow {
-                player: win.player
+                MediaTrackInfo {
+                    player: win.player
+                }
+
+                MediaProgress {
+                    player:   win.player
+                    position: win._position
+                    seeking:  win._seeking
+
+                    onSeekStarted: (pos) => { win._seeking = true;  win._position = pos }
+                    onSeekMoved:   (pos) => { win._position = pos }
+                    onSeekReleased: (pos) => {
+                        if (win.player) win.player.position = pos
+                        win._seeking = false
+                    }
+                }
+
+                MediaControls {
+                    player:    win.player
+                    isPlaying: win.isPlaying
+                }
+
+                MediaVolumeRow {
+                    player: win.player
+                }
             }
         }
     }

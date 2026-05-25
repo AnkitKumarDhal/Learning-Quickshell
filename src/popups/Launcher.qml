@@ -192,4 +192,10 @@ PanelWindow {
             }
         }
     }
+
+    Timer {
+        id: focusTimer
+        interval: 32
+        onTriggered: searchBar.forceActiveFocus()
+    }
 }

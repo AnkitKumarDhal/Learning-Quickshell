@@ -17,5 +17,6 @@ PillBase {
         verticalAlignment: Text.AlignVCenter
     }
 
-    onClicked: Popups.archMenuOpen = !Popups.archMenuOpen
+// Temporarily hijack the Arch logo click
+onClicked: Popups.clipboardOpen = !Popups.clipboardOpen
 }

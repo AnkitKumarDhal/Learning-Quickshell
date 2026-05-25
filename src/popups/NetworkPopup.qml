@@ -28,308 +28,151 @@ PanelWindow {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
     visible: slide.windowVisible
 
-    PopupSlide {
-        id: slide
-        anchors.fill: parent
-        edge: "top"
-        open: Popups.networkOpen
-        onCloseRequested: Popups.networkOpen = false
-    }
-
     Binding {
         target: NetworkService
         property: "scannerActive"
         value: Popups.networkOpen
     }
 
-    // ── Popup card ────────────────────────────────────────────────────────────
-    Rectangle {
-        anchors {
-            top:        parent.top
-            right:      parent.right
-            topMargin:  Theme.barHeight + 8
-            rightMargin: Theme.barMargin
-        }
+    PopupSlide {
+        id: slide
+        anchors.fill: parent
+        edge: "top"
+        open: Popups.networkOpen
+        onCloseRequested: Popups.networkOpen = false
 
-        width:        360
-        height:       mainCol.implicitHeight + 18
-        radius:       Theme.popupRadius
-        color:        Colors.surfaceContainer
-        border.color: Colors.outlineVariant
-        border.width: Theme.popupBorder
-        clip:         true
-
-        ColumnLayout {
-            id: mainCol
+        // ── Popup card ────────────────────────────────────────────────────────────
+        Rectangle {
             anchors {
-                top:          parent.top
-                left:         parent.left
-                right:        parent.right
-                topMargin:    10
-                leftMargin:   16
-                rightMargin:  16
-                bottomMargin: 16
-            }
-            spacing: 12
-
-            // ── Tab bar ──────────────────────────────────────────────────────
-            TabBar {
-                id: tabs
-                Layout.fillWidth: true
-                orientation: "horizontal"
-                currentPage: ["wifi", "bluetooth", "hotspot"][Popups.networkTab]
-                model: [
-                    { key: "wifi",      icon: "󰤨", label: "Wi-Fi"    },
-                    { key: "bluetooth", icon: "󰂯", label: "Bluetooth" },
-                    { key: "hotspot",   icon: "󰀂", label: "Hotspot"   }
-                ]
-                onPageChanged: (key) => {
-                    const idx = ["wifi", "bluetooth", "hotspot"].indexOf(key)
-                    if (idx >= 0) Popups.networkTab = idx
-                }
+                top:        parent.top
+                right:      parent.right
+                topMargin:  Theme.barHeight + 8
+                rightMargin: Theme.barMargin
             }
 
-            // ── WiFi tab ─────────────────────────────────────────────────────
+            width:        360
+            height:       mainCol.implicitHeight + 18
+            radius:       Theme.popupRadius
+            color:        Colors.surfaceContainer
+            border.color: Colors.outlineVariant
+            border.width: Theme.popupBorder
+            clip:         true
+
             ColumnLayout {
-                visible: Popups.networkTab === 0
-                Layout.fillWidth: true
-                spacing: 8
+                id: mainCol
+                anchors {
+                    top:          parent.top
+                    left:         parent.left
+                    right:        parent.right
+                    topMargin:    10
+                    leftMargin:   16
+                    rightMargin:  16
+                    bottomMargin: 16
+                }
+                spacing: 12
 
-                RowLayout {
+                // ── Tab bar ──────────────────────────────────────────────────────
+                TabBar {
+                    id: tabs
                     Layout.fillWidth: true
-                    Layout.bottomMargin: 4
-
-                    Text {
-                        text: "Wi-Fi"
-                        color: Colors.on_SurfaceVariant
-                        font.pixelSize: 11
-                        font.bold: true
-                        font.family: Fonts.font
-                        leftPadding: 4
-                        Layout.fillWidth: true
-                    }
-
-                    Rectangle {
-                        width: 40; height: 22; radius: 11
-                        color: NetworkService.wifiEnabled ? Colors.primary : Colors.surfaceContainerHighest
-                        border.width: NetworkService.wifiEnabled ? 0 : 1
-                        border.color: Colors.outlineVariant
-                        opacity: (NetworkService.wifiHardwareEnabled ?? true) ? 1.0 : 0.4
-                        
-                        Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
-
-                        Rectangle {
-                            width: 16; height: 16; radius: 8
-                            color: NetworkService.wifiEnabled ? Colors.on_Primary : Colors.outline
-                            anchors.verticalCenter: parent.verticalCenter
-                            x: NetworkService.wifiEnabled ? 20 : 4
-                            Behavior on x { NumberAnimation { duration: Theme.hoverFadeDuration; easing.type: Easing.OutCubic } }
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            enabled: NetworkService.wifiHardwareEnabled ?? true
-                            onClicked: NetworkService.setWifiEnabled(!NetworkService.wifiEnabled)
-                            cursorShape: Qt.PointingHandCursor
-                        }
+                    orientation: "horizontal"
+                    currentPage: ["wifi", "bluetooth", "hotspot"][Popups.networkTab]
+                    model: [
+                        { key: "wifi",      icon: "󰤨", label: "Wi-Fi"    },
+                        { key: "bluetooth", icon: "󰂯", label: "Bluetooth" },
+                        { key: "hotspot",   icon: "󰀂", label: "Hotspot"   }
+                    ]
+                    onPageChanged: (key) => {
+                        const idx = ["wifi", "bluetooth", "hotspot"].indexOf(key)
+                        if (idx >= 0) Popups.networkTab = idx
                     }
                 }
 
-                Flickable {
+                // ── WiFi tab ─────────────────────────────────────────────────────
+                ColumnLayout {
+                    visible: Popups.networkTab === 0
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(networkCol.implicitHeight, 280)
-                    contentHeight: networkCol.implicitHeight
-                    clip: true
-                    visible: NetworkService.wifiEnabled
-                    boundsBehavior: Flickable.StopAtBounds
+                    spacing: 8
 
-                    ColumnLayout {
-                        id: networkCol
-                        width: parent.width
-                        spacing: 4
-
-                        Repeater {
-                            model: NetworkService.networks
-
-                            delegate: NetworkRow {
-                                required property var modelData
-                                Layout.fillWidth: true
-                                network: modelData
-                            }
-                        }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.bottomMargin: 4
 
                         Text {
-                            visible: NetworkService.networks.length === 0
-                            Layout.alignment: Qt.AlignHCenter
-                            text: "Scanning…"
-                            font.family: Fonts.font
+                            text: "Wi-Fi"
+                            color: Colors.on_SurfaceVariant
                             font.pixelSize: 11
-                            color: Colors.outline
-                            topPadding: 8; bottomPadding: 8
+                            font.bold: true
+                            font.family: Fonts.font
+                            leftPadding: 4
+                            Layout.fillWidth: true
                         }
-                    }
-                }
-
-                Text {
-                    visible: !NetworkService.wifiEnabled
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "Wi-Fi is disabled"
-                    font.family: Fonts.font
-                    font.pixelSize: 11
-                    color: Colors.outline
-                    topPadding: 8; bottomPadding: 8
-                }
-            }
-
-            // ── Bluetooth tab ─────────────────────────────────────────────────
-            ColumnLayout {
-                visible: Popups.networkTab === 1
-                Layout.fillWidth: true
-                spacing: 8
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.bottomMargin: 4
-
-                    Text {
-                        text: "Bluetooth"
-                        color: Colors.on_SurfaceVariant
-                        font.pixelSize: 11
-                        font.bold: true
-                        font.family: Fonts.font
-                        leftPadding: 4
-                        Layout.fillWidth: true
-                    }
-
-                    Rectangle {
-                        width: 40; height: 22; radius: 11
-                        color: NetworkService.btEnabled ? Colors.primary : Colors.surfaceContainerHighest
-                        border.width: NetworkService.btEnabled ? 0 : 1
-                        border.color: Colors.outlineVariant
-                        opacity: NetworkService.btAdapter ? 1.0 : 0.4
-                        
-                        Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                         Rectangle {
-                            width: 16; height: 16; radius: 8
-                            color: NetworkService.btEnabled ? Colors.on_Primary : Colors.outline
-                            anchors.verticalCenter: parent.verticalCenter
-                            x: NetworkService.btEnabled ? 20 : 4
-                            Behavior on x { NumberAnimation { duration: Theme.hoverFadeDuration; easing.type: Easing.OutCubic } }
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            enabled: NetworkService.btAdapter !== null
-                            onClicked: NetworkService.setBtEnabled(!NetworkService.btEnabled)
-                            cursorShape: Qt.PointingHandCursor
-                        }
-                    }
-                }
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 4
-                    visible: NetworkService.btEnabled
-
-                    Repeater {
-                        model: NetworkService.btDevices
-
-                        delegate: Item {
-                            required property var modelData
-
-                            Layout.fillWidth: true
-                            implicitHeight: 44
+                            width: 40; height: 22; radius: 11
+                            color: NetworkService.wifiEnabled ? Colors.primary : Colors.surfaceContainerHighest
+                            border.width: NetworkService.wifiEnabled ? 0 : 1
+                            border.color: Colors.outlineVariant
+                            opacity: (NetworkService.wifiHardwareEnabled ?? true) ? 1.0 : 0.4
+                            
+                            Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                             Rectangle {
-                                anchors.fill: parent
-                                radius: 10
-                                color: btHov.containsMouse ? Colors.surfaceContainerHighest : Qt.rgba(Colors.primaryContainer.r, Colors.primaryContainer.g, Colors.primaryContainer.b, 0.3)
-                                Behavior on color { ColorAnimation { duration: 120 } }
+                                width: 16; height: 16; radius: 8
+                                color: NetworkService.wifiEnabled ? Colors.on_Primary : Colors.outline
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: NetworkService.wifiEnabled ? 20 : 4
+                                Behavior on x { NumberAnimation { duration: Theme.hoverFadeDuration; easing.type: Easing.OutCubic } }
+                            }
 
-                                MouseArea {
-                                    id: btHov
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: modelData.connected = false
+                            MouseArea {
+                                anchors.fill: parent
+                                enabled: NetworkService.wifiHardwareEnabled ?? true
+                                onClicked: NetworkService.setWifiEnabled(!NetworkService.wifiEnabled)
+                                cursorShape: Qt.PointingHandCursor
+                            }
+                        }
+                    }
+
+                    Flickable {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: Math.min(networkCol.implicitHeight, 280)
+                        contentHeight: networkCol.implicitHeight
+                        clip: true
+                        visible: NetworkService.wifiEnabled
+                        boundsBehavior: Flickable.StopAtBounds
+
+                        ColumnLayout {
+                            id: networkCol
+                            width: parent.width
+                            spacing: 4
+
+                            Repeater {
+                                model: NetworkService.networks
+
+                                delegate: NetworkRow {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    network: modelData
                                 }
                             }
 
-                            RowLayout {
-                                anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
-                                spacing: 10
-
-                                Text {
-                                    text: {
-                                        const ic = modelData.icon ?? "";
-                                        if (ic.includes("headphone") || ic.includes("headset")) return "󰋋";
-                                        if (ic.includes("phone"))    return "󰄜";
-                                        if (ic.includes("keyboard")) return "󰌌";
-                                        if (ic.includes("mouse"))    return "󰍽";
-                                        if (ic.includes("speaker"))  return "󰓃";
-                                        if (ic.includes("computer")) return "󰇄";
-                                        return "󰂯";
-                                    }
-                                    font.family: Fonts.fontM
-                                    font.pixelSize: 16
-                                    color: Colors.primary
-                                }
-
-                                Text {
-                                    text: modelData.name
-                                    font.family: Fonts.font
-                                    font.pixelSize: 12
-                                    font.bold: true
-                                    color: Colors.on_Surface
-                                    elide: Text.ElideRight
-                                    Layout.fillWidth: true
-                                }
-
-                                Text {
-                                    visible: modelData.hasBattery
-                                    text: Math.round((modelData.battery ?? 0) * 100) + "%"
-                                    font.family: Fonts.font
-                                    font.pixelSize: 10
-                                    color: Colors.outline
-                                }
-
-                                // Connected chip (mirrors DeviceRow's "Default" chip)
-                                Rectangle {
-                                    width: btChip.implicitWidth + 16
-                                    height: 22
-                                    radius: 11
-                                    color: Colors.primary
-
-                                    Row {
-                                        id: btChip
-                                        anchors.centerIn: parent
-                                        spacing: 4
-                                        Text {
-                                            text: "󰄵"
-                                            color: Colors.on_Primary
-                                            font.pixelSize: 10
-                                            font.family: Fonts.font
-                                            anchors.verticalCenter: parent.verticalCenter
-                                        }
-                                        Text {
-                                            text: "Connected"
-                                            color: Colors.on_Primary
-                                            font.pixelSize: 10
-                                            font.bold: true
-                                            font.family: Fonts.font
-                                            anchors.verticalCenter: parent.verticalCenter
-                                        }
-                                    }
-                                }
+                            Text {
+                                visible: NetworkService.networks.length === 0
+                                Layout.alignment: Qt.AlignHCenter
+                                text: "Scanning…"
+                                font.family: Fonts.font
+                                font.pixelSize: 11
+                                color: Colors.outline
+                                topPadding: 8; bottomPadding: 8
                             }
                         }
                     }
 
                     Text {
-                        visible: (NetworkService.btDevices?.length ?? 0) === 0
+                        visible: !NetworkService.wifiEnabled
                         Layout.alignment: Qt.AlignHCenter
-                        text: "No devices connected"
+                        text: "Wi-Fi is disabled"
                         font.family: Fonts.font
                         font.pixelSize: 11
                         color: Colors.outline
@@ -337,39 +180,192 @@ PanelWindow {
                     }
                 }
 
-                Text {
-                    visible: !NetworkService.btEnabled
-                    Layout.alignment: Qt.AlignHCenter
-                    text: NetworkService.btAdapter ? "Bluetooth is disabled" : "No Bluetooth adapter found"
-                    font.family: Fonts.font
-                    font.pixelSize: 11
-                    color: Colors.outline
-                    topPadding: 8; bottomPadding: 8
+                // ── Bluetooth tab ─────────────────────────────────────────────────
+                ColumnLayout {
+                    visible: Popups.networkTab === 1
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.bottomMargin: 4
+
+                        Text {
+                            text: "Bluetooth"
+                            color: Colors.on_SurfaceVariant
+                            font.pixelSize: 11
+                            font.bold: true
+                            font.family: Fonts.font
+                            leftPadding: 4
+                            Layout.fillWidth: true
+                        }
+
+                        Rectangle {
+                            width: 40; height: 22; radius: 11
+                            color: NetworkService.btEnabled ? Colors.primary : Colors.surfaceContainerHighest
+                            border.width: NetworkService.btEnabled ? 0 : 1
+                            border.color: Colors.outlineVariant
+                            opacity: NetworkService.btAdapter ? 1.0 : 0.4
+                            
+                            Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
+
+                            Rectangle {
+                                width: 16; height: 16; radius: 8
+                                color: NetworkService.btEnabled ? Colors.on_Primary : Colors.outline
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: NetworkService.btEnabled ? 20 : 4
+                                Behavior on x { NumberAnimation { duration: Theme.hoverFadeDuration; easing.type: Easing.OutCubic } }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                enabled: NetworkService.btAdapter !== null
+                                onClicked: NetworkService.setBtEnabled(!NetworkService.btEnabled)
+                                cursorShape: Qt.PointingHandCursor
+                            }
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+                        visible: NetworkService.btEnabled
+
+                        Repeater {
+                            model: NetworkService.btDevices
+
+                            delegate: Item {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                implicitHeight: 44
+
+                                // Row hover detection — HoverHandler doesn't consume click events
+                                HoverHandler { id: rowHover }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 10
+                                    color: rowHover.hovered
+                                        ? Colors.surfaceContainerHighest
+                                        : modelData.connected
+                                            ? Qt.rgba(Colors.primaryContainer.r, Colors.primaryContainer.g, Colors.primaryContainer.b, 0.3)
+                                            : Colors.surfaceContainerHigh
+                                    Behavior on color { ColorAnimation { duration: 120 } }
+                                }
+
+                                RowLayout {
+                                    anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+                                    spacing: 10
+
+                                    Text {
+                                        text: {
+                                            const ic = modelData.icon ?? ""
+                                            if (ic.includes("headphone") || ic.includes("headset")) return "󰋋"
+                                            if (ic.includes("phone"))    return "󰄜"
+                                            if (ic.includes("keyboard")) return "󰌌"
+                                            if (ic.includes("mouse"))    return "󰍽"
+                                            if (ic.includes("speaker"))  return "󰓃"
+                                            if (ic.includes("computer")) return "󰇄"
+                                            return "󰂯"
+                                        }
+                                        font.family: Fonts.fontM
+                                        font.pixelSize: 16
+                                        color: modelData.connected ? Colors.primary : Colors.outline
+                                    }
+
+                                    Text {
+                                        text: modelData.name
+                                        font.family: Fonts.font
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        color: Colors.on_Surface
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
+
+                                    Text {
+                                        visible: modelData.hasBattery ?? false
+                                        text: Math.round((modelData.battery ?? 0) * 100) + "%"
+                                        font.family: Fonts.font
+                                        font.pixelSize: 10
+                                        color: Colors.outline
+                                    }
+
+                                    // Connect / Connected chip button
+                                    Rectangle {
+                                        width: chipLabel.implicitWidth + 20
+                                        height: 24
+                                        radius: 12
+                                        color: modelData.connected ? Colors.primary : Colors.surfaceContainerHighest
+                                        border.width: modelData.connected ? 0 : 1
+                                        border.color: Colors.outline
+                                        Behavior on color { ColorAnimation { duration: 120 } }
+
+                                        Text {
+                                            id: chipLabel
+                                            anchors.centerIn: parent
+                                            text: modelData.connected ? "Connected" : "Connect"
+                                            color: modelData.connected ? Colors.on_Primary : Colors.on_Surface
+                                            font.pixelSize: 10
+                                            font.bold: true
+                                            font.family: Fonts.font
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: modelData.connected = !modelData.connected
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Text {
+                            visible: (NetworkService.btDevices?.length ?? 0) === 0
+                            Layout.alignment: Qt.AlignHCenter
+                            text: "No devices connected"
+                            font.family: Fonts.font
+                            font.pixelSize: 11
+                            color: Colors.outline
+                            topPadding: 8; bottomPadding: 8
+                        }
+                    }
+
+                    Text {
+                        visible: !NetworkService.btEnabled
+                        Layout.alignment: Qt.AlignHCenter
+                        text: NetworkService.btAdapter ? "Bluetooth is disabled" : "No Bluetooth adapter found"
+                        font.family: Fonts.font
+                        font.pixelSize: 11
+                        color: Colors.outline
+                        topPadding: 8; bottomPadding: 8
+                    }
                 }
-            }
 
-            // ── Hotspot tab ───────────────────────────────────────────────────
-            ColumnLayout {
-                visible: Popups.networkTab === 2
-                Layout.fillWidth: true
-                spacing: 6
+                // ── Hotspot tab ───────────────────────────────────────────────────
+                ColumnLayout {
+                    visible: Popups.networkTab === 2
+                    Layout.fillWidth: true
+                    spacing: 6
 
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "󰀂"
-                    font.family: Fonts.fontM
-                    font.pixelSize: 32
-                    color: Colors.outline
-                    topPadding: 12
-                }
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: "󰀂"
+                        font.family: Fonts.fontM
+                        font.pixelSize: 32
+                        color: Colors.outline
+                        topPadding: 12
+                    }
 
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "Hotspot coming soon"
-                    font.family: Fonts.font
-                    font.pixelSize: 11
-                    color: Colors.outline
-                    bottomPadding: 12
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: "Hotspot coming soon"
+                        font.family: Fonts.font
+                        font.pixelSize: 11
+                        color: Colors.outline
+                        bottomPadding: 12
+                    }
                 }
             }
         }

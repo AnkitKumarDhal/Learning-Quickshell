@@ -5,75 +5,17 @@ import qs.src.components
 import qs.src.theme
 import qs.src.state
 import qs.src.services
+import qs.src.services.system
 
 PillBase {
     id: root
 
     hoverExpand: true
 
-    property real cpuUsage: 0.0
-    property real memUsed:  0.0
-    property real memTotal: 0.0
-
-    // ── CPU polling ───────────────────────────────────────────────────────────
-    property var _prev: ({})
-
-    Process {
-        id: cpuProc
-        command: ["cat", "/proc/stat"]
-        running: false
-
-        stdout: SplitParser {
-            onRead: (line) => {
-                const m = line.match(/^(cpu\d*)\s+(.+)/)
-                if (!m) return
-                const id    = m[1]
-                if (id !== "cpu") return   // pill only shows overall
-
-                const parts = m[2].trim().split(/\s+/).map(Number)
-                const idle  = parts[3] + parts[4]
-                const busy  = parts[0] + parts[1] + parts[2] + parts[5] + parts[6]
-                const total = idle + busy
-
-                const prev   = root._prev["cpu"] || { idle, total }
-                const dIdle  = idle  - prev.idle
-                const dTotal = total - prev.total
-                root._prev["cpu"] = { idle, total }
-                root.cpuUsage = dTotal > 0 ? (1.0 - dIdle / dTotal) * 100.0 : 0.0
-            }
-        }
-    }
-
-    // ── Memory polling ────────────────────────────────────────────────────────
-    Process {
-        id: memProc
-        command: ["cat", "/proc/meminfo"]
-        running: false
-
-        stdout: SplitParser {
-            property var _t: 0
-
-            onRead: (line) => {
-                const val = parseInt(line.split(/\s+/)[1])
-                if      (line.startsWith("MemTotal:"))     _t = val
-                else if (line.startsWith("MemAvailable:")) {
-                    root.memTotal = _t / 1024 / 1024
-                    root.memUsed  = (_t - val) / 1024 / 1024
-                }
-            }
-        }
-    }
-
-    Timer {
-        interval: 1000
-        running: true
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: {
-            cpuProc.running = true
-            memProc.running = true
-        }
-    }
+    // SystemMonitor.qml — remove all polling, just bind:
+    property real cpuUsage: SystemStats.cpuUsage * 100
+    property real memUsed:  SystemStats.memUsedGb
+    property real memTotal: SystemStats.memTotalGb
 
     // ── Display ───────────────────────────────────────────────────────────────
     Row {

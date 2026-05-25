@@ -1,4 +1,3 @@
-// src/services/NetworkService.qml
 pragma Singleton
 
 import QtQuick
@@ -10,6 +9,7 @@ Singleton {
     id: root
 
     // ── WiFi ─────────────────────────────────────────────────────────────────
+    readonly property var wifiHardwareEnabled: Networking.wifiHardwareEnabled
 
     /// The first WiFi device found, or null
     readonly property var wifiDevice: {
@@ -63,7 +63,7 @@ Singleton {
 
     readonly property var btAdapter:       Bluetooth.defaultAdapter
     readonly property bool btEnabled:      root.btAdapter?.enabled      ?? false
-    readonly property var btDevices:       Bluetooth.connectedDevices?.values ?? []
+    readonly property var btDevices:       root.btAdapter?.devices?.values ?? []
 
     function setBtEnabled(val) {
         if (root.btAdapter) root.btAdapter.enabled = val;
