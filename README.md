@@ -4,8 +4,8 @@ A modern, modular shell configuration built with Quickshell for Hyprland Wayland
 
 ## Resources
 
-- [Quickshell Documentation](https://quickshell.io/)
-- [Hyprland Lua Configuration](https://wiki.hyprland.org/Configuring/Using-lua/)
+- [Quickshell Documentation](https://quickshell.org/docs/v0.3.0/types/)
+- [Hyprland Lua Configuration](https://wiki.hypr.land/)
 - [License](LICENSE)
 
 ---
@@ -44,15 +44,18 @@ This Quickshell configuration provides a comprehensive desktop shell experience 
 
 | Feature | Description | Location |
 |---------|-------------|----------|
-| Focus Mode | Auto-hides bar during fullscreen, manual toggle available | ShellState.qml |
+| Focus Mode | Auto-hides bar during fullscreen, manual toggle available* | ShellState.qml |
 | Application Launcher | Fuzzy-search application finder with results list | src/popups/Launcher.qml |
 | Clipboard Manager | History-based clipboard with paste functionality | src/popups/ClipboardPopup.qml |
 | Media Controls | Player controls with progress, volume, and track info | src/popups/MediaPopup.qml |
 | Notification Panel | Toast notifications with stacking and dismiss actions | src/popups/NotificationPanel.qml |
-| Network Popup | WiFi, Bluetooth, VPN, and Hotspot management tabs | src/popups/NetworkPopup.qml |
+| Network Popup | WiFi, Bluetooth, VPN, and Hotspot management tabs** | src/popups/NetworkPopup.qml |
 | System Monitor | Real-time CPU, memory, disk, and network usage graphs | src/popups/SystemPopup.qml |
-| Volume Control | Per-application volume mixer with device selection | src/popups/VolumePopup.qml |
+| Volume Control | Per-application volume mixer*** with device selection | src/popups/VolumePopup.qml |
 
+- *- broken right now
+- **- vpn and hotspot still in progress
+- ***- per application volume mixer is not available yet
 ---
 
 ## Complete File Structure
@@ -463,7 +466,7 @@ Then run Matugen with your wallpaper:
 matugen image /path/to/wallpaper.jpg
 ```
 
-This will process the wallpaper, extract dominant colors, apply Material Design 3 color algorithms, and output the generated `Colors.json` file.
+This will process the wallpaper, extract dominant colors, apply Material Design 3 color algorithms, and output the generated `Colors.json` file in the quickshell directory itself.
 
 ### Available Color Tokens
 
@@ -519,9 +522,6 @@ Keybindings are defined in `shell.qml` using Quickshell's GlobalShortcut compone
 To enable these keybindings in Hyprland, add the following to your Lua configuration file (typically `~/.config/hypr/hyprland.lua` or similar):
 
 ```lua
-local hl = require("hyprland")
-
--- Define modifier key
 local mainMod = "SUPER"
 
 -- Quickshell keybindings
@@ -558,10 +558,9 @@ hl.bind(mainMod .. " + KEY", hl.dsp.global("quickshell:yourActionName"))
 | Dependency | Minimum Version | Purpose |
 |------------|-----------------|---------|
 | Hyprland | 0.40.0 | Wayland compositor |
-| Quickshell | 0.6.0 | Shell framework |
+| Quickshell | 0.3.0 | Shell framework |
 | Qt6 | 6.6.0 | UI toolkit |
 | Matugen | 0.10.0 | Color generation |
-| Node.js | 18.0.0 | Build tools (optional) |
 
 ### Installation Steps
 
@@ -574,7 +573,7 @@ cp -r /path/to/this/repo/* ~/.config/quickshell/
 2. **Install dependencies**:
 ```bash
 # Arch Linux
-sudo pacman -S hyprland qt6-base qt6-declarative nodejs
+sudo pacman -S hyprland qt6-base qt6-declarative
 
 # Install Quickshell (from AUR or build from source)
 yay -S quickshell
@@ -710,11 +709,11 @@ Matugen generates Colors.json
 
 The following issues are currently present in the shell configuration:
 
-### 1. Notification Toast Animation and Stacking
+### 1. Notification Toast Animation and Stacking (assuming toasts are at bottom right)
 
-**Issue**: Toast notifications exhibit janky animation behavior, and the stacking order is inverted. Newest notifications appear at the bottom of the stack instead of at the top, requiring users to scroll down to see the most recent notifications.
+**Issue**: Toast notifications exhibit janky animation behavior, and the stacking order is inverted. Oldest notifications appear at the bottom of the stack instead of at the top.
 
-**Expected Behavior**: Newest notifications should appear at the top of the stack with smooth entrance animations, pushing older notifications downward.
+**Expected Behavior**: Newest notifications should appear at the bottom of the stack with smooth entrance animations, pushing older notifications upward.
 
 **Affected Files**: 
 - `src/popups/NotificationToast.qml`
@@ -849,7 +848,7 @@ New feature suggestions and improvement ideas are welcome. Please submit suggest
 
 Before submitting code contributions:
 
-1. Ensure code follows existing style conventions (2-space indentation, camelCase naming)
+1. Ensure code follows existing style conventions (4-space indentation, camelCase naming)
 2. Test changes thoroughly in your environment
 3. Update documentation if adding new features
 4. Submit pull requests with clear descriptions of changes
