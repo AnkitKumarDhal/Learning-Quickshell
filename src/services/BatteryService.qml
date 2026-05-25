@@ -1,14 +1,9 @@
 pragma Singleton
-
 import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.src.theme
 
-/**
- * Battery service that monitors system battery status.
- * Polls /sys/class/power_supply for capacity and status information.
- */
 Singleton {
     id: root
 
@@ -21,10 +16,6 @@ Singleton {
 
     readonly property real fraction: capacity / 100
 
-    /**
-     * Returns the appropriate battery icon based on capacity and charging state.
-     * Uses Nerd Font glyphs for visual representation.
-     */
     function getIcon(): string {
         if (full)     return "󰁹 "
         if (charging) {
@@ -49,13 +40,9 @@ Singleton {
         return "󰂎 "
     }
 
-    /**
-     * Returns the appropriate color based on battery state.
-     * Error color for low battery, tertiary for charging/full, primary otherwise.
-     */
     function getColor(): string {
         if (charging || full) return Colors.tertiary
-        if (capacity <= 10) return Colors.error
+        if (capacity <= 25) return Colors.error
         return Colors.primary
     }
 
