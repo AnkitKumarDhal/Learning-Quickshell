@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Services.Mpris
-import Qt5Compat.GraphicalEffects
 import qs.src.components
 import qs.src.theme
 import qs.src.state
@@ -12,19 +11,22 @@ Row {
 
     spacing: 6
 
-    property var players: Mpris.players.values
+    // Cache players array to avoid repeated .values calls
+    property var _players: Mpris.players.values
+    on_PlayersChanged: _players = Mpris.players.values
+
     property var _lastActive: null
 
     property var _currentlyPlaying: {
-        if (players.length === 0) return null
+        if (_players.length === 0) return null
 
         let bestMatch = null
 
-        for (let i = 0; i < players.length; i++) {
-            let state = players[i].playbackState
+        for (let i = 0; i < _players.length; i++) {
+            let state = _players[i].playbackState
 
             if (state === MprisPlaybackState.Playing && bestMatch === null) {
-                bestMatch = players[i]
+                bestMatch = _players[i]
             }
         }
         return bestMatch
@@ -37,17 +39,17 @@ Row {
     }
 
     property var activePlayer: {
-        if (players.length === 0) return null
+        if (_players.length === 0) return null
 
         if (_currentlyPlaying) return _currentlyPlaying
 
         if (_lastActive) {
-            for (let i = 0; i < players.length; i++) {
-                if (players[i] === _lastActive) return _lastActive
+            for (let i = 0; i < _players.length; i++) {
+                if (_players[i] === _lastActive) return _lastActive
             }
         }
 
-        return players[0]
+        return _players[0]
     }
     property bool hasArt:       activePlayer && activePlayer.trackArtUrl !== ""
     property bool isPlaying:    activePlayer?.playbackState === MprisPlaybackState.Playing ?? false

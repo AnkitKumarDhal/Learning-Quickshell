@@ -13,14 +13,18 @@ PillBase {
     hoverExpand: false  // tray expands differently via its own toggle
     hoverEnabled: false
     mouseEnabled: false
-    visible: SystemTray.items.values.length > 0
+
+    // Cache system tray items array
+    property var _trayItems: SystemTray.items.values
+    on_TrayItemsChanged: _trayItems = SystemTray.items.values
+    visible: _trayItems.length > 0
 
     Row {
         id: trayRow
         spacing: 10
 
         Repeater {
-            model: SystemTray.items.values
+            model: _trayItems
 
             delegate: Item {
                 id: trayDelegate

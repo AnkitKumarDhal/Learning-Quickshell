@@ -11,11 +11,14 @@ Item {
     property int toastIndex:  0
     property int totalToasts: 1
 
-    // Find the actual notification object
+    // Cache the tracked notifications array
+    property var _tracked: NotificationService.server.trackedNotifications.values
+    on_TrackedChanged: _tracked = NotificationService.server.trackedNotifications.values
+
+    // Find the actual notification object using cached array
     property var notif: {
-        const all = NotificationService.server.trackedNotifications.values
-        for (let i = 0; i < all.length; i++) {
-            if (all[i].id === root.notifId) return all[i]
+        for (let i = 0; i < _tracked.length; i++) {
+            if (_tracked[i].id === root.notifId) return _tracked[i]
         }
         return null
     }

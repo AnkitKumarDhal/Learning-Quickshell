@@ -61,6 +61,10 @@ PanelWindow {
                 height: 48
                 color:  "transparent"
 
+                // Cache notifications array for the panel
+                property var _notifications: NotificationService.notifications.slice()
+                on__NotificationsChanged: _notifications = NotificationService.notifications.slice()
+
                 RowLayout {
                     anchors { fill: parent; topMargin: 8; leftMargin: 16; rightMargin: 16; bottomMargin: 8 }
 
@@ -75,7 +79,7 @@ PanelWindow {
 
                     // Clear all button
                     Rectangle {
-                        visible:      NotificationService.notifications.length > 0
+                        visible:      panelHeader._notifications.length > 0
                         width:        90
                         height:       26
                         radius:       13
@@ -152,7 +156,7 @@ PanelWindow {
 
                     // Empty state
                     Item {
-                        visible: NotificationService.notifications.length === 0
+                        visible: panelHeader._notifications.length === 0
                         width:   parent.width - 16
                         height:  80
 
@@ -180,7 +184,11 @@ PanelWindow {
 
                     // Notification items
                     Repeater {
-                        model: NotificationService.notifications.slice().reverse()
+                        model: {
+                            const arr = panelHeader._notifications.slice()
+                            arr.reverse()
+                            return arr
+                        }
 
                         delegate: Rectangle {
                             id:           notifItem

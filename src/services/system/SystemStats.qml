@@ -45,49 +45,101 @@ Singleton {
         return bps.toFixed(0) + " B/s"
     }
 
-    // ── CPU polling ───────────────────────────────────────────────────────────
+    // ── Combined stats reader (single process call for CPU+Mem+Net) ──────────
     Process {
-        id: cpuProc
-        command: ["cat", "/proc/stat"]
+        id: statsProc
+        command: ["sh", "-c", "cat /proc/stat /proc/meminfo /proc/net/dev"]
         running: false
 
         stdout: SplitParser {
-            onRead: (line) => {
-                const m = line.match(/^cpu\s+(.+)/)
-                if (!m) return
-                const parts = m[1].trim().split(/\s+/).map(Number)
-                const idle  = parts[3] + parts[4]
-                const total = parts.reduce((a, b) => a + b, 0)
-                const prev  = root._cpuPrev
-                const dIdle  = idle  - (prev.idle  || idle)
-                const dTotal = total - (prev.total || total)
-                root._cpuPrev = { idle, total }
-                root.cpuUsage = dTotal > 0
-                    ? Math.min((1.0 - dIdle / dTotal), 1.0)
-                    : 0.0
-            }
-        }
-    }
-
-    // ── Memory polling ────────────────────────────────────────────────────────
-    Process {
-        id: memProc
-        command: ["cat", "/proc/meminfo"]
-        running: false
-
-        stdout: SplitParser {
-            property int _total: 0
+            property string _section: ""
+            property int _memTotal: 0
+            property int _memAvailable: 0
+            property var _netCache: ({})
 
             onRead: (line) => {
-                const val = parseInt(line.split(/\s+/)[1])
-                if      (line.startsWith("MemTotal:"))     _total = val
-                else if (line.startsWith("MemAvailable:")) {
-                    const usedKb      = _total - val
-                    root.memTotalGb   = _total   / 1024 / 1024
-                    root.memUsedGb    = usedKb   / 1024 / 1024
-                    root.memUsage     = _total > 0 ? usedKb / _total : 0
+                if (line.startsWith("cpu ")) {
+                    _section = "cpu"
+                    const parts = line.slice(4).trim().split(/\s+/).map(Number)
+                    const idle  = parts[3] + parts[4]
+                    const total = parts.reduce((a, b) => a + b, 0)
+                    const prev  = root._cpuPrev
+                    const dIdle  = idle  - (prev.idle  || idle)
+                    const dTotal = total - (prev.total || total)
+                    root._cpuPrev = { idle, total }
+                    root.cpuUsage = dTotal > 0
+                        ? Math.min((1.0 - dIdle / dTotal), 1.0)
+                        : 0.0
+                }
+                else if (line.startsWith("MemTotal:")) {
+                    _section = "mem"
+                    _memTotal = parseInt(line.split(/\s+/)[1])
+                }
+                else if (line.startsWith("MemAvailable:") && _section === "mem") {
+                    const available = parseInt(line.split(/\s+/)[1])
+                    const usedKb    = _memTotal - available
+                    root.memTotalGb = _memTotal   / 1024 / 1024
+                    root.memUsedGb  = usedKb      / 1024 / 1024
+                    root.memUsage   = _memTotal > 0 ? usedKb / _memTotal : 0
+                }
+                else if (line.match(/^\s*\w+:/)) {
+                    // Network section
+                    const m = line.match(/^\s*(\w+):\s+(\d+).*\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)/)
+                    if (!m) return
+                    const iface = m[1]
+                    if (iface === "lo" || iface.startsWith("vir") ||
+                        iface.startsWith("docker") || iface.startsWith("br-")) return
+
+                    const rx = parseInt(m[2])
+                    const tx = parseInt(m[4])
+                    _netCache[iface] = { rx, tx }
                 }
             }
+        }
+
+        onExited: {
+            // Process network deltas
+            let bestRate = 0
+            let bestIface = ""
+            let bestDown = 0
+            let bestUp = 0
+
+            for (const [iface, curr] of Object.entries(_netCache)) {
+                const prev = root._netPrev[iface]
+                if (prev) {
+                    const downRate = Math.max(0, curr.rx - prev.rx)
+                    const upRate   = Math.max(0, curr.tx - prev.tx)
+                    const total    = downRate + upRate
+
+                    if (total > bestRate) {
+                        bestRate = total
+                        bestIface = iface
+                        bestDown = downRate
+                        bestUp = upRate
+                    }
+                }
+                root._netPrev[iface] = curr
+            }
+
+            if (bestIface) {
+                root.activeInterface = bestIface
+                root.netDownRate = bestDown
+                root.netUpRate = bestUp
+
+                // Update history
+                let dHist = root.netDownHistory.slice()
+                let uHist = root.netUpHistory.slice()
+                dHist.push(bestDown)
+                uHist.push(bestUp)
+                if (dHist.length > root.maxNetHistory) dHist.shift()
+                if (uHist.length > root.maxNetHistory) uHist.shift()
+                root.netDownHistory = dHist
+                root.netUpHistory = uHist
+            } else if (bestRate === 0 && root._netPrev._bestRate) {
+                // Hysteresis reset
+                root._netPrev._bestRate = 0
+            }
+            root._netPrev._bestRate = bestRate
         }
     }
 
@@ -160,61 +212,6 @@ Singleton {
         }
     }
 
-    // ── Network polling ───────────────────────────────────────────────────────
-    Process {
-        id: netProc
-        command: ["cat", "/proc/net/dev"]
-        running: false
-
-        stdout: SplitParser {
-            onRead: (line) => {
-                const m = line.match(/^\s*(\w+):\s+(\d+).*\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)/)
-                if (!m) return
-                const iface = m[1]
-
-                // Skip loopback and virtual interfaces
-                if (iface === "lo" || iface.startsWith("vir") ||
-                    iface.startsWith("docker") || iface.startsWith("br-")) return
-
-                const rx = parseInt(m[2])
-                const tx = parseInt(m[4])
-
-                const prev = root._netPrev[iface]
-                if (prev) {
-                    const downRate = Math.max(0, rx - prev.rx)
-                    const upRate   = Math.max(0, tx - prev.tx)
-
-                    // Use the interface with the highest traffic as active
-                    if (downRate + upRate > (root._netPrev._bestRate || 0)) {
-                        root._netPrev._bestRate   = downRate + upRate
-                        root.activeInterface      = iface
-                        root.netDownRate          = downRate
-                        root.netUpRate            = upRate
-
-                        // Append to history, cap at maxNetHistory
-                        let dHist = root.netDownHistory.slice()
-                        let uHist = root.netUpHistory.slice()
-                        dHist.push(downRate)
-                        uHist.push(upRate)
-                        if (dHist.length > root.maxNetHistory) dHist.shift()
-                        if (uHist.length > root.maxNetHistory) uHist.shift()
-                        root.netDownHistory = dHist
-                        root.netUpHistory   = uHist
-                    }
-                }
-
-                root._netPrev[iface] = { rx, tx }
-            }
-        }
-
-        onExited: {
-            // Hysteresis: only reset if active interface dropped near-zero
-            if (root.netDownRate < 512 && root.netUpRate < 512) {
-                root._netPrev._bestRate = 0
-            }
-        }
-    }
-
     // ── Temperature polling ───────────────────────────────────────────────────
     Process {
         id: tempProc
@@ -232,15 +229,14 @@ Singleton {
 
     // ── Main poll timer — 1s interval ─────────────────────────────────────────
     Timer {
+        id: mainTimer
         interval:        1000
         running:         true
         repeat:          true
         triggeredOnStart: true
 
         onTriggered: {
-            cpuProc.running  = true
-            memProc.running  = true
-            netProc.running  = true
+            statsProc.running = true
             if (Popups.systemOpen) {
                 tempProc.running = true
                 if (root.hasGpu) gpuReadProc.running = true

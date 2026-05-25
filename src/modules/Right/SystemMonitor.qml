@@ -1,18 +1,16 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
-import qs.src.components
 import qs.src.theme
 import qs.src.state
-import qs.src.services
-import qs.src.services.system
 
 PillBase {
     id: root
 
     hoverExpand: true
 
-    // SystemMonitor.qml — remove all polling, just bind:
+    // SystemMonitor.qml — bind directly to cached SystemStats properties
     property real cpuUsage: SystemStats.cpuUsage * 100
     property real memUsed:  SystemStats.memUsedGb
     property real memTotal: SystemStats.memTotalGb

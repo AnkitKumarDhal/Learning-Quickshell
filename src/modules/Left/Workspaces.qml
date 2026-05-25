@@ -19,18 +19,21 @@ PillBase {
         for (let i = 0; i < root.dotCount; i++) {
             const w = (dotsRow.itemAt(i)?.isActive ? activeDotW : dotWidth)
             if (x <= w + 4 || i == root.dotCount - 1) {
-                Hyprland.dispatch("hl.dsp.focus({ workspace = " + (i + 1) + " })")
+                Hyprland.dispatch(`hl.dsp.focus({ workspace = ${i + 1} })`)
                 return
             }
             x -= w + Theme.barSpacing  // 8 = spacing
         }
     }
 
+    // Cache workspace data to avoid repeated array conversions
+    property var _workspaces: Hyprland.workspaces.values
+    on_WorkspacesChanged: _workspaces = Hyprland.workspaces.values
+
     property int dotCount: {
         let highest = 3
-        let wss = Hyprland.workspaces.values
-        for (let i = 0; i < wss.length; i++) {
-            if (wss[i].id > highest) highest = wss[i].id
+        for (let i = 0; i < _workspaces.length; i++) {
+            if (_workspaces[i].id > highest) highest = _workspaces[i].id
         }
         return highest
     }
@@ -45,10 +48,10 @@ PillBase {
             delegate: Rectangle {
                 readonly property int wsId: index + 1
 
+                // Cache workspace lookup
                 property var hyprWs: {
-                    let wss = Hyprland.workspaces.values
-                    for (let i = 0; i < wss.length; i++) {
-                        if (wss[i].id === wsId) return wss[i]
+                    for (let i = 0; i < _workspaces.length; i++) {
+                        if (_workspaces[i].id === wsId) return _workspaces[i]
                     }
                     return null
                 }
