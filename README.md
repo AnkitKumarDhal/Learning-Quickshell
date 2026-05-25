@@ -557,7 +557,7 @@ hl.bind(mainMod .. " + KEY", hl.dsp.global("quickshell:yourActionName"))
 
 | Dependency | Minimum Version | Purpose |
 |------------|-----------------|---------|
-| Hyprland | 0.40.0 | Wayland compositor |
+| Hyprland | 0.55.0 | Wayland compositor |
 | Quickshell | 0.3.0 | Shell framework |
 | Qt6 | 6.6.0 | UI toolkit |
 | Matugen | 0.10.0 | Color generation |
@@ -715,7 +715,7 @@ The following issues are currently present in the shell configuration:
 
 **Expected Behavior**: Newest notifications should appear at the bottom of the stack with smooth entrance animations, pushing older notifications upward.
 
-**Affected Files**: 
+**Affected Files**: https://quickshell.org/docs/v0.3.0/types/
 - `src/popups/NotificationToast.qml`
 - `src/popups/ToastItem.qml`
 - `src/services/NotificationService.qml`
