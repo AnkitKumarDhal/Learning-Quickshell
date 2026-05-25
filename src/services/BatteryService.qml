@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.src.theme
 
 /**
  * Battery service that monitors system battery status.
