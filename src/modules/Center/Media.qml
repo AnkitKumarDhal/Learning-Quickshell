@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtGraphicalEffects
 import Quickshell
 import Quickshell.Services.Mpris
 import qs.src.components
