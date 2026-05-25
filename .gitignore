@@ -1,5 +1,19 @@
 ```
-# No build artifacts, dependencies, or temp files detected in changes
-# Only README.md was added, which is a source/config file
+# Compiled Python files
+*.pyc
+__pycache__/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
 ```
-quickshell.md

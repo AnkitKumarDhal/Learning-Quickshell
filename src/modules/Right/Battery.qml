@@ -4,45 +4,20 @@ import qs.src.components
 import qs.src.theme
 import qs.src.services
 
+/**
+ * Battery indicator pill for the top bar.
+ * Displays battery capacity and charging status using Nerd Font icons.
+ */
 PillBase {
     id: root
 
     visible: BatteryService.hasBattery
     hoverExpand: true
 
-    function getIcon(): string {
-        if (BatteryService.full)     return "󰁹 "
-        if (BatteryService.charging) {
-            if (BatteryService.capacity >= 90) return "󰂅 "
-            if (BatteryService.capacity >= 80) return "󰂄 "
-            if (BatteryService.capacity >= 70) return "󰂃 "
-            if (BatteryService.capacity >= 60) return "󰂂 "
-            if (BatteryService.capacity >= 50) return "󰂁 "
-            if (BatteryService.capacity >= 40) return "󰂀 "
-            if (BatteryService.capacity >= 30) return "󰁿 "
-            if (BatteryService.capacity >= 20) return "󰁾 "
-            if (BatteryService.capacity >= 10) return "󰁽 "
-            return "󰁻 "
-        }
-        if (BatteryService.capacity >= 90) return "󰁹 "
-        if (BatteryService.capacity >= 80) return "󰂀 "
-        if (BatteryService.capacity >= 60) return "󰁿 "
-        if (BatteryService.capacity >= 40) return "󰁼 "
-        if (BatteryService.capacity >= 20) return "󰁻 "
-        if (BatteryService.capacity >= 10) return "󰁺 "
-        return "󰂎 "
-    }
-
-    function getColor(): string {
-        if (BatteryService.charging || BatteryService.full) return Colors.tertiary
-        if (BatteryService.capacity <= 10) return Colors.error
-        return Colors.primary
-    }
-
     Text {
         id: batteryText
-        text: root.getIcon() + BatteryService.capacity + "%"
-        color: root.getColor()
+        text: BatteryService.getIcon() + BatteryService.capacity + "%"
+        color: BatteryService.getColor()
         font.pointSize: 11
         font.bold: true
         font.family: Fonts.font

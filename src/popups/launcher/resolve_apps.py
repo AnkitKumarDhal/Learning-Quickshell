@@ -1,92 +1,133 @@
+"""Application launcher icon resolver and .desktop file parser.
+
+This module scans system and user application directories for .desktop files,
+parses them, and resolves icon paths according to the GTK icon theme specification.
+"""
+
 import os
 import json
 import configparser
-import glob
+from pathlib import Path
 
 
-def find_icon(name, size=48):
+ICON_EXTENSIONS = (".png", ".svg", ".xpm")
+ICON_CATEGORIES = ("apps", "applications")
+ICON_SIZES = ["48x48", "scalable", "32x32", "64x64", "128x128", "256x256", "22x22"]
+ICON_ROOTS = [
+    Path.home() / ".local/share/icons",
+    Path("/usr/share/icons"),
+]
+PIXMAP_DIRS = [
+    Path("/usr/share/pixmaps"),
+    Path.home() / ".local/share/pixmaps",
+]
+APP_DIRS = [
+    Path("/usr/share/applications"),
+    Path.home() / ".local/share/applications",
+]
+
+
+def _get_gtk_icon_themes() -> list[str]:
+    """Detect active GTK icon themes from config files."""
+    themes = ["hicolor"]
+    config_paths = [
+        Path.home() / ".config/gtk-4.0/settings.ini",
+        Path.home() / ".config/gtk-3.0/settings.ini",
+    ]
+
+    for cfg_path in config_paths:
+        try:
+            with open(cfg_path) as f:
+                for line in f:
+                    if "gtk-icon-theme-name" in line:
+                        theme = line.split("=", 1)[1].strip()
+                        if theme and theme not in themes:
+                            themes.insert(0, theme)
+                        break
+        except OSError:
+            continue
+
+    return themes
+
+
+def find_icon(name: str, size: int = 48) -> str:
+    """Find the full path to an icon given its name.
+
+    Args:
+        name: Icon name or absolute path
+        size: Preferred icon size in pixels
+
+    Returns:
+        Full path to icon file, or empty string if not found
+    """
     if not name:
         return ""
 
     # Already an absolute path
     if os.path.isabs(name):
-        if os.path.exists(name):
-            return name
-        for ext in (".png", ".svg", ".xpm"):
-            if os.path.exists(name + ext):
-                return name + ext
+        icon_path = Path(name)
+        if icon_path.exists():
+            return str(icon_path)
+        for ext in ICON_EXTENSIONS:
+            candidate = icon_path.with_suffix(icon_path.suffix + ext)
+            if candidate.exists():
+                return str(candidate)
         return ""
 
     # Strip known extensions to get bare name
-    base = name
-    for ext in (".png", ".svg", ".xpm"):
-        if base.endswith(ext):
-            base = base[: -len(ext)]
+    base_name = name
+    for ext in ICON_EXTENSIONS:
+        if base_name.endswith(ext):
+            base_name = base_name[: -len(ext)]
             break
 
-    # Detect active GTK icon theme
-    themes = ["hicolor"]
-    for cfg in [
-        os.path.expanduser("~/.config/gtk-4.0/settings.ini"),
-        os.path.expanduser("~/.config/gtk-3.0/settings.ini"),
-    ]:
-        try:
-            for line in open(cfg):
-                if "gtk-icon-theme-name" in line:
-                    themes.insert(0, line.split("=", 1)[1].strip())
-                    break
-        except OSError:
-            pass
+    themes = _get_gtk_icon_themes()
 
-    roots = [
-        os.path.expanduser("~/.local/share/icons"),
-        "/usr/share/icons",
-    ]
-    sizes = [
-        f"{size}x{size}",
-        "scalable",
-        "48x48",
-        "32x32",
-        "64x64",
-        "128x128",
-        "256x256",
-        "22x22",
-    ]
-    categories = ["apps", "applications"]
-    extensions = ["svg", "png", "xpm"]
-
-    for root in roots:
+    # Search in themed icon directories
+    for root in ICON_ROOTS:
         for theme in themes:
-            for sz in sizes:
-                for cat in categories:
-                    for ext in extensions:
-                        path = os.path.join(root, theme, sz, cat, f"{base}.{ext}")
-                        if os.path.exists(path):
-                            return path
+            theme_dir = root / theme
+            if not theme_dir.exists():
+                continue
 
-    # Fallback: pixmaps
-    for d in ["/usr/share/pixmaps", os.path.expanduser("~/.local/share/pixmaps")]:
-        for ext in extensions:
-            path = os.path.join(d, f"{base}.{ext}")
-            if os.path.exists(path):
-                return path
+            for size_dir in ICON_SIZES:
+                for category in ICON_CATEGORIES:
+                    for ext in ICON_EXTENSIONS:
+                        icon_path = theme_dir / size_dir / category / f"{base_name}{ext}"
+                        if icon_path.exists():
+                            return str(icon_path)
+
+    # Fallback: search pixmaps directories
+    for pixmap_dir in PIXMAP_DIRS:
+        if not pixmap_dir.exists():
+            continue
+        for ext in ICON_EXTENSIONS:
+            icon_path = pixmap_dir / f"{base_name}{ext}"
+            if icon_path.exists():
+                return str(icon_path)
 
     return ""
 
 
-def load_apps():
+def load_apps() -> list[dict]:
+    """Load and parse .desktop files from standard application directories.
+
+    Returns:
+        List of application dictionaries with name, exec, icon, and comment fields,
+        sorted alphabetically by name.
+    """
     apps = []
     seen = set()
-    dirs = [
-        "/usr/share/applications",
-        os.path.expanduser("~/.local/share/applications"),
-    ]
 
-    for d in dirs:
-        for f in sorted(glob.glob(os.path.join(d, "*.desktop"))):
+    for app_dir in APP_DIRS:
+        if not app_dir.exists():
+            continue
+
+        desktop_files = sorted(app_dir.glob("*.desktop"))
+        for desktop_file in desktop_files:
             parser = configparser.RawConfigParser(strict=False)
             try:
-                parser.read(f)
+                parser.read(desktop_file)
             except Exception:
                 continue
 
@@ -105,14 +146,12 @@ def load_apps():
                 continue
 
             seen.add(name)
-            apps.append(
-                {
-                    "name": name,
-                    "exec": entry.get("Exec", ""),
-                    "icon": find_icon(entry.get("Icon", "")),
-                    "comment": entry.get("Comment", ""),
-                }
-            )
+            apps.append({
+                "name": name,
+                "exec": entry.get("Exec", ""),
+                "icon": find_icon(entry.get("Icon", "")),
+                "comment": entry.get("Comment", ""),
+            })
 
     apps.sort(key=lambda x: x["name"].lower())
     print(json.dumps(apps))
