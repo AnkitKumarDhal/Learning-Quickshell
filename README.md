@@ -4,7 +4,7 @@ A modern, modular shell configuration built with Quickshell for Hyprland Wayland
 
 ## 📚 Documentation
 
-- **[Wiki](https://github.com/yourusername/quickshell-config/wiki)** - Comprehensive guides, architecture details, and customization options
+- **[Wiki](https://github.com/AnkitKumarDhal/Learning-Quickshell/wiki)** - Comprehensive guides, architecture details, and customization options
 - [Quickshell Documentation](https://quickshell.org/docs/v0.3.0/types/)
 - [Hyprland Wiki](https://wiki.hypr.land/)
 
