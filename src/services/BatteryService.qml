@@ -28,6 +28,7 @@ Singleton {
     function getIcon(): string {
         if (full)     return "󰁹 "
         if (charging) {
+            if (capacity >= 95) return "󰂅 "
             if (capacity >= 90) return "󰂋 "
             if (capacity >= 80) return "󰂊 "
             if (capacity >= 70) return "󰢞 "
