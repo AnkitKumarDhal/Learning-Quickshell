@@ -25,7 +25,8 @@ PanelWindow {
     implicitHeight: 520
 
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+
+    WlrLayershell.keyboardFocus: Popups.clipboardOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     visible: slide.windowVisible
 
@@ -35,13 +36,9 @@ PanelWindow {
         function onClipboardOpenChanged() {
             if (Popups.clipboardOpen) {
                 ClipboardService.refresh()
-
                 ClipboardService.searchQuery = ""
-
                 searchField.text = ""
-
                 listView.currentIndex = 0
-
                 searchField.forceActiveFocus()
             }
         }
@@ -61,9 +58,8 @@ PanelWindow {
             anchors {
                 bottom: parent.bottom
                 right: parent.right
-
-                bottomMargin: 10
-                rightMargin: 10
+                bottomMargin: 18
+                rightMargin: 18
             }
 
             width: 700
@@ -90,14 +86,11 @@ PanelWindow {
 
                 RowLayout {
                     Layout.fillWidth: true
-
                     spacing: 10
 
                     Text {
                         text: "󰆏"
-
                         color: Colors.primary
-
                         font.pixelSize: 18
                         font.family: Fonts.fontM
                     }
@@ -106,14 +99,11 @@ PanelWindow {
                         id: searchField
 
                         Layout.fillWidth: true
-
                         height: 32
 
                         placeholderText: "Search clipboard..."
-
                         font.family: Fonts.font
                         font.pixelSize: 12
-
                         color: Colors.on_Surface
                         placeholderTextColor: Colors.outline
 
@@ -128,46 +118,25 @@ PanelWindow {
 
                         Keys.onDownPressed: (event) => {
                             listView.forceActiveFocus()
-
                             listView.incrementCurrentIndex()
-
-                            listView.positionViewAtIndex(
-                                listView.currentIndex,
-                                ListView.Contain
-                            )
-
+                            listView.positionViewAtIndex(listView.currentIndex, ListView.Contain)
                             event.accepted = true
                         }
 
                         Keys.onUpPressed: (event) => {
                             listView.forceActiveFocus()
-
                             listView.decrementCurrentIndex()
-
-                            listView.positionViewAtIndex(
-                                listView.currentIndex,
-                                ListView.Contain
-                            )
-
+                            listView.positionViewAtIndex(listView.currentIndex, ListView.Contain)
                             event.accepted = true
                         }
 
                         background: Rectangle {
                             radius: 8
-
                             color: Colors.surfaceContainerHigh
-
                             border.width: 1
-
-                            border.color:
-                                searchField.activeFocus
-                                    ? Colors.primary
-                                    : Colors.outline
-
+                            border.color: searchField.activeFocus ? Colors.primary : Colors.outline
                             Behavior on border.color {
-                                ColorAnimation {
-                                    duration: Theme.hoverFadeDuration
-                                }
+                                ColorAnimation { duration: Theme.hoverFadeDuration }
                             }
                         }
                     }
@@ -175,43 +144,25 @@ PanelWindow {
                     Rectangle {
                         width: 32
                         height: 32
-
                         radius: 8
-
-                        color:
-                            wipeHov.containsMouse
-                                ? Colors.errorContainer
-                                : "transparent"
-
+                        color: wipeHov.containsMouse ? Colors.errorContainer : "transparent"
                         Behavior on color {
-                            ColorAnimation {
-                                duration: Theme.hoverFadeDuration
-                            }
+                            ColorAnimation { duration: Theme.hoverFadeDuration }
                         }
 
                         Text {
                             anchors.centerIn: parent
-
                             text: "󰆴"
-
                             font.family: Fonts.fontM
                             font.pixelSize: 16
-
-                            color:
-                                wipeHov.containsMouse
-                                    ? Colors.on_ErrorContainer
-                                    : Colors.outline
+                            color: wipeHov.containsMouse ? Colors.on_ErrorContainer : Colors.outline
                         }
 
                         MouseArea {
                             id: wipeHov
-
                             anchors.fill: parent
-
                             hoverEnabled: true
-
                             cursorShape: Qt.PointingHandCursor
-
                             onClicked: ClipboardService.wipe()
                         }
                     }
@@ -219,9 +170,7 @@ PanelWindow {
 
                 Rectangle {
                     Layout.fillWidth: true
-
                     height: 1
-
                     color: Colors.outlineVariant
                     opacity: 0.5
                 }
@@ -233,15 +182,10 @@ PanelWindow {
                     Layout.fillHeight: true
 
                     focus: true
-
                     currentIndex: 0
-
                     clip: true
-
                     spacing: 4
-
                     boundsBehavior: Flickable.StopAtBounds
-
                     flickDeceleration: 2500
                     maximumFlickVelocity: 5000
 
@@ -254,53 +198,22 @@ PanelWindow {
                     Keys.onPressed: (event) => {
                         if (event.key === Qt.Key_Down) {
                             incrementCurrentIndex()
-
-                            positionViewAtIndex(
-                                currentIndex,
-                                ListView.Contain
-                            )
-
+                            positionViewAtIndex(currentIndex, ListView.Contain)
                             event.accepted = true
-                        }
-
-                        else if (event.key === Qt.Key_Up) {
+                        } else if (event.key === Qt.Key_Up) {
                             decrementCurrentIndex()
-
-                            positionViewAtIndex(
-                                currentIndex,
-                                ListView.Contain
-                            )
-
+                            positionViewAtIndex(currentIndex, ListView.Contain)
                             event.accepted = true
-                        }
-
-                        else if (
-                            event.key === Qt.Key_Return ||
-                            event.key === Qt.Key_Enter
-                        ) {
-                            const item =
-                                ClipboardService.filteredHistory[currentIndex]
-
+                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                            const item = ClipboardService.filteredHistory[currentIndex]
                             if (item) {
                                 ClipboardService.copy(item)
-
                                 Popups.clipboardOpen = false
                             }
-
                             event.accepted = true
-                        }
-
-                        else if (
-                            event.text.length > 0 &&
-                            event.key !== Qt.Key_Space
-                        ) {
+                        } else if (event.text.length > 0 && event.key !== Qt.Key_Space) {
                             searchField.forceActiveFocus()
-
-                            searchField.insert(
-                                searchField.cursorPosition,
-                                event.text
-                            )
-
+                            searchField.insert(searchField.cursorPosition, event.text)
                             event.accepted = true
                         }
                     }
@@ -308,74 +221,50 @@ PanelWindow {
                     delegate: Rectangle {
                         required property var modelData
                         required property int index
+
                         readonly property string displayString: {
                             const idx = modelData.indexOf('\t')
-
-                            return idx >= 0
-                                ? modelData.substring(idx + 1)
-                                : modelData
+                            return idx >= 0 ? modelData.substring(idx + 1) : modelData
                         }
 
                         width: listView.width - 6
-
-                        height: Math.max(
-                            40,
-                            itemText.implicitHeight + 16
-                        )
-
+                        height: Math.max(40, itemText.implicitHeight + 16)
                         radius: 8
-
-                        color: index === listView.currentIndex ? Colors.surfaceContainerHigh : itemHov.containsMouse ? Colors.background : "transparent"
+                        color: index === listView.currentIndex
+                                   ? Colors.surfaceContainerHigh
+                                   : itemHov.containsMouse
+                                       ? Colors.background
+                                       : "transparent"
 
                         Behavior on color {
-                            ColorAnimation {
-                                duration: 140
-                                easing.type: Easing.OutCubic
-                            }
+                            ColorAnimation { duration: 140; easing.type: Easing.OutCubic }
                         }
 
                         Text {
                             id: itemText
-
                             anchors {
                                 left: parent.left
                                 right: parent.right
-
                                 verticalCenter: parent.verticalCenter
-
                                 margins: 12
                             }
-
                             text: displayString
-
                             color: Colors.on_Surface
-
                             font.family: Fonts.font
                             font.pixelSize: 12
-
                             maximumLineCount: 2
-
                             elide: Text.ElideRight
-
                             wrapMode: Text.WrapAnywhere
                         }
 
                         MouseArea {
                             id: itemHov
-
                             anchors.fill: parent
-
                             hoverEnabled: true
-
                             cursorShape: Qt.PointingHandCursor
-
-                            onEntered: {
-                                listView.currentIndex = index
-                            }
-
+                            onEntered: { listView.currentIndex = index }
                             onClicked: {
                                 ClipboardService.copy(modelData)
-
                                 Popups.clipboardOpen = false
                             }
                         }
@@ -383,18 +272,12 @@ PanelWindow {
                 }
 
                 Text {
-                    visible:
-                        ClipboardService.filteredHistory.length === 0
-
+                    visible: ClipboardService.filteredHistory.length === 0
                     Layout.alignment: Qt.AlignHCenter
-
                     text: "Clipboard is empty"
-
                     font.family: Fonts.font
                     font.pixelSize: 12
-
                     color: Colors.outline
-
                     topPadding: 16
                     bottomPadding: 16
                 }
@@ -402,4 +285,3 @@ PanelWindow {
         }
     }
 }
-
