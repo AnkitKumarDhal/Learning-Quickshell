@@ -22,7 +22,7 @@ PanelWindow {
     implicitHeight: 520
 
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+    WlrLayershell.keyboardFocus: Popups.emojiOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     visible: slide.windowVisible
 
