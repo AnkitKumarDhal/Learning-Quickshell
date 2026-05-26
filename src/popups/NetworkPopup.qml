@@ -28,6 +28,8 @@ PanelWindow {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
     visible: slide.windowVisible
 
+    mask: Region { item: netCard }
+
     Binding {
         target: NetworkService
         property: "scannerActive"
@@ -43,6 +45,7 @@ PanelWindow {
 
         // ── Popup card ────────────────────────────────────────────────────────────
         Rectangle {
+            id: netCard
             anchors {
                 top:        parent.top
                 right:      parent.right

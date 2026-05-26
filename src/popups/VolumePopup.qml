@@ -33,6 +33,8 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     visible: slidePanel.windowVisible
 
+    mask: Region { item: card }
+
     PopupSlide {
         id: slidePanel
         anchors.fill: parent

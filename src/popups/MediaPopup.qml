@@ -23,6 +23,7 @@ PanelWindow {
     color:          "transparent"
     exclusionMode:  ExclusionMode.Ignore
     visible:        slide.windowVisible
+    mask:           Region { item: mediaCard }
 
     // ── Player resolution ─────────────────────────────────────────────────────
     property var _players:    Mpris.players.values
@@ -83,6 +84,7 @@ PanelWindow {
 
         // ── Card ──────────────────────────────────────────────────────────────────
         Rectangle {
+            id: mediaCard
             width:  340
             anchors.top:              parent.top
             anchors.horizontalCenter: parent.horizontalCenter

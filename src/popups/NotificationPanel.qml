@@ -28,6 +28,8 @@ PanelWindow {
 
     visible: slidePanel.windowVisible
 
+    mask: Region { item: panelCard }
+
     PopupSlide {
         id: slidePanel
         anchors.fill: parent
@@ -37,6 +39,7 @@ PanelWindow {
 
         // ── Panel card ────────────────────────────────────────────────────────────
         Rectangle {
+            id: panelCard
             anchors {
                 top:         parent.top
                 right:       parent.right

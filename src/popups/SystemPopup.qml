@@ -29,6 +29,8 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     visible: slidePanel.windowVisible
 
+    mask: Region { item: sysCard }
+
     PopupSlide {
         id: slidePanel
         anchors.fill: parent
@@ -38,6 +40,7 @@ PanelWindow {
 
         // ── Popup card ────────────────────────────────────────────────────────────
         Rectangle {
+            id: sysCard
             anchors {
                 top:         parent.top
                 right:       parent.right
