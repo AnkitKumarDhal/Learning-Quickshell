@@ -10,35 +10,47 @@ Singleton {
     property var  activeToasts: []
     property var  _toastData:   []
 
+    // ── Startup grace period ──────────────────────────────────────────────────
+    // Suppress toast popups for the first 500ms to avoid flooding on login.
+    // Notifications still land in history; they just don't visually pop up.
+    property bool _isStartup: true
+    Timer {
+        interval: 500
+        running:  true
+        onTriggered: root._isStartup = false
+    }
+
     property NotificationServer server: NotificationServer {
         bodySupported:    true
         actionsSupported: true
 
         onNotification: (notif) => {
             notif.tracked = true
+
+            // Always record arrival time for history panel
             let tData = root._toastData.slice()
             tData.push({
                 id:        notif.id,
                 expires:   Date.now() + 4000,
-                arrivedAt: Date.now()        // ← timestamp stored here
+                arrivedAt: Date.now()
             })
             root._toastData = tData
-            updateActiveToasts()
+
+            // Only show the visual toast once startup flood is over
+            if (!root._isStartup) {
+                updateActiveToasts()
+            }
         }
     }
 
-    // Returns the arrivedAt timestamp for a given notification id
     function getArrivalTime(id) {
         const entry = root._toastData.find(t => t.id === id)
         return entry ? entry.arrivedAt : Date.now()
     }
 
-    // Also expose arrival time for panel — panel uses full tracked list
-    // so we keep a separate persistent map that survives toast expiry
     property var _arrivalMap: ({})
 
     onActiveToastsChanged: {
-        // Sync arrivals into persistent map
         root._toastData.forEach(t => {
             if (!root._arrivalMap[t.id])
                 root._arrivalMap[t.id] = t.arrivedAt
@@ -63,8 +75,6 @@ Singleton {
     }
 
     function clearAll() {
-        // FIX: Copy the live list into a static array before iterating
-        // so dismissing an item doesn't shift the indices underneath us!
         const allNotifs = [...server.trackedNotifications.values]
         allNotifs.forEach(n => n.dismiss())
         root._arrivalMap = {}
@@ -72,7 +82,7 @@ Singleton {
 
     readonly property var notifications: server.trackedNotifications.values
 
-    // Expiry timer
+    // Expiry timer — only runs while toasts are alive
     Timer {
         interval:  500
         running:   root._toastData.length > 0
@@ -95,7 +105,6 @@ Singleton {
     }
 
     // Timestamp refresh timer — drives relative time updates in UI
-    // Fires every 30s, fast enough for "just now" → "1 min ago" transitions
     property int _tick: 0
     Timer {
         interval: 30000
@@ -104,22 +113,17 @@ Singleton {
         onTriggered: root._tick++
     }
 
-    // Formats a timestamp into relative or absolute string
-    // Any component that needs a timestamp binds to both the timestamp
-    // AND root._tick so it re-evaluates every 30s
     function formatTimestamp(arrivedAt) {
-        const _ = root._tick  // creates binding dependency
+        const _ = root._tick
         const diff = Date.now() - arrivedAt
         const mins = Math.floor(diff / 60000)
-        const hrs  = Math.floor(diff / 3600000)
 
         if (mins < 1)   return "just now"
         if (mins < 60)  return mins + " min" + (mins > 1 ? "s" : "") + " ago"
 
-        // Over an hour — show absolute time
-        const d = new Date(arrivedAt)
-        let h   = d.getHours()
-        const m = d.getMinutes().toString().padStart(2, "0")
+        const d    = new Date(arrivedAt)
+        let h      = d.getHours()
+        const m    = d.getMinutes().toString().padStart(2, "0")
         const ampm = h >= 12 ? "PM" : "AM"
         h = h % 12 || 12
         return h + ":" + m + " " + ampm
