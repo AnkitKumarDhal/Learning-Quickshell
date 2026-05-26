@@ -19,6 +19,32 @@ Singleton {
     property bool networkOpen:       false
     property int  networkTab:        0
 
+    // ── Mutual Exclusion ──────────────────────────────────────────────────────
+    // Opening any popup closes all others.
+    // calendarOpen and idleInhibitorOpen are excluded — they're companion
+    // states managed alongside other popups rather than independent panels.
+    onNotificationsOpenChanged: if (notificationsOpen) _closeOthers("notifications")
+    onSystemOpenChanged:        if (systemOpen)        _closeOthers("system")
+    onMediaOpenChanged:         if (mediaOpen)         _closeOthers("media")
+    onVolumeOpenChanged:        if (volumeOpen)        _closeOthers("volume")
+    onNetworkOpenChanged:       if (networkOpen)       _closeOthers("network")
+    onLauncherOpenChanged:      if (launcherOpen)      _closeOthers("launcher")
+    onClipboardOpenChanged:     if (clipboardOpen)     _closeOthers("clipboard")
+    onEmojiOpenChanged:         if (emojiOpen)         _closeOthers("emoji")
+    onArchMenuOpenChanged:      if (archMenuOpen)      _closeOthers("archMenu")
+
+    function _closeOthers(keep) {
+        if (keep !== "emoji")         emojiOpen         = false
+        if (keep !== "media")         mediaOpen         = false
+        if (keep !== "system")        systemOpen        = false
+        if (keep !== "volume")        volumeOpen        = false
+        if (keep !== "network")       networkOpen       = false
+        if (keep !== "archMenu")      archMenuOpen      = false
+        if (keep !== "launcher")      launcherOpen      = false
+        if (keep !== "clipboard")     clipboardOpen     = false
+        if (keep !== "notifications") notificationsOpen = false
+    }
+
     // ── Aggregate State ───────────────────────────────────────────────────────
     readonly property bool anyOpen:
         notificationsOpen ||
