@@ -739,21 +739,6 @@ The following issues are currently present in the shell configuration:
 
 ---
 
-### 3. YouTube Music (Pear Desktop) Volume Slider
-
-**Issue**: When using the YouTube Music application via Pear Desktop, the volume slider in the media player popup does not respond to adjustments. This issue has not been tested against Spotify, but volume control works correctly for browser-based media players and phone audio via KDE Connect.
-
-**Expected Behavior**: The volume slider should control playback volume for all MPRIS-compatible media players, including Pear Desktop applications.
-
-**Affected Files**:
-- `src/popups/MediaPopup.qml`
-- `src/popups/media/MediaVolumeRow.qml`
-- `src/services/VolumeService.qml`
-
-**Priority**: Low
-
----
-
 ## Roadmap
 
 The following features and improvements are planned for future development:
