@@ -36,13 +36,13 @@ ShellRoot {
                 MediaPopup          { screen: modelData }
                 Launcher            { screen: modelData }
                 ClipboardPopup      { screen: modelData }
+                EmojiPicker         { screen: modelData }
             }
         }
     }
 
-    // ── Focus mode keybind (SUPER+Z) ──────────────────────────────────────────
+    // ── Global Keybinds ───────────────────────────────────────────────────────
     // Hyprland lua config bind:
-    //   bind = SUPER, Z, global, quickshell:focusModeToggle
     GlobalShortcut {
         appid:       "quickshell"
         name:        "focusModeToggle"
@@ -66,5 +66,17 @@ ShellRoot {
         name:        "clipboardToggle"
         description: "Toggle Clipboard Manager overlay"
         onPressed:   Popups.clipboardOpen = !Popups.clipboardOpen
+    }
+    GlobalShortcut {
+        appid:       "quickshell"
+        name:        "emojiPickerToggle"
+        description: "Toggle Emoji Picker"
+        onPressed:   Popups.emojiOpen = !Popups.emojiOpen
+    }
+    GlobalShortcut {
+        appid:       "quickshell"
+        name:        "mediaPlayerPopup"
+        description: "Toggle Media Player Popup"
+        onPressed:   Popups.mediaOpen = !Popups.mediaOpen
     }
 }

@@ -793,12 +793,6 @@ The following features and improvements are planned for future development:
 
 - [ ] **Custom Tray Context Menus**: Implement fully customized context menus for system tray icons, replacing default renderer with styled QML components matching the shell aesthetic.
 
-- [ ] **Emoji Picker Popup**: Develop an emoji picker popup similar to the clipboard manager, featuring:
-  - Category-based organization
-  - Search functionality
-  - Recently used tracking
-  - Quick insert capability
-
 - [ ] **Wallpaper and Theme Manager**: Create a GUI wallpaper selector that:
   - Displays available wallpapers in a grid
   - Automatically triggers Matugen color generation on selection
@@ -812,6 +806,12 @@ The following features and improvements are planned for future development:
   - Module enable/disable toggles
   - Popup behavior configuration
   - Import/export settings functionality
+
+- [x] **Emoji Picker Popup**: Develop an emoji picker popup similar to the clipboard manager, featuring:
+  - Category-based organization
+  - Search functionality
+  - Recently used tracking
+  - Quick insert capability
 
 ---
 

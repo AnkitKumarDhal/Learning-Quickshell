@@ -5,8 +5,6 @@ import Quickshell
 Singleton {
     id: root
 
-    // ── Timing Constants ──────────────────────────────────────────────────────
-
     // ── Popup States ──────────────────────────────────────────────────────────
     property bool notificationsOpen: false
     property bool systemOpen:        false
@@ -17,11 +15,9 @@ Singleton {
     property bool volumeOpen:        false
     property bool launcherOpen:      false
     property bool clipboardOpen:     false
+    property bool emojiOpen:         false
     property bool networkOpen:       false
     property int  networkTab:        0
-
-    // Note: Tray context menu is managed internally by TrayContextMenu.
-    // No open bool needed here; TrayContextMenu owns its own state.
 
     // ── Aggregate State ───────────────────────────────────────────────────────
     readonly property bool anyOpen:
@@ -34,6 +30,7 @@ Singleton {
         volumeOpen        ||
         clipboardOpen     ||
         launcherOpen      ||
+        emojiOpen         ||
         networkOpen
 
     // ── Methods ───────────────────────────────────────────────────────────────
@@ -48,5 +45,6 @@ Singleton {
         networkOpen       = false
         clipboardOpen     = false
         launcherOpen      = false
+        emojiOpen         = false
     }
 }
