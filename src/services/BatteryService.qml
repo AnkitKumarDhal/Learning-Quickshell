@@ -55,7 +55,7 @@ Singleton {
      */
     function getColor(): string {
         if (charging || full) return Colors.tertiary
-        if (capacity <= 10) return Colors.error
+        if (capacity <= 20) return Colors.error
         return Colors.primary
     }
 
