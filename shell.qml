@@ -73,4 +73,10 @@ ShellRoot {
         description: "Toggle Emoji Picker"
         onPressed:   Popups.emojiOpen = !Popups.emojiOpen
     }
+    GlobalShortcut {
+        appid:       "quickshell"
+        name:        "mediaPlayerPopup"
+        description: "Toggle Media Player Popup"
+        onPressed:   Popups.mediaOpen = !Popups.mediaOpen
+    }
 }
