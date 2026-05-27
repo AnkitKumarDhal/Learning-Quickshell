@@ -45,8 +45,15 @@ PanelWindow {
             searchBar.clear()
             root.selectedIndex = 0
             appLoader.reload()
-            searchBar.forceActiveFocus()
+            // Delay focus to after WlrLayershell keyboard grab is active
+            focusTimer.restart()
         }
+    }
+
+    Timer {
+        id: focusTimer
+        interval: 50
+        onTriggered: searchBar.forceActiveFocus()
     }
 
     // ── State ─────────────────────────────────────────────────────────────
@@ -191,11 +198,5 @@ PanelWindow {
                 }
             }
         }
-    }
-
-    Timer {
-        id: focusTimer
-        interval: 32
-        onTriggered: searchBar.forceActiveFocus()
     }
 }

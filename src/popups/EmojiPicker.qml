@@ -22,7 +22,7 @@ PanelWindow {
     implicitHeight: 520
 
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: Popups.emojiOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: Popups.emojiOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     visible: slide.windowVisible
 
@@ -71,9 +71,16 @@ PanelWindow {
                 root.searchText = ""
                 root.activeCat  = 0
                 emojiGrid.resetIndex()
-                searchBar.forceActiveFocus()
+                // Delay focus to after WlrLayershell keyboard grab is active
+                emojiFocusTimer.restart()
             }
         }
+    }
+
+    Timer {
+        id: emojiFocusTimer
+        interval: 50
+        onTriggered: searchBar.forceActiveFocus()
     }
 
     PopupSlide {

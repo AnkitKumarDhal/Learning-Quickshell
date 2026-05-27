@@ -80,6 +80,16 @@ Singleton {
         root._arrivalMap = {}
     }
 
+    // ── Reversed notification list for panel display ──────────────────────────
+    // Stored as a stable property (not recreated per binding eval) to avoid
+    // Repeater delegate churn and the resulting animation jank.
+    readonly property var reversedNotifications: {
+        const all = server.trackedNotifications.values
+        const copy = all.slice()
+        copy.reverse()
+        return copy
+    }
+
     readonly property var notifications: server.trackedNotifications.values
 
     // Expiry timer — only runs while toasts are alive

@@ -26,7 +26,7 @@ PanelWindow {
 
     WlrLayershell.layer: WlrLayer.Overlay
 
-    WlrLayershell.keyboardFocus: Popups.clipboardOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: Popups.clipboardOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     visible: slide.windowVisible
 
@@ -39,9 +39,16 @@ PanelWindow {
                 ClipboardService.searchQuery = ""
                 searchField.text = ""
                 listView.currentIndex = 0
-                searchField.forceActiveFocus()
+                // Delay focus to after WlrLayershell keyboard grab is active
+                clipboardFocusTimer.restart()
             }
         }
+    }
+
+    Timer {
+        id: clipboardFocusTimer
+        interval: 50
+        onTriggered: searchField.forceActiveFocus()
     }
 
     PopupSlide {

@@ -188,7 +188,7 @@ PanelWindow {
 
                     // Notification items
                     Repeater {
-                        model: NotificationService.notifications.slice().reverse()
+                        model: NotificationService.reversedNotifications
 
                         delegate: Rectangle {
                             id:           notifItem

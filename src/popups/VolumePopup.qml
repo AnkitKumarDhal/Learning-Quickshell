@@ -12,12 +12,9 @@ PanelWindow {
     id: root
     property var screen
 
-    PwObjectTracker {
-        objects: Pipewire.nodes.values.filter(n => n.audio !== null && !n.isStream && n.isSink)
-    }
-    PwObjectTracker {
-        objects: Pipewire.nodes.values.filter(n => n.audio !== null && !n.isStream && !n.isSink)
-    }
+    // Note: Pipewire nodes are already bound by VolumeService's PwObjectTracker.
+    // We use Pipewire.nodes.values directly in Repeaters — filter() would break
+    // the property-change dependency chain needed for live updates.
 
     color:         "transparent"
     exclusionMode: ExclusionMode.Ignore
@@ -366,14 +363,12 @@ PanelWindow {
                     }
 
                     Repeater {
-                        model: Pipewire.nodes.values.filter(n =>
-                            n.audio !== null &&
-                            !n.isStream &&
-                            n.isSink
-                        )
+                        model: Pipewire.nodes.values
                         delegate: DeviceRow {
                             required property var modelData
                             Layout.fillWidth: true
+                            visible: modelData.audio !== null && !modelData.isStream && modelData.isSink
+                            height: visible ? implicitHeight : 0
                             deviceName:  modelData.description || modelData.name || "Unknown"
                             isDefault:   VolumeService.sink && VolumeService.sink.id === modelData.id
                             icon:        "󰓃"
@@ -400,14 +395,12 @@ PanelWindow {
                     }
 
                     Repeater {
-                        model: Pipewire.nodes.values.filter(n =>
-                            n.audio !== null &&
-                            !n.isStream &&
-                            !n.isSink
-                        )
+                        model: Pipewire.nodes.values
                         delegate: DeviceRow {
                             required property var modelData
                             Layout.fillWidth: true
+                            visible: modelData.audio !== null && !modelData.isStream && !modelData.isSink
+                            height: visible ? implicitHeight : 0
                             deviceName: modelData.description || modelData.name || "Unknown"
                             isDefault:  VolumeService.source && VolumeService.source.id === modelData.id
                             icon:       "󰍬"
