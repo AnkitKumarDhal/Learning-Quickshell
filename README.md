@@ -724,21 +724,6 @@ The following issues are currently present in the shell configuration:
 
 ---
 
-### 2. Clipboard Manager Keyboard Focus Conflict
-
-**Issue**: Opening the clipboard manager even once causes the application launcher to lose keyboard focus capture. After the clipboard has been opened, the launcher will not receive keyboard input unless the mouse is moved in any direction, which then restores focus.
-
-**Expected Behavior**: The application launcher should always capture keyboard focus immediately upon opening, regardless of whether the clipboard manager has been used.
-
-**Affected Files**:
-- `src/popups/ClipboardPopup.qml`
-- `src/popups/Launcher.qml`
-- `src/state/Popups.qml`
-
-**Priority**: High
-
----
-
 ## Roadmap
 
 The following features and improvements are planned for future development:
