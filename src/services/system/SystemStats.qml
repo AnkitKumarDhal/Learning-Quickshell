@@ -46,6 +46,9 @@ Singleton {
     }
 
     // ── CPU polling ───────────────────────────────────────────────────────────
+    // Reads the aggregate "cpu " line from /proc/stat and computes idle/total
+    // delta between successive polls. Regex intentionally matches only the
+    // aggregate line (cpu <stats>), NOT per-core lines (cpu0, cpu1, ...).
     Process {
         id: cpuProc
         command: ["cat", "/proc/stat"]

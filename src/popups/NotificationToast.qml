@@ -37,6 +37,10 @@ PanelWindow {
 
     WlrLayershell.layer: WlrLayer.Overlay
 
+    // Only keep the window alive while toasts are active — a zero-height mask
+    // would otherwise create an invisible surface that blocks input to windows beneath.
+    visible: NotificationService.activeToasts.length > 0
+
     // ── Toast stack ───────────────────────────────────────────────────────────
     // Toasts anchor to the bottom, stack upward
     // New toast slides in from the right, existing ones animate upward

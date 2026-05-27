@@ -24,7 +24,7 @@ PanelWindow {
     exclusionMode:  ExclusionMode.Ignore
     visible:        slide.windowVisible
     mask: Region {
-        x:      (root.implicitWidth - mediaCard.width) / 2
+        x:      (win.implicitWidth - mediaCard.width) / 2
         y:      Theme.barHeight + 8
         width:  mediaCard.width
         height: mediaCard.height

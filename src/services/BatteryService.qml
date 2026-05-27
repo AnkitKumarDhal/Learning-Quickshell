@@ -99,7 +99,7 @@ Singleton {
         interval: 30000
         repeat:   true
         running:  true
-        
+
         onTriggered: {
             _capProc.running  = true
             _statProc.running = true
