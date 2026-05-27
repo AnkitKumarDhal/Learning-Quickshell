@@ -13,6 +13,7 @@ QtObject {
         Qt.resolvedUrl("resolve_apps.py").toString().slice(7)
 
     function reload() {
+        if (loading) return  // already loading, don't restart
         _buf    = ""
         loading = true
         loaderProc.running = true
