@@ -28,7 +28,12 @@ PanelWindow {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
     visible: slide.windowVisible
 
-    mask: Region { item: netCard }
+    mask: Region {
+        x:      root.implicitWidth - netCard.width - Theme.barMargin
+        y:      Theme.barHeight + 8
+        width:  netCard.width
+        height: netCard.height
+    }
 
     Binding {
         target: NetworkService

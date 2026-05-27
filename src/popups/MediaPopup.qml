@@ -23,7 +23,12 @@ PanelWindow {
     color:          "transparent"
     exclusionMode:  ExclusionMode.Ignore
     visible:        slide.windowVisible
-    mask:           Region { item: mediaCard }
+    mask: Region {
+        x:      (root.implicitWidth - mediaCard.width) / 2
+        y:      Theme.barHeight + 8
+        width:  mediaCard.width
+        height: mediaCard.height
+    }
 
     // ── Player resolution ─────────────────────────────────────────────────────
     property var _players:    Mpris.players.values
