@@ -28,7 +28,12 @@ PanelWindow {
 
     visible: slidePanel.windowVisible
 
-    mask: Region { item: panelCard }
+    mask: Region {
+        x:      root.implicitWidth - panelCard.width - Theme.barMargin
+        y:      Theme.barHeight + 2
+        width:  panelCard.width
+        height: panelCard.height
+}
 
     PopupSlide {
         id: slidePanel

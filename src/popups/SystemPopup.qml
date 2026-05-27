@@ -29,7 +29,12 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     visible: slidePanel.windowVisible
 
-    mask: Region { item: sysCard }
+    mask: Region {
+        x:      root.implicitWidth - sysCard.width - Theme.barMargin
+        y:      Theme.barHeight + 8
+        width:  sysCard.width
+        height: sysCard.height
+    }
 
     PopupSlide {
         id: slidePanel
