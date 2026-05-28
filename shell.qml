@@ -37,6 +37,7 @@ ShellRoot {
                 Launcher            { screen: modelData }
                 ClipboardPopup      { screen: modelData }
                 EmojiPicker         { screen: modelData }
+                WallpaperPopup      { screen: modelData }
             }
         }
     }
@@ -78,5 +79,11 @@ ShellRoot {
         name:        "mediaPlayerPopup"
         description: "Toggle Media Player Popup"
         onPressed:   Popups.mediaOpen = !Popups.mediaOpen
+    }
+    GlobalShortcut {
+        appid:       "quickshell"
+        name:        "wallpaperPickerToggle"
+        description: "Toggle Wallpaper Picker"
+        onPressed:   Popups.wallpaperOpen = !Popups.wallpaperOpen
     }
 }
