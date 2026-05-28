@@ -11,3 +11,4 @@ MediaPopup           1.0    MediaPopup.qml
 Launcher             1.0    Launcher.qml
 ClipboardPopup       1.0    ClipboardPopup.qml
 EmojiPicker          1.0    EmojiPicker.qml
+WallpaperPopup       1.0    WallpaperPopup.qml

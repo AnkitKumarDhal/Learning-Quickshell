@@ -17,6 +17,7 @@ Singleton {
     property bool clipboardOpen:     false
     property bool emojiOpen:         false
     property bool networkOpen:       false
+    property bool wallpaperOpen:     false
     property int  networkTab:        0
 
     // ── Mutual Exclusion ──────────────────────────────────────────────────────
@@ -32,6 +33,7 @@ Singleton {
     onClipboardOpenChanged:     if (clipboardOpen)     _closeOthers("clipboard")
     onEmojiOpenChanged:         if (emojiOpen)         _closeOthers("emoji")
     onArchMenuOpenChanged:      if (archMenuOpen)      _closeOthers("archMenu")
+    onWallpaperOpenChanged:     if (wallpaperOpen)     _closeOthers("wallpaper")
 
     function _closeOthers(keep) {
         if (keep !== "emoji")         emojiOpen         = false
@@ -43,6 +45,7 @@ Singleton {
         if (keep !== "launcher")      launcherOpen      = false
         if (keep !== "clipboard")     clipboardOpen     = false
         if (keep !== "notifications") notificationsOpen = false
+        if (keep !== "wallpaper")     wallpaperOpen     = false
     }
 
     // ── Aggregate State ───────────────────────────────────────────────────────
@@ -57,6 +60,7 @@ Singleton {
         clipboardOpen     ||
         launcherOpen      ||
         emojiOpen         ||
+        wallpaperOpen     ||
         networkOpen
 
     // ── Methods ───────────────────────────────────────────────────────────────
@@ -72,5 +76,6 @@ Singleton {
         clipboardOpen     = false
         launcherOpen      = false
         emojiOpen         = false
+        wallpaperOpen     = false
     }
 }
