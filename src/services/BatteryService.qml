@@ -20,26 +20,32 @@ Singleton {
     property int timeRemainingMinutes: -1
 
     // ── Mode detection ────────────────────────────────────────────────────────
-    property int    conservationMode: -1   // 0 or 1, -1 = unknown
-    property string cpuProfile:       ""   // performance | balanced | power-saver
-
-    // Persist last-applied mode to /tmp so eco vs quickjuice is distinguishable
-    property string _savedMode: ""
+    // conservationMode is intentionally NOT polled — reading that sysfs node
+    // acquires an ACPI driver lock that blocks /proc/acpi/call writes, which
+    // breaks the rapid-charge SBMC commands in the fish scripts.
+    // Mode is derived from cpuProfile (fast, no locks) + the persisted hint.
+    property string cpuProfile: ""   // polled via powerprofilesctl get
+    property string _savedMode: ""   // written to /tmp on every applyMode()
 
     readonly property string currentMode: {
-        if (conservationMode === 1 && cpuProfile === "performance") return "game"
-        if (conservationMode === 1 && cpuProfile === "balanced")    return "study"
-        if (conservationMode === 0 && cpuProfile === "power-saver") {
-            return _savedMode === "quickjuice" ? "quickjuice" : "eco"
-        }
+        // Prefer saved mode when it agrees with the live cpu profile
+        if (_savedMode === "game"       && cpuProfile === "performance") return "game"
+        if (_savedMode === "study"      && cpuProfile === "balanced")    return "study"
+        if (_savedMode === "quickjuice" && cpuProfile === "power-saver") return "quickjuice"
+        if (_savedMode === "eco"        && cpuProfile === "power-saver") return "eco"
+        // Fallback: infer what we can from cpu profile alone
+        if (cpuProfile === "performance") return "game"
+        if (cpuProfile === "balanced")    return "study"
         return "custom"
     }
 
     readonly property real fraction: capacity / 100
 
     function getIcon(): string {
-        if (notCharging)  return "󱈸 "
-        if (full)         return "󰁹 "
+        // notCharging intentionally falls through to standard capacity icons.
+        // The tertiary color from getColor() is enough to signal the capped state,
+        // and avoids using glyphs that aren't in all Nerd Font builds.
+        if (full) return "󰁹 "
         if (charging) {
             if (capacity >= 95) return "󰂅 "
             if (capacity >= 90) return "󰂋 "
@@ -79,12 +85,8 @@ Singleton {
     function applyMode(mode) {
         applying   = true
         _savedMode = mode
-
-        // Persist hint so eco vs quickjuice survives restarts
         _writeModeProc.command = ["sh", "-c", "printf '%s' " + mode + " > /tmp/qs_battery_mode"]
         _writeModeProc.running = true
-
-        // Map id → fish function name
         const fishFn = (mode === "quickjuice") ? "quick-juice" : mode
         _modeProc.command = ["fish", "-c", fishFn + "-mode"]
         _modeProc.running = true
@@ -93,7 +95,6 @@ Singleton {
     // ── Internal ──────────────────────────────────────────────────────────────
     property string _batPath: ""
 
-    // Load saved mode hint on startup
     Process {
         id: _readModeProc
         command: ["cat", "/tmp/qs_battery_mode"]
@@ -112,7 +113,6 @@ Singleton {
         running: false
     }
 
-    // Discover battery sysfs path and set commands for subsequent processes
     Process {
         id: _finder
         command: ["sh", "-c", "ls /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n 1"]
@@ -135,11 +135,10 @@ Singleton {
                     "echo $a; echo $b; echo $c"
                 ]
 
-                root.hasBattery       = true
+                root.hasBattery      = true
                 _capProc.running     = true
                 _statProc.running    = true
                 _energyProc.running  = true
-                _consProc.running    = true
                 _profileProc.running = true
             }
         }
@@ -172,7 +171,6 @@ Singleton {
         }
     }
 
-    // Reads energy_now, power_now, energy_full (or charge_ equivalents) for time estimate
     Process {
         id: _energyProc
         command: []
@@ -209,18 +207,6 @@ Singleton {
     }
 
     Process {
-        id: _consProc
-        command: ["cat", "/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode"]
-        running: false
-        stdout: SplitParser {
-            onRead: (d) => {
-                const v = parseInt(d.trim())
-                if (!isNaN(v)) root.conservationMode = v
-            }
-        }
-    }
-
-    Process {
         id: _profileProc
         command: ["powerprofilesctl", "get"]
         running: false
@@ -238,12 +224,10 @@ Singleton {
             _capProc.running     = true
             _statProc.running    = true
             _energyProc.running  = true
-            _consProc.running    = true
             _profileProc.running = true
         }
     }
 
-    // Poll every 5 s instead of 30 s so status flips are near-instant
     Timer {
         interval:         5000
         repeat:           true
@@ -253,8 +237,8 @@ Singleton {
             _capProc.running     = true
             _statProc.running    = true
             _energyProc.running  = true
-            _consProc.running    = true
             _profileProc.running = true
+            // conservation_mode is intentionally absent — see comment on currentMode above
         }
     }
 }

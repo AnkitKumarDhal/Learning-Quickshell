@@ -68,17 +68,18 @@ PanelWindow {
                     anchors.centerIn: parent
                     spacing: 10
 
+                    // Basic unicode gear — safe across all fonts
                     Text {
                         Layout.alignment: Qt.AlignHCenter
-                        text:             "󰓦"
-                        font.pixelSize:   32
-                        font.family:      Fonts.fontM
+                        text:             "⚙"
+                        font.pixelSize:   30
                         color:            Colors.primary
 
-                        SequentialAnimation on rotation {
-                            running:  BatteryService.applying
-                            loops:    Animation.Infinite
-                            NumberAnimation { from: 0; to: 360; duration: 1200; easing.type: Easing.InOutCubic }
+                        SequentialAnimation on opacity {
+                            running: BatteryService.applying
+                            loops:   Animation.Infinite
+                            NumberAnimation { to: 0.2; duration: 500; easing.type: Easing.InOutSine }
+                            NumberAnimation { to: 1.0; duration: 500; easing.type: Easing.InOutSine }
                         }
                     }
 
@@ -109,7 +110,6 @@ PanelWindow {
                     Layout.fillWidth: true
                     spacing: 14
 
-                    // Percentage + icon
                     Text {
                         text:           BatteryService.getIcon() + BatteryService.capacity + "%"
                         color:          BatteryService.getColor()
@@ -129,7 +129,6 @@ PanelWindow {
 
                     Item { Layout.fillWidth: true }
 
-                    // Status label + time
                     ColumnLayout {
                         spacing: 3
                         Layout.alignment: Qt.AlignVCenter
@@ -207,10 +206,9 @@ PanelWindow {
                         Layout.fillWidth: true
                     }
 
-                    // Live CPU profile pill
                     Rectangle {
                         visible: BatteryService.cpuProfile !== ""
-                        width:   cpuLabel.implicitWidth + 28
+                        width:   cpuLabel.implicitWidth + 12
                         height:  18
                         radius:  9
                         color:   Colors.surfaceContainerHigh
@@ -229,12 +227,12 @@ PanelWindow {
                 // ── Mode grid ─────────────────────────────────────────────────────
                 GridLayout {
                     Layout.fillWidth: true
-                    columns:      2
-                    columnSpacing: 8
-                    rowSpacing:   8
+                    columns:          2
+                    columnSpacing:    8
+                    rowSpacing:       8
 
                     component ModeCard: Rectangle {
-                        property string modeId:   ""
+                        property string modeId:    ""
                         property string modeEmoji: ""
                         property string modeName:  ""
                         property string modeDesc:  ""
@@ -277,12 +275,12 @@ PanelWindow {
                             }
 
                             Text {
-                                text:           modeDesc
-                                color:          Colors.on_SurfaceVariant
-                                font.pixelSize: 9
-                                font.family:    Fonts.font
-                                opacity:        0.85
-                                wrapMode:       Text.WordWrap
+                                text:             modeDesc
+                                color:            Colors.on_SurfaceVariant
+                                font.pixelSize:   9
+                                font.family:      Fonts.font
+                                opacity:          0.85
+                                wrapMode:         Text.WordWrap
                                 Layout.fillWidth: true
                             }
                         }
@@ -327,7 +325,6 @@ PanelWindow {
                     }
                 }
 
-                // bottom breathing room
                 Item { height: 2 }
             }
         }

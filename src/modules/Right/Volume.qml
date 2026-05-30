@@ -18,7 +18,7 @@ PillBase {
     }
 
     Text {
-        text: root.getIcon() + "  " + Math.round(VolumeService.volume * 100) + "%"
+        text: root.getIcon() + " " + Math.round(VolumeService.volume * 100) + "%"
         color: VolumeService.muted ? Colors.error : Colors.primary
         font.pointSize: 11
         font.bold: true
