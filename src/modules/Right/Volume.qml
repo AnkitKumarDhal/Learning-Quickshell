@@ -11,10 +11,10 @@ PillBase {
     hoverExpand: true
 
     function getIcon(): string {
-        if (VolumeService.muted || VolumeService.volume <= 0.0) return "󰝟"
-        if (VolumeService.volume >= 0.7) return "󰕾"
-        if (VolumeService.volume >= 0.3) return "󰖀"
-        return "󰕿"
+        if (VolumeService.muted || VolumeService.volume <= 0.0) return " "
+        if (VolumeService.volume >= 0.7) return " "
+        if (VolumeService.volume >= 0.3) return " "
+        return " "
     }
 
     Text {

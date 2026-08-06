@@ -18,7 +18,7 @@ PanelWindow {
 
     anchors { bottom: true; left: true; right: true }
 
-    implicitWidth:  screen ? screen.width : 1920
+    implicitWidth:  screen ? screen.width : 1880
     implicitHeight: 520
 
     WlrLayershell.layer:         WlrLayer.Overlay
@@ -102,6 +102,7 @@ PanelWindow {
         onCloseRequested: Popups.wallpaperOpen = false
 
         Rectangle {
+            id: wallRec
             anchors {
                 bottom:           parent.bottom
                 horizontalCenter: parent.horizontalCenter
@@ -253,7 +254,7 @@ PanelWindow {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
 
-                    cellWidth:  158
+                    cellWidth:  150
                     cellHeight: 108
 
                     clip:           true

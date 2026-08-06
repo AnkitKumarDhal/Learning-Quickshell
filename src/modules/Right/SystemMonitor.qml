@@ -22,7 +22,7 @@ PillBase {
         spacing: 8
 
         Text {
-            text:           "CPU " + Math.round(root.cpuUsage) + "%"
+            text:           " " + Math.round(root.cpuUsage) + "%"
             color:          Colors.primary
             font.pointSize: 11
             font.bold:      true
@@ -39,7 +39,7 @@ PillBase {
         }
 
         Text {
-            text:           "MEM " + root.memUsed.toFixed(1) + "G"
+            text:           " " + root.memUsed.toFixed(1) + "G"
             color:          Colors.primary
             font.pointSize: 11
             font.bold:      true

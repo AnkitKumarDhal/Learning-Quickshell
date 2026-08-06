@@ -17,12 +17,12 @@ PillBase {
     readonly property string _icon: {
         if (hasWifi) {
             if (!NetworkService.wifiEnabled || !NetworkService.wifiConnected)
-                return "󰤭";
+                return "󰤭 ";
             const s = NetworkService.signalStrength;
-            if (s < 0.25) return "󰤟";
-            if (s < 0.50) return "󰤢";
-            if (s < 0.75) return "󰤥";
-            return "󰤨";
+            if (s < 0.25) return "󰤟 ";
+            if (s < 0.50) return "󰤢 ";
+            if (s < 0.75) return "󰤥 ";
+            return "󰤨 ";
         }
         return hasEthernet ? "󰈀" : "󰈂";
     }

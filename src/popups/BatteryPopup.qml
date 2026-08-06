@@ -64,32 +64,12 @@ PanelWindow {
                 visible:      BatteryService.applying
                 z:            10
 
-                ColumnLayout {
+                Text {
                     anchors.centerIn: parent
-                    spacing: 10
-
-                    // Basic unicode gear — safe across all fonts
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text:             "⚙"
-                        font.pixelSize:   30
-                        color:            Colors.primary
-
-                        SequentialAnimation on opacity {
-                            running: BatteryService.applying
-                            loops:   Animation.Infinite
-                            NumberAnimation { to: 0.2; duration: 500; easing.type: Easing.InOutSine }
-                            NumberAnimation { to: 1.0; duration: 500; easing.type: Easing.InOutSine }
-                        }
-                    }
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text:             "Applying mode…"
-                        color:            Colors.on_Surface
-                        font.pixelSize:   13
-                        font.family:      Fonts.font
-                    }
+                    text:             "Applying..."
+                    color:            Colors.on_Surface
+                    font.pixelSize:   13
+                    font.family:      Fonts.font
                 }
             }
 
@@ -103,7 +83,7 @@ PanelWindow {
                     leftMargin:   16
                     rightMargin:  16
                 }
-                spacing: 12
+                spacing: 14
 
                 // ── Status header ─────────────────────────────────────────────────
                 RowLayout {
@@ -137,7 +117,8 @@ PanelWindow {
                             Layout.alignment: Qt.AlignRight
                             text: {
                                 if (BatteryService.full)        return "Full"
-                                if (BatteryService.notCharging) return "Capped at 80%"
+                                if (BatteryService.notCharging) return "Not charging"
+                                if (BatteryService.notCharging && BatteryService.chargeMode === "conserve") return "Capped at 80%"
                                 if (BatteryService.charging)    return "Charging"
                                 return "On battery"
                             }
@@ -192,137 +173,104 @@ PanelWindow {
                     opacity: 0.5
                 }
 
-                // ── Mode section header ───────────────────────────────────────────
-                RowLayout {
+                // ── Reusable setting row ────────────────────────────────────────────
+                component SettingRow: ColumnLayout {
+                    id: settingRow
+                    property string label:        ""
+                    property var    options:      []   // [{id: "..", label: ".."}, ...]
+                    property string currentValue: ""
+                    signal selected(string id)
+
                     Layout.fillWidth: true
+                    spacing: 6
 
                     Text {
-                        text:           "Power Mode"
+                        text:           settingRow.label
                         color:          Colors.on_SurfaceVariant
                         font.pixelSize: 11
                         font.bold:      true
                         font.family:    Fonts.font
                         leftPadding:    2
-                        Layout.fillWidth: true
                     }
 
-                    Rectangle {
-                        visible: BatteryService.cpuProfile !== ""
-                        width:   cpuLabel.implicitWidth + 12
-                        height:  18
-                        radius:  9
-                        color:   Colors.surfaceContainerHigh
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
 
-                        Text {
-                            id: cpuLabel
-                            anchors.centerIn: parent
-                            text:           BatteryService.cpuProfile
-                            color:          Colors.on_SurfaceVariant
-                            font.pixelSize: 9
-                            font.family:    Fonts.font
+                        Repeater {
+                            model: settingRow.options
+                            delegate: Rectangle {
+                                required property var modelData
+                                readonly property bool isActive: modelData.id === settingRow.currentValue
+
+                                Layout.fillWidth: true
+                                height: 30
+                                radius: 8
+
+                                color: isActive
+                                           ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.16)
+                                           : optHov.containsMouse
+                                               ? Colors.surfaceContainerHighest
+                                               : Colors.surfaceContainerHigh
+                                border.color: isActive ? Colors.primary : Colors.outlineVariant
+                                border.width: isActive ? 1.5 : 1
+
+                                Behavior on color        { ColorAnimation { duration: 150 } }
+                                Behavior on border.color { ColorAnimation { duration: 150 } }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text:             modelData.label
+                                    color:            isActive ? Colors.primary : Colors.on_Surface
+                                    font.pixelSize:   10
+                                    font.bold:        isActive
+                                    font.family:      Fonts.font
+                                }
+
+                                MouseArea {
+                                    id:           optHov
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape:  (BatteryService.applying || isActive)
+                                                      ? Qt.ArrowCursor : Qt.PointingHandCursor
+                                    enabled:      !BatteryService.applying && !isActive
+                                    onClicked:    settingRow.selected(modelData.id)
+                                }
+                            }
                         }
                     }
                 }
 
-                // ── Mode grid ─────────────────────────────────────────────────────
-                GridLayout {
-                    Layout.fillWidth: true
-                    columns:          2
-                    columnSpacing:    8
-                    rowSpacing:       8
+                SettingRow {
+                    label:        "Performance"
+                    currentValue: BatteryService.cpuTier
+                    options: [
+                        { id: "power-saving", label: "Power Saving" },
+                        { id: "balanced",     label: "Balanced" },
+                        { id: "performance",  label: "Performance" }
+                    ]
+                    onSelected: (id) => BatteryService.setCpuTier(id)
+                }
 
-                    component ModeCard: Rectangle {
-                        property string modeId:    ""
-                        property string modeEmoji: ""
-                        property string modeName:  ""
-                        property string modeDesc:  ""
+                SettingRow {
+                    label:        "Charging"
+                    currentValue: BatteryService.chargeMode
+                    options: [
+                        { id: "rapid",    label: "Rapid" },
+                        { id: "conserve", label: "Conserve (80%)" },
+                        { id: "full",     label: "Full (100%)" }
+                    ]
+                    onSelected: (id) => BatteryService.setChargeMode(id)
+                }
 
-                        readonly property bool isActive: BatteryService.currentMode === modeId
-
-                        Layout.fillWidth: true
-                        height: 82
-                        radius: 12
-
-                        color: isActive
-                                   ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.13)
-                                   : cardHov.containsMouse
-                                       ? Colors.surfaceContainerHighest
-                                       : Colors.surfaceContainerHigh
-
-                        border.color: isActive ? Colors.primary : Colors.outlineVariant
-                        border.width: isActive ? 2 : 1
-
-                        Behavior on color        { ColorAnimation { duration: 150 } }
-                        Behavior on border.color { ColorAnimation { duration: 150 } }
-                        Behavior on border.width { NumberAnimation { duration: 150 } }
-
-                        ColumnLayout {
-                            anchors { fill: parent; margins: 10 }
-                            spacing: 2
-
-                            Text {
-                                text:           modeEmoji
-                                font.pixelSize: 18
-                            }
-
-                            Text {
-                                text:           modeName
-                                color:          isActive ? Colors.primary : Colors.on_Surface
-                                font.pixelSize: 12
-                                font.bold:      true
-                                font.family:    Fonts.fontM
-                                Behavior on color { ColorAnimation { duration: 150 } }
-                            }
-
-                            Text {
-                                text:             modeDesc
-                                color:            Colors.on_SurfaceVariant
-                                font.pixelSize:   9
-                                font.family:      Fonts.font
-                                opacity:          0.85
-                                wrapMode:         Text.WordWrap
-                                Layout.fillWidth: true
-                            }
-                        }
-
-                        MouseArea {
-                            id:           cardHov
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape:  (BatteryService.applying || isActive)
-                                              ? Qt.ArrowCursor : Qt.PointingHandCursor
-                            enabled:      !BatteryService.applying && !isActive
-                            onClicked:    BatteryService.applyMode(modeId)
-                        }
-                    }
-
-                    ModeCard {
-                        modeId:    "game"
-                        modeEmoji: "🎮"
-                        modeName:  "Game"
-                        modeDesc:  "Performance · 80% cap · 120Hz"
-                    }
-
-                    ModeCard {
-                        modeId:    "study"
-                        modeEmoji: "📚"
-                        modeName:  "Study"
-                        modeDesc:  "Balanced · 80% cap · 120Hz"
-                    }
-
-                    ModeCard {
-                        modeId:    "quickjuice"
-                        modeEmoji: "⚡"
-                        modeName:  "Quick Juice"
-                        modeDesc:  "Power-saver · Rapid charge · 60Hz"
-                    }
-
-                    ModeCard {
-                        modeId:    "eco"
-                        modeEmoji: "🍃"
-                        modeName:  "Eco"
-                        modeDesc:  "Power-saver · 100% fill · 60Hz"
-                    }
+                SettingRow {
+                    label:        "Display"
+                    currentValue: String(BatteryService.refreshRate)
+                    options: [
+                        { id: "60",  label: "60Hz" },
+                        { id: "120", label: "120Hz" }
+                    ]
+                    onSelected: (id) => BatteryService.setRefreshRate(parseInt(id))
                 }
 
                 Item { height: 2 }

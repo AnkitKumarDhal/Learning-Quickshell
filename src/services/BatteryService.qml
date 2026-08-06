@@ -11,7 +11,7 @@ Singleton {
     property int    capacity:    0
     property bool   charging:    false
     property bool   full:        false
-    property bool   notCharging: false   // conservation cap reached (80%)
+    property bool   notCharging: false
     property string status:      "Unknown"
     property bool   hasBattery:  false
     property bool   applying:    false
@@ -19,32 +19,17 @@ Singleton {
     // ── Time remaining ────────────────────────────────────────────────────────
     property int timeRemainingMinutes: -1
 
-    // ── Mode detection ────────────────────────────────────────────────────────
-    // conservationMode is intentionally NOT polled — reading that sysfs node
-    // acquires an ACPI driver lock that blocks /proc/acpi/call writes, which
-    // breaks the rapid-charge SBMC commands in the fish scripts.
-    // Mode is derived from cpuProfile (fast, no locks) + the persisted hint.
-    property string cpuProfile: ""   // polled via powerprofilesctl get
-    property string _savedMode: ""   // written to /tmp on every applyMode()
+    // ── Independent control state ────────────────────────────────────────────
+    property string cpuTier:     ""   // power-saving | balanced | performance
+    property string chargeMode:  ""   // rapid | conserve | full
+    property int    refreshRate: 0    // 60 | 120
 
-    readonly property string currentMode: {
-        // Prefer saved mode when it agrees with the live cpu profile
-        if (_savedMode === "game"       && cpuProfile === "performance") return "game"
-        if (_savedMode === "study"      && cpuProfile === "balanced")    return "study"
-        if (_savedMode === "quickjuice" && cpuProfile === "power-saver") return "quickjuice"
-        if (_savedMode === "eco"        && cpuProfile === "power-saver") return "eco"
-        // Fallback: infer what we can from cpu profile alone
-        if (cpuProfile === "performance") return "game"
-        if (cpuProfile === "balanced")    return "study"
-        return "custom"
-    }
+    property string _epp:      ""
+    property string _platform: ""
 
     readonly property real fraction: capacity / 100
 
     function getIcon(): string {
-        // notCharging intentionally falls through to standard capacity icons.
-        // The tertiary color from getColor() is enough to signal the capped state,
-        // and avoids using glyphs that aren't in all Nerd Font builds.
         if (full) return "󰁹 "
         if (charging) {
             if (capacity >= 95) return "󰂅 "
@@ -82,36 +67,36 @@ Singleton {
         return h + "h " + String(m).padStart(2, "0") + "m"
     }
 
-    function applyMode(mode) {
-        applying   = true
-        _savedMode = mode
-        _writeModeProc.command = ["sh", "-c", "printf '%s' " + mode + " > /tmp/qs_battery_mode"]
-        _writeModeProc.running = true
-        const fishFn = (mode === "quickjuice") ? "quick-juice" : mode
-        _modeProc.command = ["fish", "-c", fishFn + "-mode"]
-        _modeProc.running = true
+    function setCpuTier(tier) {
+        const fn = { "power-saving": "pwr-power-saving", "balanced": "pwr-balanced", "performance": "pwr-performance" }[tier]
+        if (!fn) return
+        applying = true
+        _cpuProc.command = ["fish", "-c", fn]
+        _cpuProc.running = true
+    }
+
+    function setChargeMode(mode) {
+        const fn = { "rapid": "charge-rapid", "conserve": "charge-conserve", "full": "charge-full" }[mode]
+        if (!fn) return
+        applying = true
+        _chargeProc.command = ["fish", "-c", fn]
+        _chargeProc.running = true
+    }
+
+    function setRefreshRate(hz) {
+        applying = true
+        _displayProc.command = ["fish", "-c", (hz === 120 ? "display-120hz" : "display-60hz")]
+        _displayProc.running = true
+    }
+
+    function _recomputeCpuTier() {
+        if (_platform === "low-power")        root.cpuTier = "power-saving"
+        else if (_platform === "performance") root.cpuTier = "performance"
+        else if (_platform === "balanced")    root.cpuTier = "balanced"
     }
 
     // ── Internal ──────────────────────────────────────────────────────────────
     property string _batPath: ""
-
-    Process {
-        id: _readModeProc
-        command: ["cat", "/tmp/qs_battery_mode"]
-        running: true
-        stdout: SplitParser {
-            onRead: (d) => {
-                const m = d.trim()
-                if (m) root._savedMode = m
-            }
-        }
-    }
-
-    Process {
-        id: _writeModeProc
-        command: []
-        running: false
-    }
 
     Process {
         id: _finder
@@ -125,6 +110,7 @@ Singleton {
 
                 _capProc.command  = ["cat", root._batPath + "/capacity"]
                 _statProc.command = ["cat", root._batPath + "/status"]
+                _chargeTypeProc.command = ["cat", root._batPath + "/charge_types"]
                 _energyProc.command = ["sh", "-c",
                     "a=$(cat " + root._batPath + "/energy_now 2>/dev/null || " +
                          "cat " + root._batPath + "/charge_now 2>/dev/null || echo -1); " +
@@ -135,11 +121,14 @@ Singleton {
                     "echo $a; echo $b; echo $c"
                 ]
 
-                root.hasBattery      = true
-                _capProc.running     = true
-                _statProc.running    = true
-                _energyProc.running  = true
-                _profileProc.running = true
+                root.hasBattery         = true
+                _capProc.running        = true
+                _statProc.running       = true
+                _energyProc.running     = true
+                _chargeTypeProc.running = true
+                _eppProc.running        = true
+                _platformProc.running   = true
+                _refreshProc.running    = true
             }
         }
     }
@@ -206,26 +195,72 @@ Singleton {
         }
     }
 
+    // charge_types looks like: "Fast Standard [Long_Life]" — bracketed entry is active
     Process {
-        id: _profileProc
-        command: ["powerprofilesctl", "get"]
+        id: _chargeTypeProc
+        command: ["cat", "/dev/null"]
         running: false
         stdout: SplitParser {
-            onRead: (d) => { root.cpuProfile = d.trim() }
+            onRead: (d) => {
+                const m = d.match(/\[(\w+)\]/)
+                if (!m) return
+                const active = m[1]
+                if (active === "Fast")            root.chargeMode = "rapid"
+                else if (active === "Long_Life")  root.chargeMode = "conserve"
+                else if (active === "Standard")   root.chargeMode = "full"
+            }
         }
     }
 
     Process {
-        id: _modeProc
+        id: _eppProc
+        command: ["cat", "/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference"]
+        running: false
+        stdout: SplitParser {
+            onRead: (d) => { root._epp = d.trim(); root._recomputeCpuTier() }
+        }
+    }
+
+    Process {
+        id: _platformProc
+        command: ["cat", "/sys/firmware/acpi/platform_profile"]
+        running: false
+        stdout: SplitParser {
+            onRead: (d) => { root._platform = d.trim(); root._recomputeCpuTier() }
+        }
+    }
+
+    Process {
+        id: _refreshProc
+        command: ["sh", "-c", "hyprctl monitors -j | jq -r '.[] | select(.name==\"eDP-1\") | .refreshRate'"]
+        running: false
+        stdout: SplitParser {
+            onRead: (line) => {
+                const v = parseFloat(line.trim())
+                if (!isNaN(v)) root.refreshRate = Math.round(v)
+            }
+        }
+    }
+
+    Process {
+        id: _cpuProc
         command: []
         running: false
-        onExited: {
-            root.applying        = false
-            _capProc.running     = true
-            _statProc.running    = true
-            _energyProc.running  = true
-            _profileProc.running = true
-        }
+        onExited: { root.applying = false; _eppProc.running = true; _platformProc.running = true }
+    }
+
+    Process {
+        id: _chargeProc
+        command: []
+        running: false
+        onExited: { root.applying = false; _chargeTypeProc.running = true }
+    }
+
+    Process {
+        id: _displayProc
+        command: []
+        running: false
+        onExited: { root.applying = false; _refreshProc.running = true }
     }
 
     Timer {
@@ -234,11 +269,13 @@ Singleton {
         running:          root.hasBattery
         triggeredOnStart: false
         onTriggered: {
-            _capProc.running     = true
-            _statProc.running    = true
-            _energyProc.running  = true
-            _profileProc.running = true
-            // conservation_mode is intentionally absent — see comment on currentMode above
+            _capProc.running        = true
+            _statProc.running       = true
+            _energyProc.running     = true
+            _chargeTypeProc.running = true
+            _eppProc.running        = true
+            _platformProc.running   = true
+            _refreshProc.running    = true
         }
     }
 }
