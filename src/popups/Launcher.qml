@@ -28,6 +28,7 @@ PanelWindow {
         target: Popups
         function onLauncherOpenChanged() {
             if (Popups.launcherOpen) {
+                closeDelay.stop()
                 root._shouldShow = true
             } else {
                 closeDelay.start()
@@ -44,8 +45,10 @@ PanelWindow {
         if (visible) {
             searchBar.clear()
             root.selectedIndex = 0
+            if (root.hasLoadedOnce) {
+                root.filterApps()
+            }
             appLoader.reload()
-            // Delay focus to after WlrLayershell keyboard grab is active
             focusTimer.restart()
         }
     }
@@ -60,6 +63,8 @@ PanelWindow {
     property int selectedIndex: 0
     property var allApps:       []
     property var filteredApps:  []
+    property var hasLoadedOnce: false
+    property bool loadFailed:   false
 
     function filterApps() {
         const q = searchBar.text.toLowerCase().trim()
@@ -92,9 +97,12 @@ PanelWindow {
     LauncherAppLoader {
         id: appLoader
         onLoaded: (apps) => {
+            root.hasLoadedOnce = true
+            root.loadFailed = false
             root.allApps = apps
             root.filterApps()
         }
+        onFailed: root.loadFailed = true
     }
 
     // ── Launch process (fire-and-forget) ──────────────────────────────────

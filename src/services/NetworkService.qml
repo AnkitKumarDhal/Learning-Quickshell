@@ -52,12 +52,17 @@ Singleton {
 
     // Enable scanner whenever the popup is open — caller sets this
     property bool scannerActive: false
-    onScannerActiveChanged: {
-        if (root.wifiDevice) root.wifiDevice.scannerEnabled = root.scannerActive;
+    property int activePasswordInputs: 0
+
+    function _updateScanner() {
+        if (root.wifiDevice) {
+            root.wifiDevice.scannerEnabled = root.scannerActive && (root.activePasswordInputs === 0);
+        }
     }
-    onWifiDeviceChanged: {
-        if (root.wifiDevice) root.wifiDevice.scannerEnabled = root.scannerActive;
-    }
+
+    onScannerActiveChanged: _updateScanner()
+    onActivePasswordInputsChanged: _updateScanner()
+    onWifiDeviceChanged: _updateScanner()
 
     // ── Bluetooth ─────────────────────────────────────────────────────────────
 

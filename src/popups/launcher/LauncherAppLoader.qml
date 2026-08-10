@@ -5,6 +5,7 @@ QtObject {
     id: root
 
     signal loaded(var apps)
+    signal failed()
 
     property bool   loading: false
     property string _buf:    ""
@@ -35,14 +36,14 @@ QtObject {
             root.loading = false
             if (code !== 0) {
                 console.warn("[resolve_apps] exited with code", code)
-                root.loaded([])
+                root.failed()
                 return
             }
             try {
                 root.loaded(JSON.parse(root._buf))
             } catch(e) {
                 console.warn("[resolve_apps] JSON parse failed:", e, root._buf.slice(0, 120))
-                root.loaded([])
+                root.failed()
             }
         }
     }

@@ -12,6 +12,20 @@ Item {
     implicitHeight: innerCol.implicitHeight + 24
     property bool _showPsk: false
 
+    on_ShowPskChanged: {
+        if (_showPsk) {
+            NetworkService.activePasswordInputs += 1;
+        } else {
+            NetworkService.activePasswordInputs = Math.max(0, NetworkService.activePasswordInputs - 1)
+        }
+    }
+
+    Component.onDestruction: {
+        if (_showPsk) {
+            NetworkService.activePasswordInputs = Math.max(0, NetworkService.activePasswordInputs - 1)
+        }
+    }
+
     Connections {
         target: root.network
         function onConnectionFailed(reason) {
