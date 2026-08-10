@@ -13,14 +13,23 @@ PillBase {
     hoverExpand: false  // tray expands differently via its own toggle
     hoverEnabled: false
     mouseEnabled: false
-    visible: SystemTray.items.values.length > 0
+    // Cache system tray items to avoid repeated property access
+    property var _cachedTrayItems: SystemTray.items.values
+    
+    Connections {
+        target: SystemTray.items
+        function onCountChanged() { root._cachedTrayItems = SystemTray.items.values }
+        function onValuesChanged() { root._cachedTrayItems = SystemTray.items.values }
+    }
+    
+    visible: root._cachedTrayItems.length > 0
 
     Row {
         id: trayRow
         spacing: 10
 
         Repeater {
-            model: SystemTray.items.values
+            model: root._cachedTrayItems
 
             delegate: Item {
                 id: trayDelegate
