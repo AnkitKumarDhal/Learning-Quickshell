@@ -71,20 +71,18 @@ PanelWindow {
                 root.searchText = ""
                 root.activeCat  = 0
                 emojiGrid.resetIndex()
-                // Delay focus to ensure WlrLayershell keyboard grab is fully active
-                Qt.callLater(() => {
-                    Qt.callLater(() => {
-                        searchBar.forceActiveFocus()
-                    })
-                })
+                // Use a Timer to defer focus until the event loop has fully processed
+                // the window visibility and WlrLayershell keyboard grab setup
+                emojiFocusTimer.start()
             }
         }
     }
 
     Timer {
         id: emojiFocusTimer
-        interval: 50
+        interval: 80
         running: false
+        repeat: false
         onTriggered: searchBar.forceActiveFocus()
     }
 
