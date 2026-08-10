@@ -18,6 +18,7 @@ Singleton {
     property bool emojiOpen:         false
     property bool networkOpen:       false
     property bool wallpaperOpen:     false
+    property bool batteryOpen:       false
     property int  networkTab:        0
 
     // ── Mutual Exclusion ──────────────────────────────────────────────────────
@@ -34,6 +35,7 @@ Singleton {
     onEmojiOpenChanged:         if (emojiOpen)         _closeOthers("emoji")
     onArchMenuOpenChanged:      if (archMenuOpen)      _closeOthers("archMenu")
     onWallpaperOpenChanged:     if (wallpaperOpen)     _closeOthers("wallpaper")
+    onBatteryOpenChanged:       if (batteryOpen)       _closeOthers("battery")
 
     function _closeOthers(keep) {
         if (keep !== "emoji")         emojiOpen         = false
@@ -46,6 +48,7 @@ Singleton {
         if (keep !== "clipboard")     clipboardOpen     = false
         if (keep !== "notifications") notificationsOpen = false
         if (keep !== "wallpaper")     wallpaperOpen     = false
+        if (keep !== "battery")       batteryOpen       = false
     }
 
     // ── Aggregate State ───────────────────────────────────────────────────────
@@ -61,6 +64,7 @@ Singleton {
         launcherOpen      ||
         emojiOpen         ||
         wallpaperOpen     ||
+        batteryOpen       ||
         networkOpen
 
     // ── Methods ───────────────────────────────────────────────────────────────
@@ -77,5 +81,6 @@ Singleton {
         launcherOpen      = false
         emojiOpen         = false
         wallpaperOpen     = false
+        batteryOpen       = false
     }
 }

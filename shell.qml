@@ -38,6 +38,7 @@ ShellRoot {
                 ClipboardPopup      { screen: modelData }
                 EmojiPicker         { screen: modelData }
                 WallpaperPopup      { screen: modelData }
+                BatteryPopup        { screen: modelData }
             }
         }
     }

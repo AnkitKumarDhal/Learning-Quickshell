@@ -13,7 +13,6 @@ import qs.src.state
 PanelWindow {
     id: root
 
-    property var screen
 
     color:         "transparent"
     exclusionMode: ExclusionMode.Auto

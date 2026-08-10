@@ -11,14 +11,14 @@ PillBase {
     hoverExpand: true
 
     function getIcon(): string {
-        if (VolumeService.muted || VolumeService.volume <= 0.0) return "󰝟"
-        if (VolumeService.volume >= 0.7) return "󰕾"
-        if (VolumeService.volume >= 0.3) return "󰖀"
-        return "󰕿"
+        if (VolumeService.muted || VolumeService.volume <= 0.0) return " "
+        if (VolumeService.volume >= 0.7) return " "
+        if (VolumeService.volume >= 0.3) return " "
+        return " "
     }
 
     Text {
-        text: root.getIcon() + "  " + Math.round(VolumeService.volume * 100) + "%"
+        text: root.getIcon() + " " + Math.round(VolumeService.volume * 100) + "%"
         color: VolumeService.muted ? Colors.error : Colors.primary
         font.pointSize: 11
         font.bold: true
