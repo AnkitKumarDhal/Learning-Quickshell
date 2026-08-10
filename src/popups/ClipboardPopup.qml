@@ -39,19 +39,8 @@ PanelWindow {
                 ClipboardService.searchQuery = ""
                 searchField.text = ""
                 listView.currentIndex = 0
-                // Use a Timer to defer focus until the event loop has fully processed
-                // the window visibility and WlrLayershell keyboard grab setup
-                clipboardFocusTimer.start()
             }
         }
-    }
-
-    Timer {
-        id: clipboardFocusTimer
-        interval: 80
-        running: false
-        repeat: false
-        onTriggered: searchField.forceActiveFocus()
     }
 
     PopupSlide {
@@ -110,6 +99,8 @@ PanelWindow {
 
                         Layout.fillWidth: true
                         height: 32
+                        
+                        focus: true
 
                         placeholderText: "Search clipboard..."
                         font.family: Fonts.font

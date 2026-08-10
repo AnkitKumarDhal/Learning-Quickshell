@@ -36,6 +36,8 @@ Item {
             Layout.fillWidth: true
 
             height: 32
+            
+            focus: true
 
             placeholderText: "Search emoji..."
 

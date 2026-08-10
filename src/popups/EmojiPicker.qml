@@ -71,19 +71,8 @@ PanelWindow {
                 root.searchText = ""
                 root.activeCat  = 0
                 emojiGrid.resetIndex()
-                // Use a Timer to defer focus until the event loop has fully processed
-                // the window visibility and WlrLayershell keyboard grab setup
-                emojiFocusTimer.start()
             }
         }
-    }
-
-    Timer {
-        id: emojiFocusTimer
-        interval: 80
-        running: false
-        repeat: false
-        onTriggered: searchBar.forceActiveFocus()
     }
 
     PopupSlide {
@@ -122,6 +111,8 @@ PanelWindow {
                 EmojiSearchBar {
                     id: searchBar
                     Layout.fillWidth: true
+                    
+                    focus: true
 
                     onTextChanged:   { root.searchText = text; emojiGrid.resetIndex() }
                     onEscapePressed: Popups.emojiOpen = false

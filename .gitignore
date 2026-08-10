@@ -1,1 +1,41 @@
-Nothing needs to be added to the .gitignore file based on the provided file changes. The modified files are all QML source files which should not be ignored.
+```
+# Build artifacts
+*.qmlc
+*.so
+*.dylib
+*.dll
+*.exe
+*.o
+*.obj
+
+# Dependencies
+node_modules/
+.qmake.stash
+Makefile
+*.pro.user
+build/
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+```

@@ -30,9 +30,12 @@ PanelWindow {
             if (Popups.launcherOpen) {
                 closeDelay.stop()
                 root._shouldShow = true
-                // Use a Timer to defer focus until the event loop has fully processed
-                // the window visibility and WlrLayershell keyboard grab setup
-                launcherFocusTimer.start()
+                searchBar.clear()
+                root.selectedIndex = 0
+                if (root.hasLoadedOnce) {
+                    root.filterApps()
+                }
+                appLoader.reload()
             } else {
                 closeDelay.start()
             }
@@ -43,22 +46,6 @@ PanelWindow {
         id: closeDelay
         interval: Theme.animDuration + 30
         onTriggered: root._shouldShow = false
-    }
-    
-    Timer {
-        id: launcherFocusTimer
-        interval: 80
-        running: false
-        repeat: false
-        onTriggered: {
-            searchBar.clear()
-            root.selectedIndex = 0
-            if (root.hasLoadedOnce) {
-                root.filterApps()
-            }
-            appLoader.reload()
-            searchBar.forceActiveFocus()
-        }
     }
 
     // ── State ─────────────────────────────────────────────────────────────
@@ -188,6 +175,7 @@ PanelWindow {
             anchors { top: parent.top; left: parent.left; right: parent.right }
             resultCount: root.filteredApps.length
             showCount:   text !== ""
+            focus:       true
 
             onTextChanged:  root.onSearchTextChanged()
             onEscapePressed: Popups.launcherOpen = false
