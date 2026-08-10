@@ -49,14 +49,13 @@ PanelWindow {
                 root.filterApps()
             }
             appLoader.reload()
-            focusTimer.restart()
+            // Delay focus to ensure WlrLayershell keyboard grab is fully active
+            Qt.callLater(() => {
+                Qt.callLater(() => {
+                    searchBar.forceActiveFocus()
+                })
+            })
         }
-    }
-
-    Timer {
-        id: focusTimer
-        interval: 50
-        onTriggered: searchBar.forceActiveFocus()
     }
 
     // ── State ─────────────────────────────────────────────────────────────
