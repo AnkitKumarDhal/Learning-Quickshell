@@ -234,7 +234,10 @@ Singleton {
     }
 
     // ── Main poll timer — 1s interval ─────────────────────────────────────────
+    // Only poll CPU, memory, and network continuously (needed for top bar display)
+    // Temperature, GPU, and disk only poll when popup is open to save resources
     Timer {
+        id: mainTimer
         interval:        1000
         running:         true
         repeat:          true
@@ -244,6 +247,8 @@ Singleton {
             cpuProc.running  = true
             memProc.running  = true
             netProc.running  = true
+            
+            // Only poll temperature/GPU when popup is visible
             if (Popups.systemOpen) {
                 tempProc.running = true
                 if (root.hasGpu) gpuReadProc.running = true
@@ -251,10 +256,30 @@ Singleton {
         }
     }
 
+    // Disk polling only when popup is open
     Connections {
         target: Popups
         function onSystemOpenChanged() {
             if (Popups.systemOpen) diskProc.running = true
+        }
+    }
+    
+    // Reduce polling frequency when popup is closed (poll every 2s instead of 1s)
+    property int _pollInterval: Popups.systemOpen ? 1000 : 2000
+    Behavior on _pollInterval { NumberAnimation { duration: 300 } }
+    
+    Timer {
+        id: slowTimer
+        interval: 2000
+        running: !Popups.systemOpen
+        repeat: true
+        
+        onTriggered: {
+            // Keep stats fresh even when popup is closed, but at reduced rate
+            if (!Popups.systemOpen) {
+                cpuProc.running = true
+                memProc.running = true
+            }
         }
     }
 }

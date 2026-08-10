@@ -263,11 +263,16 @@ Singleton {
         onExited: { root.applying = false; _refreshProc.running = true }
     }
 
+    // Adaptive polling: poll more frequently when charging/discharging, less when full
+    property int _batteryPollInterval: (root.charging || (!root.full && !root.notCharging)) ? 5000 : 15000
+    
     Timer {
-        interval:         5000
+        id: batteryTimer
+        interval:         root._batteryPollInterval
         repeat:           true
         running:          root.hasBattery
         triggeredOnStart: false
+        
         onTriggered: {
             _capProc.running        = true
             _statProc.running       = true
@@ -277,5 +282,13 @@ Singleton {
             _platformProc.running   = true
             _refreshProc.running    = true
         }
+    }
+    
+    // Update polling interval based on battery state changes
+    Connections {
+        target: root
+        function onChargingChanged() { batteryTimer.restart() }
+        function onFullChanged() { batteryTimer.restart() }
+        function onNotChargingChanged() { batteryTimer.restart() }
     }
 }

@@ -26,9 +26,18 @@ PillBase {
         }
     }
 
+    // Cache workspace list to avoid repeated property access in Repeater
+    property var _cachedWorkspaces: Hyprland.workspaces.values
+    
+    Connections {
+        target: Hyprland.workspaces
+        function onCountChanged() { root._cachedWorkspaces = Hyprland.workspaces.values }
+        function onValuesChanged() { root._cachedWorkspaces = Hyprland.workspaces.values }
+    }
+    
     property int dotCount: {
         let highest = 3
-        let wss = Hyprland.workspaces.values
+        let wss = root._cachedWorkspaces
         for (let i = 0; i < wss.length; i++) {
             if (wss[i].id > highest) highest = wss[i].id
         }
@@ -45,8 +54,9 @@ PillBase {
             delegate: Rectangle {
                 readonly property int wsId: index + 1
 
+                // Use cached workspace list instead of accessing Hyprland.workspaces.values repeatedly
                 property var hyprWs: {
-                    let wss = Hyprland.workspaces.values
+                    let wss = root._cachedWorkspaces
                     for (let i = 0; i < wss.length; i++) {
                         if (wss[i].id === wsId) return wss[i]
                     }

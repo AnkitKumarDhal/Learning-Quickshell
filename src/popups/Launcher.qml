@@ -66,23 +66,55 @@ PanelWindow {
     property var hasLoadedOnce: false
     property bool loadFailed:   false
 
+    // Debounced search to avoid filtering on every keystroke
+    property string _pendingQuery: ""
+    
     function filterApps() {
         const q = searchBar.text.toLowerCase().trim()
+        root._pendingQuery = q
+        
         if (q === "") {
             root.filteredApps = root.allApps.slice(0, 48)
         } else {
-            root.filteredApps = root.allApps.filter(a => {
-                const name    = (a.name    || "").toLowerCase()
-                const comment = (a.comment || "").toLowerCase()
-                return name.startsWith(q) || name.includes(q) || comment.includes(q)
-            }).sort((a, b) => {
-                const an = (a.name || "").toLowerCase()
-                const bn = (b.name || "").toLowerCase()
-                return (an.startsWith(q) ? 0 : 1) - (bn.startsWith(q) ? 0 : 1)
-                    || an.localeCompare(bn)
-            }).slice(0, 48)
+            // Optimized filtering with early exit and cached lowercase values
+            const matches = []
+            const startsWith = []
+            
+            for (let i = 0; i < root.allApps.length && matches.length < 48; i++) {
+                const app = root.allApps[i]
+                const name = (app.name || "").toLowerCase()
+                
+                // Check if name starts with query (highest priority)
+                if (name.startsWith(q)) {
+                    startsWith.push(app)
+                    continue
+                }
+                
+                // Check if name or comment contains query
+                if (name.includes(q) || (app.comment || "").toLowerCase().includes(q)) {
+                    matches.push(app)
+                }
+            }
+            
+            // Sort: startsWith first, then contains, alphabetically
+            startsWith.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+            matches.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+            
+            root.filteredApps = [...startsWith, ...matches].slice(0, 48)
         }
         root.selectedIndex = 0
+    }
+    
+    // Debounce timer for search
+    Timer {
+        id: filterDebounce
+        interval: 150
+        onTriggered: root.filterApps()
+    }
+    
+    // Modified text change handler to use debounce
+    function onSearchTextChanged() {
+        filterDebounce.restart()
     }
 
     function launch(idx) {
@@ -155,7 +187,7 @@ PanelWindow {
             resultCount: root.filteredApps.length
             showCount:   text !== ""
 
-            onTextChanged:  root.filterApps()
+            onTextChanged:  root.onSearchTextChanged()
             onEscapePressed: Popups.launcherOpen = false
             onReturnPressed: root.launch(root.selectedIndex)
             onUpPressed: {

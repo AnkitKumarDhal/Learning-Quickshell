@@ -8,6 +8,7 @@ import os
 import json
 import configparser
 from pathlib import Path
+from functools import lru_cache
 
 
 ICON_EXTENSIONS = (".png", ".svg", ".xpm")
@@ -26,9 +27,16 @@ APP_DIRS = [
     Path.home() / ".local/share/applications",
 ]
 
+# Cache for icon theme lookup
+_icon_themes_cache = None
+
 
 def _get_gtk_icon_themes() -> list[str]:
     """Detect active GTK icon themes from config files."""
+    global _icon_themes_cache
+    if _icon_themes_cache is not None:
+        return _icon_themes_cache
+    
     themes = ["hicolor"]
     config_paths = [
         Path.home() / ".config/gtk-4.0/settings.ini",
@@ -47,9 +55,11 @@ def _get_gtk_icon_themes() -> list[str]:
         except OSError:
             continue
 
+    _icon_themes_cache = themes
     return themes
 
 
+@lru_cache(maxsize=256)
 def find_icon(name: str, size: int = 48) -> str:
     """Find the full path to an icon given its name.
 
@@ -83,7 +93,7 @@ def find_icon(name: str, size: int = 48) -> str:
 
     themes = _get_gtk_icon_themes()
 
-    # Search in themed icon directories
+    # Search in themed icon directories - optimized order
     for root in ICON_ROOTS:
         for theme in themes:
             theme_dir = root / theme
