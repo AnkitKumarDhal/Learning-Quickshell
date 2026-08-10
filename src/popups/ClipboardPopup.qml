@@ -39,20 +39,18 @@ PanelWindow {
                 ClipboardService.searchQuery = ""
                 searchField.text = ""
                 listView.currentIndex = 0
-                // Delay focus to ensure WlrLayershell keyboard grab is fully active
-                Qt.callLater(() => {
-                    Qt.callLater(() => {
-                        searchField.forceActiveFocus()
-                    })
-                })
+                // Use a Timer to defer focus until the event loop has fully processed
+                // the window visibility and WlrLayershell keyboard grab setup
+                clipboardFocusTimer.start()
             }
         }
     }
 
     Timer {
         id: clipboardFocusTimer
-        interval: 50
+        interval: 80
         running: false
+        repeat: false
         onTriggered: searchField.forceActiveFocus()
     }
 
