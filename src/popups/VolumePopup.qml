@@ -10,7 +10,7 @@ import qs.src.services
 
 PanelWindow {
     id: root
-    property var screen
+//    property var screen
 
     // Note: Pipewire nodes are already bound by VolumeService's PwObjectTracker.
     // We use Pipewire.nodes.values directly in Repeaters — filter() would break

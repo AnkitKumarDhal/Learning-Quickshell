@@ -11,7 +11,7 @@ import qs.src.services
 PanelWindow {
     id: root
 
-    property var screen
+    //property var screen
 
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore

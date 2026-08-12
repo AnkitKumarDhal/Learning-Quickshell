@@ -11,7 +11,7 @@ import qs.src.popups.emoji
 PanelWindow {
     id: root
 
-    property var screen
+    //property var screen
 
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore

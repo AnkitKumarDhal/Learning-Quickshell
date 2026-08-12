@@ -1,1 +1,1 @@
-Nothing needs to be added to the .gitignore file based on the provided file changes. The modified files are all QML source files which should not be ignored.
+.qmlls.ini

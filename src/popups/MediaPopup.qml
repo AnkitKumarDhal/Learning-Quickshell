@@ -11,7 +11,7 @@ import qs.src.popups.media
 PanelWindow {
     id: win
 
-    property var screen
+    //property var screen
     WlrLayershell.screen:        screen
     WlrLayershell.layer:         WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
