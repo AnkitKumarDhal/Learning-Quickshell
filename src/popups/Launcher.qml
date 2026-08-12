@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
-import Quickshell.Io
 import Qt5Compat.GraphicalEffects
 import qs.src.theme
 import qs.src.state
@@ -50,23 +49,21 @@ PanelWindow {
         interval: 80
         running: false
         repeat: false
+
         onTriggered: {
             searchBar.clear()
             root.selectedIndex = 0
-            if (root.hasLoadedOnce) {
-                root.filterApps()
-            }
-            appLoader.reload()
+            root.filterApps()
             searchBar.forceActiveFocus()
         }
     }
 
     // ── State ─────────────────────────────────────────────────────────────
     property int selectedIndex: 0
-    property var allApps:       []
-    property var filteredApps:  []
-    property var hasLoadedOnce: false
-    property bool loadFailed:   false
+    property var allApps: DesktopEntries.applications.values
+    property var filteredApps: []
+
+    Component.onCompleted: root.filterApps()
 
     // Debounced search to avoid filtering on every keystroke
     property string _pendingQuery: ""
@@ -121,29 +118,10 @@ PanelWindow {
 
     function launch(idx) {
         const app = root.filteredApps[idx]
-        if (!app || !app.exec) return
-        launchProc.command = ["sh", "-c", app.exec.replace(/%[uUfFdDnNickvm]/g, "").trim()]
-        launchProc.running = true
+        if (!app) return
+
+        app.execute()
         Popups.launcherOpen = false
-    }
-
-    // ── App loader ────────────────────────────────────────────────────────
-    LauncherAppLoader {
-        id: appLoader
-        onLoaded: (apps) => {
-            root.hasLoadedOnce = true
-            root.loadFailed = false
-            root.allApps = apps
-            root.filterApps()
-        }
-        onFailed: root.loadFailed = true
-    }
-
-    // ── Launch process (fire-and-forget) ──────────────────────────────────
-    Process {
-        id:      launchProc
-        command: []
-        running: false
     }
 
     // ── Dim overlay ───────────────────────────────────────────────────────
