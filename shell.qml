@@ -1,4 +1,5 @@
 //@ pragma UseQApplication
+//@ pragma IconTheme BeautySolar
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
