@@ -7,6 +7,7 @@ import qs.src.windows
 import qs.src.popups
 import qs.src.state
 import qs.src.components
+import qs.src.services
 
 ShellRoot {
     // ── Per-screen scope ──────────────────────────────────────────────────────
@@ -27,8 +28,6 @@ ShellRoot {
                 NotificationToast { screen: modelData }
 
                 // ── Popups ────────────────────────────────────────────────────
-                // All popups are instantiated here and nowhere else.
-                // Add new popups to this list as they are built.
 
                 PopupLoader {
                     open: Popups.notificationsOpen
@@ -118,6 +117,10 @@ ShellRoot {
                             screen: modelData
                         }
                     }
+                }
+
+                PolkitPopup {
+                    screen: modelData
                 }
             }
         }

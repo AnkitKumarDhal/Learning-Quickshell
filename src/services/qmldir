@@ -3,3 +3,4 @@ singleton NotificationService 1.0 NotificationService.qml
 singleton VolumeService       1.0 VolumeService.qml
 singleton NetworkService      1.0 NetworkService.qml
 singleton ClipboardService    1.0 ClipboardService.qml
+singleton PolkitService       1.0 PolkitService.qml
