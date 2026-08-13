@@ -7,6 +7,7 @@ import qs.src.windows
 import qs.src.popups
 import qs.src.state
 import qs.src.components
+import qs.src.services
 
 ShellRoot {
     // ── Per-screen scope ──────────────────────────────────────────────────────
@@ -115,6 +116,15 @@ ShellRoot {
                     open: Popups.batteryOpen
                     popup: Component {
                         BatteryPopup {
+                            screen: modelData
+                        }
+                    }
+                }
+
+                PopupLoader {
+                    open: PolkitService.active
+                    popup: Component {
+                        PolkitPopup {
                             screen: modelData
                         }
                     }
