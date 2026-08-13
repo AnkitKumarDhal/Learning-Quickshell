@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell.Networking
 import qs.src.theme
+import qs.src.services
 import qs.src.components
 
 Item {
@@ -41,10 +42,10 @@ Item {
         radius: 10
         color: rowHover.containsMouse
             ? Colors.surfaceContainerHighest
-            : (root.network.connected 
-                ? Qt.rgba(Colors.primaryContainer.r, Colors.primaryContainer.g, Colors.primaryContainer.b, 0.3) 
+            : (root.network.connected
+                ? Qt.rgba(Colors.primaryContainer.r, Colors.primaryContainer.g, Colors.primaryContainer.b, 0.3)
                 : "transparent")
-        
+
         Behavior on color { ColorAnimation { duration: 120 } }
 
         MouseArea {
@@ -179,7 +180,7 @@ Item {
                 font.pixelSize: 12
                 color: Colors.on_Surface
                 placeholderTextColor: Colors.outline
-                
+
                 background: Rectangle {
                     radius: 8
                     color: Colors.surfaceContainerHigh
@@ -197,14 +198,14 @@ Item {
 
             Rectangle {
                 width: 32; height: 32; radius: 8
-                color: confirmHover.containsMouse 
-                    ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.2) 
+                color: confirmHover.containsMouse
+                    ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.2)
                     : Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.1)
                 Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
                 HoverHandler { id: confirmHover }
-                
+
                 Text { anchors.centerIn: parent; text: "󰌑"; font.family: Fonts.fontM; font.pixelSize: 14; color: Colors.primary }
-                
+
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor

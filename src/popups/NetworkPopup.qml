@@ -11,7 +11,7 @@ import qs.src.components
 PanelWindow {
     id: root
 
-    property var screen
+    //property var screen
 
     color:         "transparent"
     exclusionMode: ExclusionMode.Ignore
@@ -122,7 +122,7 @@ PanelWindow {
                             border.width: NetworkService.wifiEnabled ? 0 : 1
                             border.color: Colors.outlineVariant
                             opacity: (NetworkService.wifiHardwareEnabled ?? true) ? 1.0 : 0.4
-                            
+
                             Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                             Rectangle {
@@ -214,7 +214,7 @@ PanelWindow {
                             border.width: NetworkService.btEnabled ? 0 : 1
                             border.color: Colors.outlineVariant
                             opacity: NetworkService.btAdapter ? 1.0 : 0.4
-                            
+
                             Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                             Rectangle {

@@ -18,6 +18,7 @@ Item {
 
     function clear()            { field.text = "" }
     function forceActiveFocus() { field.forceActiveFocus() }
+    function insertText(value)  { field.insert(field.cursoPosition, value) }
 
     // ── Layout ────────────────────────────────────────────────────────────
     RowLayout {

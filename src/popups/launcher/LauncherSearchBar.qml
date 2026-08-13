@@ -61,12 +61,35 @@ Item {
                 opacity:           0.5
             }
 
-            Keys.onEscapePressed: { root.escapePressed(); event.accepted = true }
-            Keys.onReturnPressed: { root.returnPressed(); event.accepted = true }
-            Keys.onEnterPressed:  { root.returnPressed(); event.accepted = true }
-            Keys.onUpPressed:     { root.upPressed();     event.accepted = true }
-            Keys.onDownPressed:   { root.downPressed();   event.accepted = true }
-            Keys.onTabPressed:    { root.tabPressed();    event.accepted = true }
+            Keys.onEscapePressed: (event) => {
+                root.escapePressed()
+                event.accepted = true
+            }
+
+            Keys.onReturnPressed: (event) => {
+                root.returnPressed()
+                event.accepted = true
+            }
+
+            Keys.onEnterPressed: (event) => {
+                root.returnPressed()
+                event.accepted = true
+            }
+
+            Keys.onUpPressed: (event) => {
+                root.upPressed()
+                event.accepted = true
+            }
+
+            Keys.onDownPressed: (event) => {
+                root.downPressed()
+                event.accepted = true
+            }
+
+            Keys.onTabPressed: (event) => {
+                root.tabPressed()
+                event.accepted = true
+            }
         }
 
         // Result count badge

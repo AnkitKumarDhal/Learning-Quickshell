@@ -1,4 +1,7 @@
 import QtQuick
+//
+// Emoji characters/categories are curated manually.
+// Search metadata is generated separately from Unicode CLDR.
 
 QtObject {
     readonly property var categories: [

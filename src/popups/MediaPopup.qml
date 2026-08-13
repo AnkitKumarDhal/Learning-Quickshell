@@ -11,7 +11,7 @@ import qs.src.popups.media
 PanelWindow {
     id: win
 
-    property var screen
+    //property var screen
     WlrLayershell.screen:        screen
     WlrLayershell.layer:         WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -77,6 +77,13 @@ PanelWindow {
     Connections {
         target: win.player ?? null
         function onTrackTitleChanged() { win._position = 0 }
+    }
+
+    Component.onCompleted: {
+        if (Popups.mediaOpen){
+            target: win.player ?? null
+            function onTrackTitleChanged() { win._position = 0 }
+        }
     }
 
     // ── Slide ─────────────────────────────────────────────────────────────────

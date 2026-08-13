@@ -171,16 +171,15 @@ Singleton {
 
         stdout: SplitParser {
             onRead: (line) => {
-                const m = line.match(/^\s*(\w+):\s+(\d+).*\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)/)
-                if (!m) return
-                const iface = m[1]
+                const parts = line.trim().split(/\s+/)
+                if (parts.length < 10) return
 
-                // Skip loopback and virtual interfaces
-                if (iface === "lo" || iface.startsWith("vir") ||
-                    iface.startsWith("docker") || iface.startsWith("br-")) return
+                const iface = parts[0].replace(":", "")
 
-                const rx = parseInt(m[2])
-                const tx = parseInt(m[4])
+                if (iface === "lo" || iface.startsWith("vir") || iface.startsWith("docker") || iface.startsWith("br-")) return
+
+                const rx = Number(parts[1])
+                const tx = Number(parts[9])
 
                 const prev = root._netPrev[iface]
                 if (prev) {
@@ -247,7 +246,7 @@ Singleton {
             cpuProc.running  = true
             memProc.running  = true
             netProc.running  = true
-            
+
             // Only poll temperature/GPU when popup is visible
             if (Popups.systemOpen) {
                 tempProc.running = true
@@ -263,17 +262,17 @@ Singleton {
             if (Popups.systemOpen) diskProc.running = true
         }
     }
-    
+
     // Reduce polling frequency when popup is closed (poll every 2s instead of 1s)
     property int _pollInterval: Popups.systemOpen ? 1000 : 2000
     Behavior on _pollInterval { NumberAnimation { duration: 300 } }
-    
+
     Timer {
         id: slowTimer
         interval: 2000
         running: !Popups.systemOpen
         repeat: true
-        
+
         onTriggered: {
             // Keep stats fresh even when popup is closed, but at reduced rate
             if (!Popups.systemOpen) {

@@ -6,6 +6,7 @@ import Quickshell.Wayland
 import qs.src.windows
 import qs.src.popups
 import qs.src.state
+import qs.src.components
 
 ShellRoot {
     // ── Per-screen scope ──────────────────────────────────────────────────────
@@ -29,16 +30,95 @@ ShellRoot {
                 // All popups are instantiated here and nowhere else.
                 // Add new popups to this list as they are built.
 
-                NotificationPanel   { screen: modelData }
-                SystemPopup         { screen: modelData }
-                VolumePopup         { screen: modelData }
-                NetworkPopup        { screen: modelData }
-                MediaPopup          { screen: modelData }
-                Launcher            { screen: modelData }
-                ClipboardPopup      { screen: modelData }
-                EmojiPicker         { screen: modelData }
-                WallpaperPopup      { screen: modelData }
-                BatteryPopup        { screen: modelData }
+                PopupLoader {
+                    open: Popups.notificationsOpen
+                    popup: Component {
+                        NotificationPanel {
+                            screen: modelData
+                        }
+                    }
+                }
+
+                PopupLoader {
+                    open: Popups.systemOpen
+                    popup: Component {
+                        SystemPopup {
+                            screen: modelData
+                        }
+                    }
+                }
+
+                PopupLoader {
+                    open: Popups.volumeOpen
+                    popup: Component {
+                        VolumePopup {
+                            screen: modelData
+                        }
+                    }
+                }
+
+                PopupLoader {
+                    open: Popups.networkOpen
+                    popup: Component {
+                        NetworkPopup {
+                            screen: modelData
+                        }
+                    }
+                }
+
+                PopupLoader {
+                    open: Popups.mediaOpen
+                    popup: Component {
+                        MediaPopup {
+                            screen: modelData
+                        }
+                    }
+                }
+
+                PopupLoader {
+                    open: Popups.launcherOpen
+                    popup: Component {
+                        Launcher {
+                            screen: modelData
+                        }
+                    }
+                }
+
+                PopupLoader {
+                    open: Popups.clipboardOpen
+                    popup: Component {
+                        ClipboardPopup {
+                            screen: modelData
+                        }
+                    }
+                }
+
+                PopupLoader {
+                    open: Popups.emojiOpen
+                    popup: Component {
+                        EmojiPicker {
+                            screen: modelData
+                        }
+                    }
+                }
+
+                PopupLoader {
+                    open: Popups.wallpaperOpen
+                    popup: Component {
+                        WallpaperPopup {
+                            screen: modelData
+                        }
+                    }
+                }
+
+                PopupLoader {
+                    open: Popups.batteryOpen
+                    popup: Component {
+                        BatteryPopup {
+                            screen: modelData
+                        }
+                    }
+                }
             }
         }
     }

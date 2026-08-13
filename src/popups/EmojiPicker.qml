@@ -11,7 +11,7 @@ import qs.src.popups.emoji
 PanelWindow {
     id: root
 
-    property var screen
+    //property var screen
 
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
@@ -28,23 +28,29 @@ PanelWindow {
 
     // ── Data ──────────────────────────────────────────────────────────────
     EmojiData { id: emojiData }
+    EmojiSearchData { id: emojiSearchData }
 
     // ── State ─────────────────────────────────────────────────────────────
     property int    activeCat:  0
     property string searchText: ""
 
     readonly property var currentEmojis: {
-        if (searchText.length === 0)
+        const q = searchText.trim().toLowerCase()
+
+        if (!q)
             return emojiData.categories[activeCat].emojis
 
-        const q = searchText.toLowerCase()
-        let results = []
+        const results = []
+
         for (const cat of emojiData.categories) {
-            for (const e of cat.emojis) {
-                if (cat.label.toLowerCase().includes(q))
-                    results.push(e)
+            for (const emoji of cat.emojis) {
+                const terms = emojiSearchData.terms[emoji]
+
+                if (terms && terms.includes(q))
+                    results.push(emoji)
             }
         }
+
         return results
     }
 
@@ -71,16 +77,19 @@ PanelWindow {
                 root.searchText = ""
                 root.activeCat  = 0
                 emojiGrid.resetIndex()
-                // Delay focus to after WlrLayershell keyboard grab is active
-                emojiFocusTimer.restart()
+                emojiGrid.forceActiveFocus()
             }
         }
     }
 
-    Timer {
-        id: emojiFocusTimer
-        interval: 50
-        onTriggered: searchBar.forceActiveFocus()
+    Component.onCompleted: {
+        if (Popups.emojiOpen) {
+            searchBar.clear()
+            root.searchText = ""
+            root.activeCat = 0
+            emojiGrid.resetIndex()
+            emojiGrid.forceActiveFocus()
+        }
     }
 
     PopupSlide {
@@ -159,7 +168,10 @@ PanelWindow {
                     emojis: root.currentEmojis
 
                     onEmojiSelected: (emoji) => root.copyEmoji(emoji)
-                    onTypedChar:     (ch)    => searchBar.forceActiveFocus()
+                    onTypedChar:     (ch)    => {
+                        searchBar.forceActiveFocus()
+                        searchBar.insertText(ch)
+                    }
                 }
             }
         }

@@ -56,9 +56,7 @@ Singleton {
         notificationsOpen ||
         systemOpen        ||
         archMenuOpen      ||
-        calendarOpen      ||
         mediaOpen         ||
-        idleInhibitorOpen ||
         volumeOpen        ||
         clipboardOpen     ||
         launcherOpen      ||
@@ -72,9 +70,7 @@ Singleton {
         notificationsOpen = false
         systemOpen        = false
         archMenuOpen      = false
-        calendarOpen      = false
         mediaOpen         = false
-        idleInhibitorOpen = false
         volumeOpen        = false
         networkOpen       = false
         clipboardOpen     = false

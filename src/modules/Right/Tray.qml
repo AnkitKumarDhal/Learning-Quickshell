@@ -15,13 +15,7 @@ PillBase {
     mouseEnabled: false
     // Cache system tray items to avoid repeated property access
     property var _cachedTrayItems: SystemTray.items.values
-    
-    Connections {
-        target: SystemTray.items
-        function onCountChanged() { root._cachedTrayItems = SystemTray.items.values }
-        function onValuesChanged() { root._cachedTrayItems = SystemTray.items.values }
-    }
-    
+
     visible: root._cachedTrayItems.length > 0
 
     Row {

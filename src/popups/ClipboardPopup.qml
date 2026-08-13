@@ -11,7 +11,7 @@ import qs.src.services
 PanelWindow {
     id: root
 
-    property var screen
+    //property var screen
 
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
@@ -39,15 +39,26 @@ PanelWindow {
                 ClipboardService.searchQuery = ""
                 searchField.text = ""
                 listView.currentIndex = 0
-                // Delay focus to after WlrLayershell keyboard grab is active
-                clipboardFocusTimer.restart()
+                clipboardFocusTimer.start()
             }
+        }
+    }
+
+    Component.onCompleted: {
+        if (Popups.clipboardOpen) {
+            ClipboardService.refresh()
+            ClipboardService.searchQuery = ""
+            searchField.text = ""
+            listView.currentIndex = 0
+            clipboardFocusTimer.start()
         }
     }
 
     Timer {
         id: clipboardFocusTimer
-        interval: 50
+        interval: 80
+        running: false
+        repeat: false
         onTriggered: searchField.forceActiveFocus()
     }
 
@@ -119,8 +130,9 @@ PanelWindow {
                             listView.currentIndex = 0
                         }
 
-                        Keys.onEscapePressed: {
+                        Keys.onEscapePressed: (event) => {
                             Popups.clipboardOpen = false
+                            event.accepted = true
                         }
 
                         Keys.onDownPressed: (event) => {
@@ -203,7 +215,10 @@ PanelWindow {
                     model: ClipboardService.filteredHistory
 
                     Keys.onPressed: (event) => {
-                        if (event.key === Qt.Key_Down) {
+                        if (event.key === Qt.Key_Escape) {
+                            Popups.clipboardOpen = false
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Down) {
                             incrementCurrentIndex()
                             positionViewAtIndex(currentIndex, ListView.Contain)
                             event.accepted = true

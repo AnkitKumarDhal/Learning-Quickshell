@@ -1,4 +1,5 @@
-PillBase   1.0 PillBase.qml
-PopupPage  1.0 PopupPage.qml
-PopupSlide 1.0 PopupSlide.qml
-TabBar     1.0 TabBar.qml
+PillBase    1.0 PillBase.qml
+PopupPage   1.0 PopupPage.qml
+PopupSlide  1.0 PopupSlide.qml
+TabBar      1.0 TabBar.qml
+PopupLoader 1.0 PopupLoader.qml
