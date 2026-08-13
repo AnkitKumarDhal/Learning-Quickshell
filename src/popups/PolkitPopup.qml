@@ -21,7 +21,7 @@ PopupSlide {
 
         screen: root.screen
 
-        implicitHeight: content.implicitHeight + 48
+        implicitHeight: 320
 
         anchors {
             top: true
@@ -48,7 +48,7 @@ PopupSlide {
             radius: Theme.popupRadius
 
             ColumnLayout {
-                id: content
+                id: popupContent
                 anchors {
                     fill: parent
                     margins: 24
@@ -212,12 +212,12 @@ PopupSlide {
             responseField.clear()
         }
 
-        function onFlowChanged() {
-            responseField.clear()
-            root.responseText = ""
-
-            if (PolkitService.active)
+        function onIsResponseRequiredChanged() {
+            if (PolkitService.responseRequired) {
+                responseField.clear()
+                root.responseText = ""
                 responseField.forceActiveFocus()
+            }
         }
     }
 
