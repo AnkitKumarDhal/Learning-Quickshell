@@ -1,4 +1,5 @@
 EmojiData        1.0  EmojiData.qml
 EmojiSearchBar   1.0  EmojiSearchBar.qml
+EmojiSearchData  1.0  EmojiSearchData.qml
 EmojiCategoryBar 1.0  EmojiCategoryBar.qml
 EmojiGrid        1.0  EmojiGrid.qml

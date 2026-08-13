@@ -28,15 +28,18 @@ Item {
 
     // ── Internal ──────────────────────────────────────────────────────────────
     property bool _selfHovered: false
+    property bool _ready: false
 
-    readonly property bool _effectiveOpen: open || (hoverEnabled && (triggerHovered || _selfHovered))
+    readonly property bool _effectiveOpen: _ready && ( open || (hoverEnabled && (triggerHovered || _selfHovered)) )
+
+    Component.onCompleted: root._ready = true
 
     default property alias content: inner.data
 
     clip: true
 
     on_EffectiveOpenChanged: {
-        if (_effectiveOpen) { hoverCloseTimer.stop(); windowVisible = true } 
+        if (_effectiveOpen) { hoverCloseTimer.stop(); windowVisible = true }
         else { hoverEnabled ? hoverCloseTimer.restart() : slideCloseTimer.restart() }
     }
 

@@ -63,7 +63,15 @@ PanelWindow {
     property var allApps: DesktopEntries.applications.values
     property var filteredApps: []
 
-    Component.onCompleted: root.filterApps()
+    Component.onCompleted: {
+        root.filterApps()
+
+        if (Popups.launcherOpen) {
+            closeDelay.stop()
+            root._shouldShow = true
+            launcherFocusTimer.start()
+        }
+    }
 
     // Debounced search to avoid filtering on every keystroke
     property string _pendingQuery: ""

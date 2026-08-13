@@ -28,13 +28,7 @@ PillBase {
 
     // Cache workspace list to avoid repeated property access in Repeater
     property var _cachedWorkspaces: Hyprland.workspaces.values
-    
-    Connections {
-        target: Hyprland.workspaces
-        function onCountChanged() { root._cachedWorkspaces = Hyprland.workspaces.values }
-        function onValuesChanged() { root._cachedWorkspaces = Hyprland.workspaces.values }
-    }
-    
+
     property int dotCount: {
         let highest = 3
         let wss = root._cachedWorkspaces

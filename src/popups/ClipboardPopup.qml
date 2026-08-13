@@ -39,10 +39,18 @@ PanelWindow {
                 ClipboardService.searchQuery = ""
                 searchField.text = ""
                 listView.currentIndex = 0
-                // Use a Timer to defer focus until the event loop has fully processed
-                // the window visibility and WlrLayershell keyboard grab setup
                 clipboardFocusTimer.start()
             }
+        }
+    }
+
+    Component.onCompleted: {
+        if (Popups.clipboardOpen) {
+            ClipboardService.refresh()
+            ClipboardService.searchQuery = ""
+            searchField.text = ""
+            listView.currentIndex = 0
+            clipboardFocusTimer.start()
         }
     }
 
@@ -122,8 +130,9 @@ PanelWindow {
                             listView.currentIndex = 0
                         }
 
-                        Keys.onEscapePressed: {
+                        Keys.onEscapePressed: (event) => {
                             Popups.clipboardOpen = false
+                            event.accepted = true
                         }
 
                         Keys.onDownPressed: (event) => {
@@ -206,7 +215,10 @@ PanelWindow {
                     model: ClipboardService.filteredHistory
 
                     Keys.onPressed: (event) => {
-                        if (event.key === Qt.Key_Down) {
+                        if (event.key === Qt.Key_Escape) {
+                            Popups.clipboardOpen = false
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Down) {
                             incrementCurrentIndex()
                             positionViewAtIndex(currentIndex, ListView.Contain)
                             event.accepted = true

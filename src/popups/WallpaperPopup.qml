@@ -39,6 +39,13 @@ PanelWindow {
         }
     }
 
+    Component.onCompleted: {
+        if (Popups.wallpaperOpen) {
+            dirField.text = root.wallpaperDir
+            root.scanWallpapers()
+        }
+    }
+
     // ── State ─────────────────────────────────────────────────────────────────
     property string wallpaperDir: "~/wallpapers"
     property var    wallpapers:   []
@@ -46,9 +53,108 @@ PanelWindow {
     property bool   applying:     false
     property string _pendingWall: ""
 
+    readonly property string thumbnailDir: Quickshell.cachePath("wallpaper-thumbnails")
+    readonly property int thumbnailWidth: 300
+    readonly property int thumbnailHeight: 200
+    property var _thumbnailQueue: []
+
+    function _hashKey(value) {
+        let hashA = 2166136261
+        let hashB = 5381
+        for (let i = 0; i < value.length; i++) {
+            const c = value.charCodeAt(i)
+
+            hashA ^= c
+            hashA = Math.imul(hashA, 16777619)
+            hashB = Math.imul(hashB, 33) ^ c
+        }
+        return (hashA >>> 0).toString(16).padStart(8, "0") + (hashB >>> 0).toString(16).padStart(8, "0")
+    }
+
+    function _thumbnailPath(path, mtime, size) {
+        const key = _hashKey(path + "\t" + mtime + "\t" + size)
+        return root.thumbnailDir + "/" + key + ".webp"
+    }
+
     function scanWallpapers() {
         scanProc._lines  = []
         scanProc.running = true
+    }
+
+    function _beginThumbnailSync(lines) {
+        const items = []
+
+        for (const line of lines) {
+            const firstSep = line.indexOf("\t")
+            if (firstSep < 0)
+                continue
+
+            const secondSep = line.indexOf("\t", firstSep + 1)
+            if (secondSep < 0)
+                continue
+
+            const mtime = line.substring(0, firstSep)
+            const size = line.substring(firstSep + 1, secondSep)
+            const path = line.substring(secondSep + 1)
+
+            if (!path)
+                continue
+
+            items.push({
+                sourcePath: path,
+                thumbnailPath: root._thumbnailPath(path, mtime, size),
+                thumbReady: false
+            })
+        }
+
+        root.wallpapers = items
+        cacheMkdir.running = true
+    }
+
+    function _finishThumbnailSync(cacheLines) {
+        const cached = new Set()
+
+        for (const line of cacheLines) {
+            const name = line.trim()
+            if (name)
+                cached.add(name)
+        }
+
+        const expected = new Set()
+        const missing = []
+
+        const updated = root.wallpapers.map(item => {
+            const name = item.thumbnailPath.substring(item.thumbnailPath.lastIndexOf("/") + 1)
+            expected.add(name)
+
+            const ready = cached.has(name)
+
+            if (!ready)
+                missing.push(item)
+
+            return {
+                sourcePath: item.sourcePath,
+                thumbnailPath: item.thumbnailPath,
+                thumbReady: ready
+            }
+        })
+
+        root.wallpapers = updated
+        root._thumbnailQueue = missing
+
+        const orphanPaths = []
+
+        for (const name of cached) {
+            if (!expected.has(name))
+                orphanPaths.push(root.thumbnailDir + "/" + name)
+        }
+
+        if (orphanPaths.length > 0) {
+            cleanupProc.command = ["rm", "-f", ...orphanPaths]
+            cleanupProc.running = true
+        } else {
+            root._startNextThumbnail()
+        }
     }
 
     function applyWallpaper(imgPath) {
@@ -66,7 +172,7 @@ PanelWindow {
             "find " + root.wallpaperDir + " -maxdepth 1 -type f " +
             "\\( -iname '*.jpg' -o -iname '*.jpeg' " +
             "-o -iname '*.png' -o -iname '*.webp' \\) " +
-            "2>/dev/null | sort"]
+            "-printf '%T@\\t%s\\t%p\\n' 2>/dev/null | sort -k3"]
         running: false
 
         property var _lines: []
@@ -79,8 +185,120 @@ PanelWindow {
         }
 
         onExited: {
-            root.wallpapers = scanProc._lines.slice()
+            const lines = scanProc._lines.slice()
             scanProc._lines = []
+            root._beginThumbnailSync(lines)
+        }
+    }
+
+    Process {
+        id: cacheMkdir
+
+        command: ["mkdir", "-p", root.thumbnailDir]
+        running: false
+
+        onExited: {
+            cacheList.command = [
+                "find",
+                root.thumbnailDir,
+                "-maxdepth", "1",
+                "-type", "f",
+                "-name", "*.webp",
+                "-printf", "%f\n"
+            ]
+            cacheList.running = true
+        }
+    }
+
+    Process {
+        id: cacheList
+
+        running: false
+
+        property var _lines: []
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                const p = line.trim()
+
+                if (p)
+                    cacheList._lines.push(p)
+            }
+        }
+
+        onExited: {
+            const lines = cacheList._lines.slice()
+            cacheList._lines = []
+            root._finishThumbnailSync(lines)
+        }
+    }
+
+    Process {
+        id: cleanupProc
+
+        running: false
+
+        onExited: root._startNextThumbnail()
+    }
+
+    Process {
+        id: thumbProc
+
+        running: false
+
+        property var _item: null
+
+        onExited: (exitCode, exitStatus) => {
+            root._thumbnailFinished(exitCode === 0)
+        }
+    }
+
+    function _startNextThumbnail() {
+        if (thumbProc.running || root._thumbnailQueue.length === 0)
+            return
+
+        const next = root._thumbnailQueue.shift()
+
+        thumbProc._item = next
+
+        thumbProc.command = [
+            "magick",
+            next.sourcePath,
+            "-auto-orient",
+            "-thumbnail",
+            root.thumbnailWidth + "x" + root.thumbnailHeight + "^",
+            "-gravity", "center",
+            "-extent",
+            root.thumbnailWidth + "x" + root.thumbnailHeight,
+            "-strip",
+            "-quality", "82",
+            next.thumbnailPath
+        ]
+
+        thumbProc.running = true
+    }
+
+    function _thumbnailFinished(success) {
+        const finished = thumbProc._item
+        thumbProc._item = null
+
+        if (success && finished) {
+            root.wallpapers = root.wallpapers.map(item => {
+                if (item.sourcePath !== finished.sourcePath ||
+                    item.thumbnailPath !== finished.thumbnailPath) {
+                    return item
+                }
+
+                return {
+                    sourcePath: item.sourcePath,
+                    thumbnailPath: item.thumbnailPath,
+                    thumbReady: true
+                }
+            })
+        }
+
+        if (root._thumbnailQueue.length > 0) {
+            root._startNextThumbnail()
         }
     }
 
@@ -283,7 +501,7 @@ PanelWindow {
                         required property var modelData
                         required property int index
 
-                        readonly property bool isActive: root.currentWall === modelData
+                        readonly property bool isActive: root.currentWall === modelData.sourcePath
 
                         width:  wallGrid.cellWidth
                         height: wallGrid.cellHeight
@@ -301,11 +519,16 @@ PanelWindow {
                             // Thumbnail
                             Image {
                                 anchors.fill: parent
-                                source:       "file://" + thumbDelegate.modelData
+                                source:       thumbDelegate.modelData.thumbReady
+                                                    ? ("file://" + thumbDelegate.modelData.thumbnailPath)
+                                                    : ("file://" + thumbDelegate.modelData.sourcePath)
+                                sourceSize:   Qt.size(
+                                    root.thumbnailWidth,
+                                    root.thumbnailHeight
+                                )
                                 fillMode:     Image.PreserveAspectCrop
-                                smooth:       true
                                 asynchronous: true
-                                mipmap:       true
+                                cache:        true
                             }
 
                             // Dim overlay — less dim when active or hovered
@@ -385,7 +608,7 @@ PanelWindow {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape:  Qt.PointingHandCursor
-                                onClicked:    root.applyWallpaper(thumbDelegate.modelData)
+                                onClicked:    root.applyWallpaper(thumbDelegate.modelData.sourcePath)
                             }
                         }
                     }

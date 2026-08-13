@@ -59,7 +59,7 @@ Item {
                 id:              iconImg
                 anchors.fill:    parent
                 anchors.margins: 3
-                source:          root.appData.icon ? Quickshell.iconPath(root.appData.icon) : ""
+                source:          root.appData.icon ? Quickshell.iconPath(root.appData.icon, true) : ""
                 fillMode:        Image.PreserveAspectFit
                 smooth:          true
                 mipmap:          true

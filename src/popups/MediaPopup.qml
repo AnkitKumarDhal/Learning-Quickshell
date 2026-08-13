@@ -79,6 +79,13 @@ PanelWindow {
         function onTrackTitleChanged() { win._position = 0 }
     }
 
+    Component.onCompleted: {
+        if (Popups.mediaOpen){
+            target: win.player ?? null
+            function onTrackTitleChanged() { win._position = 0 }
+        }
+    }
+
     // ── Slide ─────────────────────────────────────────────────────────────────
     PopupSlide {
         id:           slide

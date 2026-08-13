@@ -13,28 +13,59 @@ Singleton {
 
     // Debounced clipboard search to avoid filtering on every keystroke
     property string _pendingQuery: ""
-    
+
     Timer {
         id: filterDebounce
         interval: 150
         onTriggered: root.applyFilter()
     }
-    
+
+    function refresh() {
+        if (listProc.running) {
+            return
+        }
+
+        listProc._tempHist = []
+        listProc.running  = true
+    }
+
+    Process {
+        id: listProc
+
+        command: ["cliphist", "list"]
+        running: false
+
+        property var _tempHist: []
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                if (line.trim() !== "")
+                    listProc._tempHist.push(line)
+            }
+        }
+
+        onExited: {
+            root.history = listProc._tempHist.slice()
+            listProc._tempHist = []
+            root.applyFilter()
+        }
+    }
+
     function applyFilter() {
         if (root.searchQuery === "") {
             root.filteredHistory = root.history
         } else {
             const q = root.searchQuery.toLowerCase()
             const result = []
-            
+
             // Optimized linear scan with early character comparison
             for (let i = 0; i < root.history.length; i++) {
                 const item = root.history[i]
                 const tabIdx = item.indexOf('\t')
                 if (tabIdx < 0) continue
-                
+
                 const content = item.substring(tabIdx + 1).toLowerCase()
-                
+
                 // Fast path: check first character match
                 if (content.length > 0 && content[0] === q[0]) {
                     if (content.startsWith(q)) {
@@ -46,11 +77,11 @@ Singleton {
                     result.push(item)
                 }
             }
-            
+
             root.filteredHistory = result
         }
     }
-    
+
     function onSearchQueryChanged() {
         root._pendingQuery = root.searchQuery
         filterDebounce.restart()
