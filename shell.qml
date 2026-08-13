@@ -28,8 +28,6 @@ ShellRoot {
                 NotificationToast { screen: modelData }
 
                 // ── Popups ────────────────────────────────────────────────────
-                // All popups are instantiated here and nowhere else.
-                // Add new popups to this list as they are built.
 
                 PopupLoader {
                     open: Popups.notificationsOpen
@@ -121,13 +119,8 @@ ShellRoot {
                     }
                 }
 
-                PopupLoader {
-                    open: PolkitService.active
-                    popup: Component {
-                        PolkitPopup {
-                            screen: modelData
-                        }
-                    }
+                PolkitPopup {
+                    screen: modelData
                 }
             }
         }

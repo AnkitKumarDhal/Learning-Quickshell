@@ -11,49 +11,131 @@ Singleton {
         id: agent
     }
 
-    readonly property bool    active:                agent.isActive
-    readonly property bool    registered:            agent.isRegistered
-    readonly property var     flow:                  agent.flow
+    // ── Agent state ──────────────────────────────────────────────────────────
 
-    readonly property string  message:               flow ? flow.message : ""
-    readonly property string  supplementaryMessage:  flow ? flow.supplementaryMessage : ""
-    readonly property bool    supplementaryIsError:  flow ? flow.supplementaryIsError : false
-    readonly property string  inputPrompt:           flow ? flow.inputPrompt : ""
-    readonly property bool    responseVisible:       flow ? flow.responseVisible : false
-    readonly property bool    responseRequired:      flow ? flow.isResponseRequired : false
-    readonly property bool    failed:                flow ? flow.failed : false
-    readonly property string  iconName:              flow ? flow.iconName : ""
-    readonly property var     identities:            flow ? flow.identities : []
+    readonly property bool registered: agent.isRegistered
+    readonly property bool active: agent.isActive
+    readonly property var flow: agent.flow
 
-    property var              selectedIdentity:      flow ? flow.selectedIdentity : null
+    // ── Current request presentation state ───────────────────────────────────
 
-    function submit(value) {
-        if (!flow || !flow.isResponseRequired) {
+    property string message: ""
+    property string supplementaryMessage: ""
+    property bool supplementaryIsError: false
+
+    property string inputPrompt: ""
+    property bool responseVisible: false
+    property bool responseRequired: false
+
+    property string iconName: ""
+    property bool failed: false
+
+    property var identities: []
+    property var selectedIdentity: null
+
+    // ── Synchronize UI state from the current AuthFlow ────────────────────────
+
+    function syncFromFlow() {
+        const current = agent.flow
+
+        if (!current)
             return
+
+        root.message = current.message
+        root.supplementaryMessage = current.supplementaryMessage
+        root.supplementaryIsError = current.supplementaryIsError
+
+        root.inputPrompt = current.inputPrompt
+        root.responseVisible = current.responseVisible
+        root.responseRequired = current.isResponseRequired
+
+        root.iconName = current.iconName
+        root.failed = current.failed
+
+        root.identities = current.identities
+        root.selectedIdentity = current.selectedIdentity
+    }
+
+    // ── Authentication request lifecycle ─────────────────────────────────────
+
+    Connections {
+        target: agent
+
+        function onAuthenticationRequestStarted() {
+            root.syncFromFlow()
         }
 
-        flow.submit(value)
+        function onFlowChanged() {
+            if (agent.flow)
+                root.syncFromFlow()
+        }
+    }
+
+    // ── Authentication conversation ──────────────────────────────────────────
+
+    Connections {
+        target: agent.flow
+
+        function onIsResponseRequiredChanged() {
+            root.syncFromFlow()
+        }
+
+        function onInputPromptChanged() {
+            root.syncFromFlow()
+        }
+
+        function onResponseVisibleChanged() {
+            root.syncFromFlow()
+        }
+
+        function onSupplementaryMessageChanged() {
+            root.syncFromFlow()
+        }
+
+        function onSupplementaryIsErrorChanged() {
+            root.syncFromFlow()
+        }
+
+        function onAuthenticationFailed() {
+            root.syncFromFlow()
+        }
+    }
+
+    // ── User actions ─────────────────────────────────────────────────────────
+
+    function submit(value) {
+        const current = agent.flow
+
+        if (!current || !current.isResponseRequired)
+            return
+
+        current.submit(value)
     }
 
     function cancel() {
-        if (!flow)
+        const current = agent.flow
+
+        if (!current)
             return
 
-        flow.cancelAuthenticationRequest()
+        current.cancelAuthenticationRequest()
     }
-Connections {
-    target: agent
 
-    function onFlowChanged() {
-        console.log("Polkit flow changed:", agent.flow)
-        console.log("Polkit active:", agent.isActive)
+    // ── Clear visual state after the popup has finished closing ───────────────
 
-        if (agent.flow) {
-            console.log("Message:", agent.flow.message)
-            console.log("Supplementary:", agent.flow.supplementaryMessage)
-            console.log("Prompt:", agent.flow.inputPrompt)
-            console.log("Response required:", agent.flow.isResponseRequired)
-            console.log("Response visible:", agent.flow.responseVisible)
-        }
+    function clearPresentation() {
+        root.message = ""
+        root.supplementaryMessage = ""
+        root.supplementaryIsError = false
+
+        root.inputPrompt = ""
+        root.responseVisible = false
+        root.responseRequired = false
+
+        root.iconName = ""
+        root.failed = false
+
+        root.identities = []
+        root.selectedIdentity = null
     }
-}}
+}
