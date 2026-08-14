@@ -120,9 +120,8 @@ ShellRoot {
                     }
                 }
 
-                PolkitPopup {
-                    screen: modelData
-                }
+                PolkitPopup { screen: modelData }
+                KeybindsPopup { screen: modelData }
             }
         }
     }
@@ -170,5 +169,11 @@ ShellRoot {
         name:        "wallpaperPickerToggle"
         description: "Toggle Wallpaper Picker"
         onPressed:   Popups.wallpaperOpen = !Popups.wallpaperOpen
+    }
+    GlobalShortcut {
+        appid:       "quickshell"
+        name:        "keybindsToggle"
+        description: "Toggle keybinds viewer"
+        onPressed:   Popups.keybindsOpen = !Popups.keybindsOpen
     }
 }
