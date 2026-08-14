@@ -33,8 +33,6 @@ PanelWindow {
             ? root.screen.width * 0.40
             : 0
 
-    implicitHeight: root.screen ? root.screen.height : 800
-
     anchors {
         top: true
         bottom: true
@@ -46,7 +44,7 @@ PanelWindow {
     }
 
     mask: Region {
-        x: root.width - popupRect.width
+        x: 0
         y: (root.height - popupRect.height) / 2
         width: popupRect.width
         height: popupRect.height
@@ -72,13 +70,26 @@ PanelWindow {
         PopupSlide {
             id: slidePanel
 
-            anchors.fill: parent
+            width: parent.width
+
+            height:
+                root.screen
+                    ? root.screen.height * 0.70
+                    : 0
+
+            anchors {
+                right: parent.right
+                verticalCenter: parent.verticalCenter
+            }
 
             edge: "right"
 
-            open: Popups.keybindsOpen && root.isFocusedScreen
+            open:
+                Popups.keybindsOpen &&
+                root.isFocusedScreen
 
-            onCloseRequested: Popups.keybindsOpen = false
+            onCloseRequested:
+                Popups.keybindsOpen = false
 
             focus: windowVisible
 
@@ -95,13 +106,7 @@ PanelWindow {
             Rectangle {
                 id: popupRect
 
-                width: root.width
-                height: root.height * 0.70
-
-                anchors {
-                    right: parent.right
-                    verticalCenter: parent.verticalCenter
-                }
+                anchors.fill: parent
 
                 color: Colors.surfaceContainer
 
