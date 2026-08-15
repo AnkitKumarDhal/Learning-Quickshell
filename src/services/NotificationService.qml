@@ -209,8 +209,10 @@ Singleton {
         if (toastModel.count >= root.maxVisibleToasts)
             return
 
-        if (root._toastQueue.length === 0)
+        if (root._toastQueue.length === 0) {
+            root._toastPresentationBusy = false
             return
+        }
 
         const notification = root._toastQueue.shift()
 
@@ -239,6 +241,8 @@ Singleton {
             toastNotification: notification,
             expiresAt: Date.now() + root.toastDuration
         })
+
+        _restartToastTimer()
     }
 
     function _promoteQueuedToasts() {
@@ -398,18 +402,21 @@ Singleton {
     }
 
     function _expireToasts() {
-        if (toastModel.count === 0)
+        if (toastModel.count === 0) {
+            _stopToastTimer()
             return
+        }
 
         const now = Date.now()
 
-        // Remove from highest index down so model indices remain valid.
         for (let i = toastModel.count - 1; i >= 0; --i) {
             if (toastModel.get(i).expiresAt <= now)
                 toastModel.remove(i)
         }
 
-        _pumpToastQueue()
+        if (!root._toastPresentationBusy)
+            _pumpToastQueue()
+
         _restartToastTimer()
     }
 

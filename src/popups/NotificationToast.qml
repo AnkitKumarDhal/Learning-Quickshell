@@ -24,8 +24,7 @@ PanelWindow {
 
     WlrLayershell.layer: WlrLayer.Overlay
 
-    visible:
-        NotificationService.activeToastCount > 0
+    visible: true
 
     readonly property int cardHeight: 80
     readonly property int cardSpacing: 8
@@ -35,7 +34,7 @@ PanelWindow {
 
     // Only the actual toast stack is clickable.
     mask: Region {
-        item: toastStack
+        item: NotificationService.activeToastCount > 0 ? toastStack : null
     }
 
     // ── Toast stack ──────────────────────────────────────────────────────────
