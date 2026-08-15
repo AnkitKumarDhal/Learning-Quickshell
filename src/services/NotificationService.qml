@@ -7,11 +7,10 @@ import Quickshell.Services.Notifications
 Singleton {
     id: root
 
-    // ── Configuration ────────────────────────────────────────────────────────
     readonly property int maxVisibleToasts: 5
     readonly property int toastDuration: 4000
+    readonly property int toastEntryInterval: 350
 
-    // ── Notification server ──────────────────────────────────────────────────
     property NotificationServer server: NotificationServer {
         bodySupported: true
         bodyMarkupSupported: false
@@ -27,56 +26,23 @@ Singleton {
         onNotification: notification => root._handleNotification(notification)
     }
 
-    // ── Public state ─────────────────────────────────────────────────────────
+    readonly property var notificationsModel: server.trackedNotifications
+    readonly property int notificationCount: server.trackedNotifications.values.length
 
-    // The notification panel consumes the server's real ObjectModel directly.
-    readonly property var notificationsModel:
-        server.trackedNotifications
-
-    readonly property int notificationCount:
-        server.trackedNotifications.values.length
-
-    // Transient toast state. This is intentionally separate from notification
-    // history because a toast is a visual presentation, not a notification.
-    ListModel {
-        id: toastModel
-    }
+    ListModel { id: toastModel }
 
     readonly property var activeToastsModel: toastModel
+    readonly property int activeToastCount: toastModel.count
 
-    readonly property int activeToastCount:
-        toastModel.count
-
-    // ── Toast queue ──────────────────────────────────────────────────────────
-    // Contains actual Quickshell Notification objects.
     property var _toastQueue: []
-
-    readonly property int toastEntryInterval: 350
     property bool _toastPresentationBusy: false
-    property var _hoveredToasts: []
+    property bool toastStackHovered: false
 
-    // ── Notification presentation state ──────────────────────────────────────
-
-    // Manual notification suppression / gaming mode.
     property bool notificationsSuppressed: false
 
-    // Toasts stay on one deliberate screen. We do not create one toast
-    // surface per monitor.
-    property ShellScreen toastScreen:
-        Quickshell.screens.length > 0
-            ? Quickshell.screens[0]
-            : null
+    property ShellScreen toastScreen: Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+    property ShellScreen panelScreen: Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
 
-    // The panel can open on the monitor whose notification button was clicked.
-    property ShellScreen panelScreen:
-        Quickshell.screens.length > 0
-            ? Quickshell.screens[0]
-            : null
-
-    // ── Arrival timestamps ───────────────────────────────────────────────────
-    //
-    // We need this because Notification does not expose "received at" time.
-    // We keep the actual Notification object as the identity.
     property var _arrivalTimes: []
 
     function _setArrivalTime(notification, timestamp) {
@@ -95,85 +61,56 @@ Singleton {
 
     function _findArrivalIndex(notification) {
         for (let i = 0; i < _arrivalTimes.length; ++i) {
-            if (_arrivalTimes[i].notification === notification)
-                return i
+            if (_arrivalTimes[i].notification === notification) return i
         }
 
         return -1
     }
 
     function getArrivalTime(notification) {
-        if (!notification)
-            return 0
-
+        if (!notification) return 0
         const index = _findArrivalIndex(notification)
-
-        if (index >= 0)
-            return _arrivalTimes[index].timestamp
+        if (index >= 0) return _arrivalTimes[index].timestamp
 
         return 0
     }
 
     function _removeArrivalTime(notification) {
         const index = _findArrivalIndex(notification)
-
-        if (index >= 0)
-            _arrivalTimes.splice(index, 1)
+        if (index >= 0) _arrivalTimes.splice(index, 1)
     }
 
-    // ── Notification lifecycle ───────────────────────────────────────────────
-
     function _handleNotification(notification) {
-        if (!notification)
-            return
+        if (!notification) return
 
-        // Retain it in NotificationServer.trackedNotifications so the
-        // notification panel can consume the server's real ObjectModel.
         notification.tracked = true
+        const historical = !!notification.lastGeneration
 
-        const isHistorical = !!notification.lastGeneration
-        const now = Date.now()
+        if (!historical) _setArrivalTime(notification, Date.now())
 
-        // Historical notifications are retained for the panel but do not get
-        // fresh toast notifications after a Quickshell reload.
-        if (!isHistorical)
-            _setArrivalTime(notification, now)
-
-        // Every Notification object gets its own closure. This is important
-        // because applications can reuse notification IDs.
         const capturedNotification = notification
 
         notification.closed.connect(() => {
             root._handleNotificationClosed(capturedNotification)
         })
 
-        // No toast for notifications restored from a previous generation.
-        if (isHistorical)
-            return
-
-        // DND / gaming mode: notification remains tracked but creates no
-        // visual toast and does not enter the toast queue.
-        if (root.notificationsSuppressed)
-            return
+        if (historical) return
+        if (root.notificationsSuppressed) return
 
         root._enqueueToast(notification)
     }
 
     function _handleNotificationClosed(notification) {
-        if (!notification)
-            return
+        if (!notification) return
 
         _removeToast(notification)
         _removeFromQueue(notification)
         _removeArrivalTime(notification)
     }
 
-    // ── Toast queue ──────────────────────────────────────────────────────────
-
     function _toastIndex(notification) {
         for (let i = 0; i < toastModel.count; ++i) {
-            if (toastModel.get(i).toastNotification === notification)
-                return i
+            if (toastModel.get(i).toastNotification === notification) return i
         }
 
         return -1
@@ -184,31 +121,18 @@ Singleton {
     }
 
     function _enqueueToast(notification) {
-        if (!notification)
-            return
-
-        // Don't show the same Notification object twice.
-        if (_toastIndex(notification) >= 0)
-            return
-
-        // Don't queue the same Notification object twice.
-        if (_queueIndex(notification) >= 0)
-            return
+        if (!notification) return
+        if (_toastIndex(notification) >= 0) return
+        if (_queueIndex(notification) >= 0) return
 
         root._toastQueue.push(notification)
-
-        root._pumpToastQueue()
+        _pumpToastQueue()
     }
 
     function _pumpToastQueue() {
-        if (root.notificationsSuppressed)
-            return
-
-        if (root._toastPresentationBusy)
-            return
-
-        if (toastModel.count >= root.maxVisibleToasts)
-            return
+        if (root.notificationsSuppressed) return
+        if (root._toastPresentationBusy) return
+        if (toastModel.count >= root.maxVisibleToasts) return
 
         if (root._toastQueue.length === 0) {
             root._toastPresentationBusy = false
@@ -217,124 +141,51 @@ Singleton {
 
         const notification = root._toastQueue.shift()
 
-        if (!notification)
-            return
+        if (!notification) return
 
-        // The notification may have been closed while waiting in the queue.
         if (!notification.tracked) {
             _pumpToastQueue()
             return
         }
 
         _showToast(notification)
-
         root._toastPresentationBusy = true
-
-        toastPresentationTimer.interval = root.toastEntryInterval
-        toastPresentationTimer.start()
+        toastPresentationTimer.restart()
     }
 
     function _showToast(notification) {
-        if (!notification)
-            return
-
+        if (!notification) return
         toastModel.insert(0, {
-            toastNotification: notification,
-            expiresAt: Date.now() + root.toastDuration
+            toastNotification: notification
         })
-
-        _restartToastTimer()
     }
 
     function _promoteQueuedToasts() {
-        root._pumpToastQueue()
-        _restartToastTimer()
+        _pumpToastQueue()
     }
 
-    // ── Toast removal ────────────────────────────────────────────────────────
+    function expireToast(notification) {
+        _removeToast(notification)
+    }
 
     function _removeToast(notification) {
         const index = _toastIndex(notification)
-
-        if (index < 0)
-            return false
-
-        for (let i = root._hoveredToasts.length - 1; i >= 0; --i) {
-            if (root._hoveredToasts[i].notification === notification) {
-                root._hoveredToasts.splice(i, 1)
-            }
-        }
+        if (index < 0) return false
 
         toastModel.remove(index)
-
-        if (!root._toastPresentationBusy)
-            _pumpToastQueue()
-
-        _restartToastTimer()
+        if (!root._toastPresentationBusy) _pumpToastQueue()
 
         return true
     }
 
     function _removeFromQueue(notification) {
         const index = _queueIndex(notification)
-
-        if (index >= 0)
-            root._toastQueue.splice(index, 1)
+        if (index >= 0) root._toastQueue.splice(index, 1)
     }
 
-    // ── Toast hover / expiry control ─────────────────────────────────────────────
-
-    function setToastHovered(notification, hovered) {
-        if (!notification) return
-
-        if (hovered) {
-            for (const entry of root._hoveredToasts) {
-                if (entry.notification === notification) return
-            }
-
-            const toastIndex = _toastIndex(notification)
-
-            if (toastIndex < 0) return
-
-            const toast = toastModel.get(toastIndex)
-            const remaining = Math.max(0, toast.expiresAt - Date.now())
-
-            root._hoveredToasts.push({
-                notification: notification,
-                remaining: remaining
-            })
-
-            _stopToastTimer()
-            return
-        }
-
-        let hoveredIndex = -1
-        let remaining = 0
-
-        for (let i = 0; i < root._hoveredToasts.length; ++i) {
-            const entry = root._hoveredToasts[i]
-
-            if (entry.notification === notification) {
-                hoveredIndex = i
-                remaining = entry.remaining
-                break
-            }
-        }
-
-        if (hoveredIndex < 0) return
-
-        root._hoveredToasts.splice(hoveredIndex, 1)
-        const toastIndex = _toastIndex(notification)
-
-        if (toastIndex >= 0) {
-            const newExpiry = remaining > 0 ? Date.now() + remaining : Date.now() + root.toastDuration
-            toastModel.setProperty(toastIndex, "expiresAt", newExpiry)
-        }
-
-        if (root._hoveredToasts.length === 0) _restartToastTimer()
+    function setToastStackHovered(hovered) {
+        root.toastStackHovered = !!hovered
     }
-
-    // ── User dismissal ───────────────────────────────────────────────────────
 
     function dismiss(notification) {
         if (!notification) return
@@ -346,8 +197,6 @@ Singleton {
         notification.dismiss()
     }
 
-    // ── Clear all ────────────────────────────────────────────────────────────
-
     function clearAll() {
         const notifications = server.trackedNotifications.values.slice()
 
@@ -355,46 +204,31 @@ Singleton {
             toastModel.remove(i)
 
         root._toastQueue = []
-        root._hoveredToasts = []
-
         root._toastPresentationBusy = false
+
         toastPresentationTimer.stop()
 
-        _stopToastTimer()
-
-        // Then dismiss the actual notifications.
         for (const notification of notifications) {
-            if (notification)
-                notification.dismiss()
+            if (notification) notification.dismiss()
         }
 
         _arrivalTimes = []
     }
 
-    // ── DND / Gaming mode ────────────────────────────────────────────────────
-
     function setSuppressed(enabled) {
         enabled = !!enabled
-
-        if (root.notificationsSuppressed === enabled)
-            return
+        if (root.notificationsSuppressed === enabled) return
 
         root.notificationsSuppressed = enabled
 
         if (enabled) {
-            // Existing visual notifications disappear.
-            // The underlying notifications stay tracked and remain visible
-            // inside the notification panel.
             for (let i = toastModel.count - 1; i >= 0; --i)
                 toastModel.remove(i)
 
             root._toastQueue = []
-            root._hoveredToasts = []
-
             root._toastPresentationBusy = false
-            toastPresentationTimer.stop()
 
-            _stopToastTimer()
+            toastPresentationTimer.stop()
         }
     }
 
@@ -402,86 +236,15 @@ Singleton {
         setSuppressed(!root.notificationsSuppressed)
     }
 
-    // ── Toast presentation scheduler ───────────────────────────────────────────
-
     Timer {
         id: toastPresentationTimer
-
+        interval: root.toastEntryInterval
         repeat: false
-
         onTriggered: {
             root._toastPresentationBusy = false
             root._pumpToastQueue()
         }
     }
-
-    // ── Toast expiry ─────────────────────────────────────────────────────────
-    //
-    // One dynamically scheduled timer. No constant polling loop.
-
-    Timer {
-        id: toastTimer
-
-        repeat: false
-
-        onTriggered: root._expireToasts()
-    }
-
-    function _restartToastTimer() {
-        if (root._hoveredToasts.length > 0) {
-            _stopToastTimer()
-            return
-        }
-
-        if (toastModel.count === 0) {
-            _stopToastTimer()
-            return
-        }
-
-        let nextExpiration = Number.MAX_SAFE_INTEGER
-
-        for (let i = 0; i < toastModel.count; ++i) {
-            const expiresAt = toastModel.get(i).expiresAt
-
-            if (expiresAt > 0)
-                nextExpiration = Math.min(nextExpiration, expiresAt)
-        }
-
-        if (nextExpiration === Number.MAX_SAFE_INTEGER) {
-            _stopToastTimer()
-            return
-        }
-
-        toastTimer.interval =
-            Math.max(1, nextExpiration - Date.now())
-
-        toastTimer.start()
-    }
-
-    function _stopToastTimer() {
-        toastTimer.stop()
-    }
-
-    function _expireToasts() {
-        if (toastModel.count === 0) {
-            _stopToastTimer()
-            return
-        }
-
-        const now = Date.now()
-
-        for (let i = toastModel.count - 1; i >= 0; --i) {
-            if (toastModel.get(i).expiresAt <= now)
-                toastModel.remove(i)
-        }
-
-        if (!root._toastPresentationBusy)
-            _pumpToastQueue()
-
-        _restartToastTimer()
-    }
-
-    // ── Relative timestamps ──────────────────────────────────────────────────
 
     property int _timeTick: 0
 
@@ -489,44 +252,27 @@ Singleton {
         interval: 30000
         repeat: true
         running: true
-
-        onTriggered:
-            root._timeTick++
+        onTriggered: root._timeTick++
     }
 
     function formatTimestamp(notification) {
-        // Create a dependency on _timeTick so timestamp text refreshes.
-        const tick = root._timeTick
-
-        if (!notification)
-            return ""
+        const unused = root._timeTick
+        if (!notification) return ""
 
         const timestamp = getArrivalTime(notification)
-
-        // Historical notifications from a previous generation don't have a
-        // trustworthy local arrival timestamp.
-        if (timestamp === 0)
-            return "Earlier"
+        if (timestamp === 0) return "Earlier"
 
         const diff = Math.max(0, Date.now() - timestamp)
         const minutes = Math.floor(diff / 60000)
 
-        if (minutes < 1)
-            return "just now"
-
-        if (minutes < 60)
-            return minutes + " min" + (minutes > 1 ? "s" : "") + " ago"
+        if (minutes < 1) return "just now"
+        if (minutes < 60) return minutes + " min" + (minutes > 1 ? "s" : "") + " ago"
 
         const date = new Date(timestamp)
-
         let hours = date.getHours()
-        const minutesString =
-            date.getMinutes().toString().padStart(2, "0")
-
+        const minuteString = date.getMinutes() .toString() .padStart(2, "0")
         const ampm = hours >= 12 ? "PM" : "AM"
-
         hours = hours % 12 || 12
-
-        return hours + ":" + minutesString + " " + ampm
+        return hours + ":" + minuteString + " " + ampm
     }
 }
