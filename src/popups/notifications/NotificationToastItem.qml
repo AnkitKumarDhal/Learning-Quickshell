@@ -242,6 +242,11 @@ Item {
 
         acceptedButtons: Qt.LeftButton
 
+        hoverEnabled: true
+
+        onEntered: NotificationService.setToastHovered(root.notification, true)
+        onExited: NotificationService.setToastHovered(root.notification, false)
+
         onClicked:
             NotificationService.dismiss(
                 root.notification

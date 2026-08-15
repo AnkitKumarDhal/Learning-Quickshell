@@ -53,6 +53,7 @@ Singleton {
 
     readonly property int toastEntryInterval: 350
     property bool _toastPresentationBusy: false
+    property var _hoveredToasts: []
 
     // ── Notification presentation state ──────────────────────────────────────
 
@@ -258,6 +259,12 @@ Singleton {
         if (index < 0)
             return false
 
+        for (let i = root._hoveredToasts.length - 1; i >= 0; --i) {
+            if (root._hoveredToasts[i].notification === notification) {
+                root._hoveredToasts.splice(i, 1)
+            }
+        }
+
         toastModel.remove(index)
 
         if (!root._toastPresentationBusy)
@@ -275,32 +282,80 @@ Singleton {
             root._toastQueue.splice(index, 1)
     }
 
+    // ── Toast hover / expiry control ─────────────────────────────────────────────
+
+    function setToastHovered(notification, hovered) {
+        if (!notification) return
+
+        if (hovered) {
+            for (const entry of root._hoveredToasts) {
+                if (entry.notification === notification) return
+            }
+
+            const toastIndex = _toastIndex(notification)
+
+            if (toastIndex < 0) return
+
+            const toast = toastModel.get(toastIndex)
+            const remaining = Math.max(0, toast.expiresAt - Date.now())
+
+            root._hoveredToasts.push({
+                notification: notification,
+                remaining: remaining
+            })
+
+            _stopToastTimer()
+            return
+        }
+
+        let hoveredIndex = -1
+        let remaining = 0
+
+        for (let i = 0; i < root._hoveredToasts.length; ++i) {
+            const entry = root._hoveredToasts[i]
+
+            if (entry.notification === notification) {
+                hoveredIndex = i
+                remaining = entry.remaining
+                break
+            }
+        }
+
+        if (hoveredIndex < 0) return
+
+        root._hoveredToasts.splice(hoveredIndex, 1)
+        const toastIndex = _toastIndex(notification)
+
+        if (toastIndex >= 0) {
+            const newExpiry = remaining > 0 ? Date.now() + remaining : Date.now() + root.toastDuration
+            toastModel.setProperty(toastIndex, "expiresAt", newExpiry)
+        }
+
+        if (root._hoveredToasts.length === 0) _restartToastTimer()
+    }
+
     // ── User dismissal ───────────────────────────────────────────────────────
 
     function dismiss(notification) {
-        if (!notification)
-            return
+        if (!notification) return
 
         _removeToast(notification)
         _removeFromQueue(notification)
         _removeArrivalTime(notification)
 
-        // This removes it from trackedNotifications as well.
         notification.dismiss()
     }
 
     // ── Clear all ────────────────────────────────────────────────────────────
 
     function clearAll() {
-        const notifications =
-            server.trackedNotifications.values.slice()
+        const notifications = server.trackedNotifications.values.slice()
 
-        // First remove visible toasts individually so ListView receives
-        // proper remove transitions.
         for (let i = toastModel.count - 1; i >= 0; --i)
             toastModel.remove(i)
 
         root._toastQueue = []
+        root._hoveredToasts = []
 
         root._toastPresentationBusy = false
         toastPresentationTimer.stop()
@@ -334,6 +389,7 @@ Singleton {
                 toastModel.remove(i)
 
             root._toastQueue = []
+            root._hoveredToasts = []
 
             root._toastPresentationBusy = false
             toastPresentationTimer.stop()
@@ -372,6 +428,11 @@ Singleton {
     }
 
     function _restartToastTimer() {
+        if (root._hoveredToasts.length > 0) {
+            _stopToastTimer()
+            return
+        }
+
         if (toastModel.count === 0) {
             _stopToastTimer()
             return
