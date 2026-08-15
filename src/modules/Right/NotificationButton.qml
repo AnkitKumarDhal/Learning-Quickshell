@@ -9,34 +9,71 @@ import qs.src.services
 PillBase {
     id: root
 
+    required property var screen
+
     hoverExpand: true
 
-    // Highlight border when panel is open
-    border.color: Colors.primary
-    border.width: Popups.notificationsOpen ? 1 : 0
-    Behavior on border.width { NumberAnimation { duration: 150 } }
+    border.color:
+        Colors.primary
+
+    border.width:
+        Popups.notificationsOpen ||
+        NotificationService.notificationsSuppressed
+            ? 1
+            : 0
+
+    Behavior on border.width {
+        NumberAnimation {
+            duration: 150
+        }
+    }
 
     Row {
         spacing: 8
 
         Text {
-            text: "󰂚"
-            color: Colors.primary
+            text:
+                NotificationService.notificationsSuppressed
+                    ? "󰂛"
+                    : "󰂚"
+
+            color:
+                Colors.primary
+
             font.pointSize: 11
             font.family: Fonts.font
-            verticalAlignment: Text.AlignVCenter
+
+            verticalAlignment:
+                Text.AlignVCenter
         }
 
         Text {
-            visible: NotificationService.notifications.length > 0
-            text:    NotificationService.notifications.length
-            color:   Colors.primary
+            visible:
+                NotificationService.notificationCount > 0
+
+            text:
+                NotificationService.notificationCount
+
+            color:
+                Colors.primary
+
             font.pointSize: 11
             font.bold: true
             font.family: Fonts.font
-            verticalAlignment: Text.AlignVCenter
+
+            verticalAlignment:
+                Text.AlignVCenter
         }
     }
 
-    onClicked: Popups.notificationsOpen = !Popups.notificationsOpen
+    // Left click: open/close the notification panel on the monitor where
+    // this button was clicked.
+    onClicked: {
+        NotificationService.panelScreen = root.screen
+        Popups.notificationsOpen = !Popups.notificationsOpen
+    }
+
+    // Right click: toggle notification suppression / gaming mode.
+    onRightClicked:
+        NotificationService.toggleSuppressed()
 }

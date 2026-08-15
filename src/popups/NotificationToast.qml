@@ -1,71 +1,195 @@
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
-import Quickshell.Services.Notifications
 import qs.src.theme
-import qs.src.state
 import qs.src.services
+import qs.src.popups.notifications
 
-// Fixed-size PanelWindow — surface never resizes, only content animates
 PanelWindow {
     id: root
 
-    //property var screen
+    color: "transparent"
 
-    color:         "transparent"
     exclusionMode: ExclusionMode.Ignore
 
     anchors {
         bottom: true
-        right:  true
+        right: true
     }
 
-    // Fixed dimensions — large enough for max 5 toasts stacked
-    // Never bind these to content or the surface will jump
-    implicitWidth:  380
+    implicitWidth: 380
     implicitHeight: 500
 
-    mask: Region {
-        Region {
-            x: root.width - 360 - 12
-            y: root.height - 2 - (NotificationService.activeToasts.length * 88)
-            width: 360
-            height: NotificationService.activeToasts.length * 88
-        }
-    }
+    screen: NotificationService.toastScreen
 
     WlrLayershell.layer: WlrLayer.Overlay
 
-    // Only keep the window alive while toasts are active — a zero-height mask
-    // would otherwise create an invisible surface that blocks input to windows beneath.
-    visible: NotificationService.activeToasts.length > 0
+    visible:
+        NotificationService.activeToastCount > 0
 
-    // ── Toast stack ───────────────────────────────────────────────────────────
-    // Toasts anchor to the bottom, stack upward
-    // New toast slides in from the right, existing ones animate upward
+    readonly property int cardHeight: 80
+    readonly property int cardSpacing: 8
+
+    readonly property int stackHeight:
+        NotificationService.activeToastCount > 0
+            ? NotificationService.activeToastCount * cardHeight
+              +
+              (NotificationService.activeToastCount - 1) * cardSpacing
+            : 0
+
+    // Only the actual toast stack is clickable.
+    mask: Region {
+        item: toastStack
+    }
+
+    // ── Toast stack ──────────────────────────────────────────────────────────
 
     Item {
+        id: toastStack
+
+        width: 360
+        height: root.stackHeight
+
         anchors {
+            right: parent.right
             bottom: parent.bottom
-            right:  parent.right
+
+            rightMargin: 12
             bottomMargin: 12
-            rightMargin:  12
         }
-        width:  360
-        height: parent.height - 24
 
-        Repeater {
-            id: toastRepeater
-            model: NotificationService.activeToasts
+        ListView {
+            id: toastList
 
-            delegate: ToastItem {
-                required property var modelData
-                required property int index
+            anchors.fill: parent
 
-                notifId:     modelData
-                toastIndex:  index
-                totalToasts: NotificationService.activeToasts.length
+            orientation: ListView.Vertical
+
+            // Newest item (index 0) belongs at the bottom.
+            verticalLayoutDirection: ListView.BottomToTop
+
+            spacing: root.cardSpacing
+
+            interactive: false
+
+            model: NotificationService.activeToastsModel
+
+            delegate: NotificationToastItem {
+                width: toastList.width
+                required property var toastNotification
+                notification: toastNotification
+            }
+
+            // ── Initial population ───────────────────────────────────────────
+
+            populate: Transition {
+                ParallelAnimation {
+                    NumberAnimation {
+                        property: "x"
+
+                        from: toastList.width + 24
+                        to: 0
+
+                        duration: 350
+
+                        easing.type:
+                            Easing.OutCubic
+                    }
+
+                    NumberAnimation {
+                        property: "opacity"
+
+                        from: 0
+                        to: 1
+
+                        duration: 220
+
+                        easing.type:
+                            Easing.OutCubic
+                    }
+                }
+            }
+
+            // ── New notification ─────────────────────────────────────────────
+
+            add: Transition {
+                ParallelAnimation {
+                    NumberAnimation {
+                        property: "x"
+
+                        from: toastList.width + 24
+                        to: 0
+
+                        duration: 350
+
+                        easing.type:
+                            Easing.OutCubic
+                    }
+
+                    NumberAnimation {
+                        property: "opacity"
+
+                        from: 0
+                        to: 1
+
+                        duration: 220
+
+                        easing.type:
+                            Easing.OutCubic
+                    }
+                }
+            }
+
+            // Existing notifications move upward when the new one arrives.
+            addDisplaced: Transition {
+                NumberAnimation {
+                    properties: "y"
+
+                    duration: 320
+
+                    easing.type:
+                        Easing.OutCubic
+                }
+            }
+
+            // ── Notification leaving ─────────────────────────────────────────
+
+            remove: Transition {
+                ParallelAnimation {
+                    NumberAnimation {
+                        property: "x"
+
+                        to: toastList.width + 24
+
+                        duration: 300
+
+                        easing.type:
+                            Easing.InCubic
+                    }
+
+                    NumberAnimation {
+                        property: "opacity"
+
+                        to: 0
+
+                        duration: 220
+
+                        easing.type:
+                            Easing.InCubic
+                    }
+                }
+            }
+
+            // Remaining notifications slide into the freed position.
+            removeDisplaced: Transition {
+                NumberAnimation {
+                    properties: "y"
+
+                    duration: 300
+
+                    easing.type:
+                        Easing.OutCubic
+                }
             }
         }
     }

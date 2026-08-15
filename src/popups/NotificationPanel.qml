@@ -11,319 +11,533 @@ import qs.src.services
 PanelWindow {
     id: root
 
-    //property var screen
+    color: "transparent"
 
-    color:         "transparent"
     exclusionMode: ExclusionMode.Ignore
 
     anchors {
-        top:   true
+        top: true
         right: true
     }
 
-    implicitWidth:  380
-    implicitHeight: root.screen ? root.screen.height : 800
+    implicitWidth: 380
+
+    implicitHeight:
+        root.screen
+            ? root.screen.height
+            : 800
+
+    screen: NotificationService.panelScreen
 
     WlrLayershell.layer: WlrLayer.Overlay
 
     visible: slidePanel.windowVisible
 
+    // The mask follows the actual animated panel card.
     mask: Region {
-        x:      root.implicitWidth - panelCard.width - Theme.barMargin
-        y:      Theme.barHeight + 2
-        width:  panelCard.width
-        height: panelCard.height
-}
+        item: panelCard
+    }
 
     PopupSlide {
         id: slidePanel
-        anchors.fill: parent
-        edge: "right"
-        open: Popups.notificationsOpen
-        onCloseRequested: Popups.notificationsOpen = false
 
-        // ── Panel card ────────────────────────────────────────────────────────────
+        anchors.fill: parent
+
+        edge: "right"
+
+        open: Popups.notificationsOpen
+
+        onCloseRequested:
+            Popups.notificationsOpen = false
+
         Rectangle {
             id: panelCard
+
             anchors {
-                top:         parent.top
-                right:       parent.right
-                topMargin:   Theme.barHeight + 2
+                top: parent.top
+                right: parent.right
+
+                topMargin: Theme.barHeight + 2
                 rightMargin: Theme.barMargin
             }
-            width:         360
-            height:        Math.min(
-                               notifCol.implicitHeight + 48,
-                               root.implicitHeight - Theme.barHeight - 24
-                           )
-            radius:        Theme.popupRadius
-            color:         Colors.background
-            border.color:  Colors.outlineVariant
-            border.width:  Theme.popupBorder
-            clip:          true
 
-            // ── Header ────────────────────────────────────────────────────────────
+            width: 360
+
+            height: Math.min(
+                notifCol.implicitHeight + 48,
+                root.implicitHeight - Theme.barHeight - 24
+            )
+
+            radius: Theme.popupRadius
+
+            color: Colors.background
+
+            border.color: Colors.outlineVariant
+            border.width: Theme.popupBorder
+
+            clip: true
+
+            // ── Header ───────────────────────────────────────────────────────
+
             Rectangle {
                 id: panelHeader
-                anchors { top: parent.top; left: parent.left; right: parent.right }
+
+                anchors {
+                    top: parent.top
+                    left: parent.left
+                    right: parent.right
+                }
+
                 height: 48
-                color:  "transparent"
+
+                color: "transparent"
 
                 RowLayout {
-                    anchors { fill: parent; topMargin: 8; leftMargin: 16; rightMargin: 16; bottomMargin: 8 }
+                    anchors {
+                        fill: parent
 
-                    Text {
-                        text:           "Notifications"
-                        color:          Colors.on_Surface
-                        font.pixelSize: 14
-                        font.bold:      true
-                        font.family:    Fonts.font
-                        Layout.fillWidth: true
+                        topMargin: 8
+                        leftMargin: 16
+                        rightMargin: 16
+                        bottomMargin: 8
                     }
 
-                    // Clear all button
+                    Text {
+                        text: "Notifications"
+
+                        color: Colors.on_Surface
+
+                        font.pixelSize: 14
+                        font.bold: true
+                        font.family: Fonts.font
+
+                        Layout.fillWidth: true
+
+                        textFormat: Text.PlainText
+                    }
+
                     Rectangle {
-                        visible:      NotificationService.notifications.length > 0
-                        width:        90
-                        height:       26
-                        radius:       13
-                        color:        "transparent"
+                        visible:
+                            NotificationService.notificationCount > 0
+
+                        width: 90
+                        height: 26
+
+                        radius: 13
+
+                        color: "transparent"
+
                         border.color: Colors.outline
                         border.width: 1
 
                         Rectangle {
-                            width: 90
-                            height: 26
-                            radius: 15
-                            color: Colors.primary
-                            opacity: clearHov.containsMouse ? 0.25 : 0
+                            anchors.fill: parent
 
-                            Behavior on opacity { NumberAnimation { duration: 150 } }
+                            radius: 13
+
+                            color: Colors.primary
+
+                            opacity:
+                                clearHover.containsMouse
+                                    ? 0.25
+                                    : 0
+
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: 150
+                                }
+                            }
                         }
 
                         Text {
-                            id:               clearText
                             anchors.centerIn: parent
-                            text:             "Clear all"
-                            color:            Colors.on_Surface
-                            font.pixelSize:   11
-                            font.family:      Fonts.font
+
+                            text: "Clear all"
+
+                            color: Colors.on_Surface
+
+                            font.pixelSize: 11
+                            font.family: Fonts.font
+
+                            textFormat: Text.PlainText
                         }
 
                         MouseArea {
-                            id:           clearHov
+                            id: clearHover
+
                             anchors.fill: parent
+
                             hoverEnabled: true
-                            cursorShape:  Qt.PointingHandCursor
-                            onClicked:    NotificationService.clearAll()
+
+                            cursorShape:
+                                Qt.PointingHandCursor
+
+                            onClicked:
+                                NotificationService.clearAll()
                         }
                     }
                 }
 
-                // Divider
                 Rectangle {
-                    anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-                    height:  1
-                    color:   Colors.outlineVariant
+                    anchors {
+                        bottom: parent.bottom
+                        left: parent.left
+                        right: parent.right
+                    }
+
+                    height: 1
+
+                    color: Colors.outlineVariant
                     opacity: 0.5
                 }
             }
 
-            // ── Notification list ─────────────────────────────────────────────────
+            // ── Notification list ────────────────────────────────────────────
+
             Flickable {
                 anchors {
-                    top:    panelHeader.bottom
-                    left:   parent.left
-                    right:  parent.right
+                    top: panelHeader.bottom
+                    left: parent.left
+                    right: parent.right
                     bottom: parent.bottom
                 }
-                contentHeight: notifCol.implicitHeight
-                clip:          true
-                boundsBehavior: Flickable.StopAtBounds
 
-                // ScrollBar.vertical: ScrollBar {
-                //     policy: ScrollBar.AsNeeded
-                //     contentItem: Rectangle {
-                //         implicitWidth:  3
-                //         implicitHeight: 40
-                //         radius:         1.5
-                //         color:          Qt.rgba(1, 1, 1, 0.25)
-                //     }
-                //     background: Item {}
-                // }
+                contentHeight:
+                    notifCol.implicitHeight
+
+                clip: true
+
+                boundsBehavior:
+                    Flickable.StopAtBounds
 
                 Column {
-                    id:       notifCol
-                    anchors { top: parent.top; left: parent.left; right: parent.right }
-                    spacing:  4
-                    padding:  8
+                    id: notifCol
 
-                    // Empty state
+                    anchors {
+                        top: parent.top
+                        left: parent.left
+                        right: parent.right
+                    }
+
+                    spacing: 4
+
+                    padding: 8
+
+                    // ── Empty state ──────────────────────────────────────────
+
                     Item {
-                        visible: NotificationService.notifications.length === 0
-                        width:   parent.width - 16
-                        height:  80
+                        visible:
+                            NotificationService.notificationCount === 0
+
+                        width: parent.width - 16
+                        height: 80
 
                         ColumnLayout {
                             anchors.centerIn: parent
+
                             spacing: 6
 
                             Text {
-                                Layout.alignment: Qt.AlignHCenter
-                                text:             "󰂚"
-                                font.pixelSize:   28
-                                font.family:      Fonts.font
-                                color:            Colors.outline
+                                Layout.alignment:
+                                    Qt.AlignHCenter
+
+                                text: "󰂚"
+
+                                font.pixelSize: 28
+                                font.family: Fonts.font
+
+                                color: Colors.outline
                             }
 
                             Text {
-                                Layout.alignment: Qt.AlignHCenter
-                                text:             "No notifications"
-                                font.pixelSize:   12
-                                font.family:      Fonts.font
-                                color:            Colors.outline
+                                Layout.alignment:
+                                    Qt.AlignHCenter
+
+                                text: "No notifications"
+
+                                font.pixelSize: 12
+                                font.family: Fonts.font
+
+                                color: Colors.outline
+
+                                textFormat: Text.PlainText
                             }
                         }
                     }
 
-                    // Notification items
+                    // ── Notification entries ─────────────────────────────────
+
                     Repeater {
-                        model: NotificationService.reversedNotifications
+                        model:
+                            NotificationService.notificationsModel
 
                         delegate: Rectangle {
-                            id:           notifItem
+                            id: notifItem
+
                             required property var modelData
 
-                            width:   notifCol.width - 16
-                            height:  notifBody.implicitHeight + 24
-                            radius:  10
-                            color:   itemHov.containsMouse
-                                         ? Colors.surfaceContainerHighest
-                                         : Colors.surfaceContainerHigh
+                            readonly property var notification:
+                                modelData
+
+                            width: notifCol.width - 16
+
+                            height:
+                                notifBody.implicitHeight + 24
+
+                            radius: 10
+
+                            color:
+                                itemHover.containsMouse
+                                    ? Colors.surfaceContainerHighest
+                                    : Colors.surfaceContainerHigh
+
                             border.width: 1
-                            border.color: Colors.outlineVariant
-                            Behavior on color { ColorAnimation { duration: 120 } }
+
+                            border.color:
+                                Colors.outlineVariant
+
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 120
+                                }
+                            }
 
                             RowLayout {
-                                id:      notifBody
-                                anchors { fill: parent; margins: 12 }
+                                id: notifBody
+
+                                anchors {
+                                    fill: parent
+                                    margins: 12
+                                }
+
                                 spacing: 10
 
-                                // App icon
+                                // ── App icon ─────────────────────────────────
+
                                 Rectangle {
-                                    width:  36
+                                    width: 36
                                     height: 36
+
                                     radius: 8
-                                    color:  Colors.primaryContainer
-                                    Layout.alignment: Qt.AlignTop
+
+                                    color:
+                                        Colors.primaryContainer
+
+                                    Layout.alignment:
+                                        Qt.AlignTop
 
                                     Image {
+                                        id: appIcon
+
                                         anchors.centerIn: parent
-                                        width:   22
-                                        height:  22
-                                        source:  notifItem.modelData && notifItem.modelData.appIcon
-                                                     ? "image://icon/" + notifItem.modelData.appIcon
-                                                     : ""
-                                        visible: source !== ""
-                                        fillMode: Image.PreserveAspectFit
-                                        smooth:   true
+
+                                        width: 22
+                                        height: 22
+
+                                        source:
+                                            notifItem.notification &&
+                                            notifItem.notification.appIcon
+                                                ? "image://icon/" +
+                                                  notifItem.notification.appIcon
+                                                : ""
+
+                                        visible:
+                                            status === Image.Ready
+
+                                        fillMode:
+                                            Image.PreserveAspectFit
+
+                                        smooth: true
                                     }
 
-                                    // Fallback icon when no app icon available
                                     Text {
                                         anchors.centerIn: parent
-                                        visible:          !(notifItem.modelData && notifItem.modelData.appIcon)
-                                        text:             "󰂚"
-                                        font.pixelSize:   16
-                                        font.family:      Fonts.font
-                                        color:            Colors.on_PrimaryContainer
+
+                                        visible:
+                                            appIcon.status !== Image.Ready
+
+                                        text: "󰂚"
+
+                                        font.pixelSize: 16
+                                        font.family: Fonts.font
+
+                                        color:
+                                            Colors.on_PrimaryContainer
                                     }
                                 }
 
+                                // ── Text content ──────────────────────────────
+
                                 ColumnLayout {
                                     Layout.fillWidth: true
+
                                     spacing: 2
 
                                     RowLayout {
                                         Layout.fillWidth: true
 
                                         Text {
-                                            text:           notifItem.modelData.appName || ""
-                                            color:          Colors.on_SurfaceVariant
+                                            text:
+                                                notifItem.notification
+                                                    ? notifItem.notification.appName
+                                                    : ""
+
+                                            color:
+                                                Colors.on_SurfaceVariant
+
                                             font.pixelSize: 10
-                                            font.family:    Fonts.font
+                                            font.family: Fonts.font
+
                                             Layout.fillWidth: true
-                                            elide:          Text.ElideRight
+
+                                            elide:
+                                                Text.ElideRight
+
+                                            textFormat:
+                                                Text.PlainText
                                         }
 
                                         Text {
-                                            text: NotificationService.formatTimestamp(
-                                                NotificationService.getPanelArrivalTime(
-                                                    notifItem.modelData.id))
-                                            color:          Colors.outline
+                                            text:
+                                                notifItem.notification
+                                                    ? NotificationService.formatTimestamp(
+                                                          notifItem.notification
+                                                      )
+                                                    : ""
+
+                                            color:
+                                                Colors.outline
+
                                             font.pixelSize: 10
-                                            font.family:    Fonts.font
+                                            font.family: Fonts.font
+
+                                            textFormat:
+                                                Text.PlainText
                                         }
                                     }
 
                                     Text {
-                                        text:           notifItem.modelData.summary || ""
-                                        color:          Colors.on_Surface
+                                        text:
+                                            notifItem.notification
+                                                ? notifItem.notification.summary
+                                                : ""
+
+                                        color:
+                                            Colors.on_Surface
+
                                         font.pixelSize: 12
-                                        font.bold:      true
-                                        font.family:    Fonts.font
+                                        font.bold: true
+                                        font.family: Fonts.font
+
                                         Layout.fillWidth: true
-                                        elide:          Text.ElideRight
+
+                                        elide:
+                                            Text.ElideRight
+
+                                        textFormat:
+                                            Text.PlainText
                                     }
 
                                     Text {
-                                        visible:        notifItem.modelData.body !== ""
-                                        text:           notifItem.modelData.body || ""
-                                        color:          Colors.on_SurfaceVariant
+                                        visible:
+                                            notifItem.notification &&
+                                            notifItem.notification.body !== ""
+
+                                        text:
+                                            notifItem.notification
+                                                ? notifItem.notification.body
+                                                : ""
+
+                                        color:
+                                            Colors.on_SurfaceVariant
+
                                         font.pixelSize: 11
-                                        font.family:    Fonts.font
+                                        font.family: Fonts.font
+
                                         Layout.fillWidth: true
-                                        wrapMode:       Text.WordWrap
+
+                                        wrapMode:
+                                            Text.WordWrap
+
                                         maximumLineCount: 3
-                                        elide:          Text.ElideRight
+
+                                        elide:
+                                            Text.ElideRight
+
+                                        textFormat:
+                                            Text.PlainText
                                     }
                                 }
 
-                                // Dismiss
+                                // ── Dismiss button ─────────────────────────────
+
                                 Rectangle {
-                                    width:  20
+                                    id: dismissButton
+
+                                    width: 20
                                     height: 20
+
                                     radius: 10
-                                    color:  dimissItemHov.containsMouse
-                                                ? Qt.rgba(1, 1, 1, 0.12)
-                                                : "transparent"
-                                    Layout.alignment: Qt.AlignTop
+
+                                    color:
+                                        dismissArea.containsMouse
+                                            ? Qt.rgba(
+                                                  1, 1, 1, 0.12
+                                              )
+                                            : "transparent"
+
+                                    Layout.alignment:
+                                        Qt.AlignTop
+
+                                    z: 2
 
                                     Text {
                                         anchors.centerIn: parent
-                                        text:             "󰅖"
-                                        font.pixelSize:   11
-                                        font.family:      Fonts.font
-                                        color:            Colors.on_SurfaceVariant
+
+                                        text: "󰅖"
+
+                                        font.pixelSize: 11
+                                        font.family: Fonts.font
+
+                                        color:
+                                            Colors.on_SurfaceVariant
                                     }
 
                                     MouseArea {
-                                        id:           dimissItemHov
+                                        id: dismissArea
+
                                         anchors.fill: parent
+
                                         hoverEnabled: true
-                                        cursorShape:  Qt.PointingHandCursor
-                                        onClicked:    notifItem.modelData.dismiss()
+
+                                        cursorShape:
+                                            Qt.PointingHandCursor
+
+                                        onClicked:
+                                            NotificationService.dismiss(
+                                                notifItem.notification
+                                            )
                                     }
                                 }
                             }
 
                             MouseArea {
-                                id:           itemHov
+                                id: itemHover
+
                                 anchors.fill: parent
+
                                 hoverEnabled: true
-                                cursorShape:  Qt.PointingHandCursor
-                                // Clicking item dismisses it
-                                onClicked:    notifItem.modelData.dismiss()
+
+                                acceptedButtons:
+                                    Qt.LeftButton
+
+                                cursorShape:
+                                    Qt.PointingHandCursor
+
+                                onClicked:
+                                    NotificationService.dismiss(
+                                        notifItem.notification
+                                    )
                             }
                         }
                     }
