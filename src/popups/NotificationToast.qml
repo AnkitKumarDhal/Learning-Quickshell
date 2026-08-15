@@ -28,7 +28,7 @@ PanelWindow {
     readonly property int stackHeight: NotificationService.maxVisibleToasts * cardHeight + (NotificationService.maxVisibleToasts - 1) * cardSpacing
 
     mask: Region {
-        item: NotificationService.activeToastCount > 0 ? hoverRegion : null
+        item: NotificationService.activeToastCount > 0 ? toastStack : null
     }
 
     Item {
@@ -112,22 +112,6 @@ PanelWindow {
                     duration: 300
                     easing.type: Easing.OutCubic
                 }
-            }
-        }
-
-        Item {
-            id: hoverRegion
-
-            width: toastStack.width
-            height: root.visibleStackHeight
-
-            anchors {
-                right: parent.right
-                bottom: parent.bottom
-            }
-
-            HoverHandler {
-                onHoveredChanged: NotificationService.setToastStackHovered(hovered)
             }
         }
     }

@@ -17,7 +17,7 @@ Singleton {
         bodyImagesSupported: false
         imageSupported: false
 
-        actionsSupported: false
+        actionsSupported: true
         actionIconsSupported: false
         inlineReplySupported: false
 
@@ -36,7 +36,9 @@ Singleton {
 
     property var _toastQueue: []
     property bool _toastPresentationBusy: false
-    property bool toastStackHovered: false
+
+    property int _hoveredToastCount: 0
+    readonly property bool toastStackHovered: _hoveredToastCount > 0
 
     property bool notificationsSuppressed: false
 
@@ -44,6 +46,14 @@ Singleton {
     property ShellScreen panelScreen: Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
 
     property var _arrivalTimes: []
+
+    function setToastHovered(hovered) {
+        if (hovered) {
+            root._hoveredToastCount++
+        } else {
+            root._hoveredToastCount = Math.max(0, root._hoveredToastCount - 1)
+        }
+    }
 
     function _setArrivalTime(notification, timestamp) {
         const existing = _findArrivalIndex(notification)
@@ -183,10 +193,6 @@ Singleton {
         if (index >= 0) root._toastQueue.splice(index, 1)
     }
 
-    function setToastStackHovered(hovered) {
-        root.toastStackHovered = !!hovered
-    }
-
     function dismiss(notification) {
         if (!notification) return
 
@@ -204,6 +210,7 @@ Singleton {
             toastModel.remove(i)
 
         root._toastQueue = []
+        root._hoveredToastCount = 0
         root._toastPresentationBusy = false
 
         toastPresentationTimer.stop()
@@ -226,6 +233,7 @@ Singleton {
                 toastModel.remove(i)
 
             root._toastQueue = []
+            root._hoveredToastCount = 0
             root._toastPresentationBusy = false
 
             toastPresentationTimer.stop()
