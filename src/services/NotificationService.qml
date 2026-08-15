@@ -51,6 +51,9 @@ Singleton {
     // Contains actual Quickshell Notification objects.
     property var _toastQueue: []
 
+    readonly property int toastEntryInterval: 350
+    property bool _toastPresentationBusy: false
+
     // ── Notification presentation state ──────────────────────────────────────
 
     // Manual notification suppression / gaming mode.
@@ -187,16 +190,45 @@ Singleton {
         if (_toastIndex(notification) >= 0)
             return
 
+        // Don't queue the same Notification object twice.
         if (_queueIndex(notification) >= 0)
             return
 
-        if (toastModel.count < root.maxVisibleToasts) {
-            _showToast(notification)
-        } else {
-            root._toastQueue.push(notification)
+        root._toastQueue.push(notification)
+
+        root._pumpToastQueue()
+    }
+
+    function _pumpToastQueue() {
+        if (root.notificationsSuppressed)
+            return
+
+        if (root._toastPresentationBusy)
+            return
+
+        if (toastModel.count >= root.maxVisibleToasts)
+            return
+
+        if (root._toastQueue.length === 0)
+            return
+
+        const notification = root._toastQueue.shift()
+
+        if (!notification)
+            return
+
+        // The notification may have been closed while waiting in the queue.
+        if (!notification.tracked) {
+            _pumpToastQueue()
+            return
         }
 
-        _restartToastTimer()
+        _showToast(notification)
+
+        root._toastPresentationBusy = true
+
+        toastPresentationTimer.interval = root.toastEntryInterval
+        toastPresentationTimer.start()
     }
 
     function _showToast(notification) {
@@ -210,22 +242,7 @@ Singleton {
     }
 
     function _promoteQueuedToasts() {
-        while (!root.notificationsSuppressed &&
-               toastModel.count < root.maxVisibleToasts &&
-               root._toastQueue.length > 0) {
-
-            const notification = root._toastQueue.shift()
-
-            if (!notification)
-                continue
-
-            // The notification might have been closed while waiting.
-            if (!notification.tracked)
-                continue
-
-            _showToast(notification)
-        }
-
+        root._pumpToastQueue()
         _restartToastTimer()
     }
 
@@ -239,7 +256,10 @@ Singleton {
 
         toastModel.remove(index)
 
-        _promoteQueuedToasts()
+        if (!root._toastPresentationBusy)
+            _pumpToastQueue()
+
+        _restartToastTimer()
 
         return true
     }
@@ -278,6 +298,9 @@ Singleton {
 
         root._toastQueue = []
 
+        root._toastPresentationBusy = false
+        toastPresentationTimer.stop()
+
         _stopToastTimer()
 
         // Then dismiss the actual notifications.
@@ -308,12 +331,28 @@ Singleton {
 
             root._toastQueue = []
 
+            root._toastPresentationBusy = false
+            toastPresentationTimer.stop()
+
             _stopToastTimer()
         }
     }
 
     function toggleSuppressed() {
         setSuppressed(!root.notificationsSuppressed)
+    }
+
+    // ── Toast presentation scheduler ───────────────────────────────────────────
+
+    Timer {
+        id: toastPresentationTimer
+
+        repeat: false
+
+        onTriggered: {
+            root._toastPresentationBusy = false
+            root._pumpToastQueue()
+        }
     }
 
     // ── Toast expiry ─────────────────────────────────────────────────────────
@@ -370,7 +409,7 @@ Singleton {
                 toastModel.remove(i)
         }
 
-        _promoteQueuedToasts()
+        _pumpToastQueue()
         _restartToastTimer()
     }
 

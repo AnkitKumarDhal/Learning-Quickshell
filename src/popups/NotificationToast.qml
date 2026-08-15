@@ -31,11 +31,7 @@ PanelWindow {
     readonly property int cardSpacing: 8
 
     readonly property int stackHeight:
-        NotificationService.activeToastCount > 0
-            ? NotificationService.activeToastCount * cardHeight
-              +
-              (NotificationService.activeToastCount - 1) * cardSpacing
-            : 0
+            NotificationService.maxVisibleToasts * cardHeight + (NotificationService.maxVisibleToasts - 1) * cardSpacing
 
     // Only the actual toast stack is clickable.
     mask: Region {
@@ -80,36 +76,6 @@ PanelWindow {
                 notification: toastNotification
             }
 
-            // ── Initial population ───────────────────────────────────────────
-
-            populate: Transition {
-                ParallelAnimation {
-                    NumberAnimation {
-                        property: "x"
-
-                        from: toastList.width + 24
-                        to: 0
-
-                        duration: 350
-
-                        easing.type:
-                            Easing.OutCubic
-                    }
-
-                    NumberAnimation {
-                        property: "opacity"
-
-                        from: 0
-                        to: 1
-
-                        duration: 220
-
-                        easing.type:
-                            Easing.OutCubic
-                    }
-                }
-            }
-
             // ── New notification ─────────────────────────────────────────────
 
             add: Transition {
@@ -117,7 +83,7 @@ PanelWindow {
                     NumberAnimation {
                         property: "x"
 
-                        from: toastList.width + 24
+                        from: toastList.width + 36
                         to: 0
 
                         duration: 350
@@ -132,7 +98,7 @@ PanelWindow {
                         from: 0
                         to: 1
 
-                        duration: 220
+                        duration: 280
 
                         easing.type:
                             Easing.OutCubic
