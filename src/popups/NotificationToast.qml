@@ -11,21 +11,20 @@ PanelWindow {
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     anchors {
+        top: true
         bottom: true
         right: true
     }
 
     implicitWidth: 380
-    implicitHeight: 500
 
     screen: NotificationService.toastScreen
     WlrLayershell.layer: WlrLayer.Overlay
     visible: true
 
-    readonly property int cardHeight: 80
     readonly property int cardSpacing: 8
-    readonly property int visibleStackHeight: NotificationService.activeToastCount > 0 ? NotificationService.activeToastCount * cardHeight + (NotificationService.activeToastCount - 1) * cardSpacing : 0
-    readonly property int stackHeight: NotificationService.maxVisibleToasts * cardHeight + (NotificationService.maxVisibleToasts - 1) * cardSpacing
+    readonly property int visibleStackHeight: toastList.contentHeight
+    readonly property int stackHeight: Math.min(root.stackHeight, root.height - 24)
 
     mask: Region {
         item: NotificationService.activeToastCount > 0 ? toastStack : null
@@ -35,7 +34,7 @@ PanelWindow {
         id: toastStack
 
         width: 360
-        height: root.stackHeight
+        height: Math.min( root.stackHeight, root.height - 24 )
 
         anchors {
             right: parent.right

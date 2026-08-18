@@ -7,6 +7,7 @@ import qs.src.components
 import qs.src.theme
 import qs.src.state
 import qs.src.services
+import qs.src.popups.notifications
 
 PanelWindow {
     id: root
@@ -213,149 +214,12 @@ PanelWindow {
 
                     Repeater {
                         model: NotificationService.notificationsModel
-                        delegate: Rectangle {
-                            id: notifItem
-
+                        delegate: NotificationCard {
                             required property var modelData
-                            readonly property var notification: modelData
 
+                            notification: modelData
                             width: notifCol.width - 16
-                            height: notifBody.implicitHeight + 24
-
-                            radius: 10
-                            color: Colors.surfaceContainerHigh
-                            border.width: 1
-                            border.color: Colors.outlineVariant
-
-                            Behavior on color {
-                                ColorAnimation {
-                                    duration: 120
-                                }
-                            }
-
-                            RowLayout {
-                                id: notifBody
-
-                                anchors {
-                                    fill: parent
-                                    margins: 12
-                                }
-
-                                spacing: 10
-
-                                Rectangle {
-                                    width: 36
-                                    height: 36
-
-                                    radius: 8
-                                    color: Colors.primaryContainer
-                                    Layout.alignment: Qt.AlignTop
-
-                                    Image {
-                                        id: appIcon
-
-                                        anchors.centerIn: parent
-
-                                        width: 22
-                                        height: 22
-
-                                        source: notifItem.notification && notifItem.notification.appIcon ? "image://icon/" + notifItem.notification.appIcon : ""
-
-                                        visible: status === Image.Ready
-                                        fillMode: Image.PreserveAspectFit
-                                        smooth: true
-                                    }
-
-                                    Text {
-                                        anchors.centerIn: parent
-                                        visible: appIcon.status !== Image.Ready
-                                        text: "󰂚"
-                                        font.pixelSize: 16
-                                        font.family: Fonts.font
-                                        color: Colors.on_PrimaryContainer
-                                    }
-                                }
-
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-
-                                    spacing: 2
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-
-                                        Text {
-                                            text: notifItem.notification ? notifItem.notification.appName : ""
-                                            color: Colors.on_SurfaceVariant
-                                            font.pixelSize: 10
-                                            font.family: Fonts.font
-                                            Layout.fillWidth: true
-                                            elide: Text.ElideRight
-                                            textFormat: Text.PlainText
-                                        }
-
-                                        Text {
-                                            text: notifItem.notification ? NotificationService.formatTimestamp( notifItem.notification) : ""
-                                            color: Colors.outline
-                                            font.pixelSize: 10
-                                            font.family: Fonts.font
-                                            textFormat: Text.PlainText
-                                        }
-                                    }
-
-                                    Text {
-                                        text: notifItem.notification ? notifItem.notification.summary : ""
-                                        color: Colors.on_Surface
-                                        font.pixelSize: 12
-                                        font.bold: true
-                                        font.family: Fonts.font
-                                        Layout.fillWidth: true
-                                        elide: Text.ElideRight
-                                        textFormat: Text.PlainText
-                                    }
-
-                                    Text {
-                                        visible: notifItem.notification && notifItem.notification.body !== ""
-                                        text: notifItem.notification ? notifItem.notification.body : ""
-                                        color: Colors.on_SurfaceVariant
-                                        font.pixelSize: 11
-                                        font.family: Fonts.font
-                                        Layout.fillWidth: true
-                                        wrapMode: Text.WordWrap
-                                        maximumLineCount: 3
-                                        elide: Text.ElideRight
-                                        textFormat: Text.PlainText
-                                    }
-                                }
-
-                                Rectangle {
-                                    id: dismissButton
-
-                                    width: 20
-                                    height: 20
-                                    radius: 10
-
-                                    color: dismissArea.containsMouse ? Qt.rgba( 1, 1, 1, 0.12) : "transparent"
-                                    Layout.alignment: Qt.AlignTop
-                                    z: 2
-
-                                    Text {
-                                        anchors.centerIn: parent
-                                        text: "󰅖"
-                                        font.pixelSize: 11
-                                        font.family: Fonts.font
-                                        color: Colors.on_SurfaceVariant
-                                    }
-
-                                    MouseArea {
-                                        id: dismissArea
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: NotificationService.dismiss(notifItem.notification)
-                                    }
-                                }
-                            }
+                            bodyMaximumLineCount: 3
                         }
                     }
                 }
