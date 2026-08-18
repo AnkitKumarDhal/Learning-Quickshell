@@ -90,7 +90,7 @@ PanelWindow {
             Volume              {}
             Battery             {}
             Tray                { window: root }
-            NotificationButton  {}
+            NotificationButton  { screen: root.screen }
         }
     }
 }

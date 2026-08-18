@@ -25,19 +25,7 @@ ShellRoot {
                 // ── Popup dismiss overlay ─────────────────────────────────────
                 PopupDismiss { screen: modelData }
 
-                // ── Toasts ────────────────────────────────────────────────────
-                NotificationToast { screen: modelData }
-
                 // ── Popups ────────────────────────────────────────────────────
-
-                PopupLoader {
-                    open: Popups.notificationsOpen
-                    popup: Component {
-                        NotificationPanel {
-                            screen: modelData
-                        }
-                    }
-                }
 
                 PopupLoader {
                     open: Popups.systemOpen
@@ -125,6 +113,16 @@ ShellRoot {
             }
         }
     }
+
+NotificationToast {}
+
+PopupLoader {
+    open: Popups.notificationsOpen
+
+    popup: Component {
+        NotificationPanel {}
+    }
+}
 
     // ── Global Keybinds ───────────────────────────────────────────────────────
     // Hyprland lua config bind:
