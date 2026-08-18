@@ -1,221 +1,200 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell.Networking
+
 import qs.src.theme
-import qs.src.services
-import qs.src.components
 
 Item {
     id: root
+
     required property var network
 
-    implicitHeight: innerCol.implicitHeight + 24
-    property bool _showPsk: false
+    signal networkSelected(var network)
 
-    on_ShowPskChanged: {
-        if (_showPsk) {
-            NetworkService.activePasswordInputs += 1;
-        } else {
-            NetworkService.activePasswordInputs = Math.max(0, NetworkService.activePasswordInputs - 1)
+    implicitHeight: 46
+
+    readonly property bool supportsPsk: {
+        switch (root.network.security) {
+        case WifiSecurityType.WpaPsk:
+        case WifiSecurityType.Wpa2Psk:
+        case WifiSecurityType.Sae:
+            return true;
+
+        default:
+            return false;
         }
     }
 
-    Component.onDestruction: {
-        if (_showPsk) {
-            NetworkService.activePasswordInputs = Math.max(0, NetworkService.activePasswordInputs - 1)
-        }
-    }
+    // ── Background ───────────────────────────────────────────────────────────
 
-    Connections {
-        target: root.network
-        function onConnectionFailed(reason) {
-            if (reason === ConnectionFailReason.NoSecrets) {
-                root._showPsk = true;
-            }
-        }
-    }
-
-    // Background and full-row click handler (Normal 1-click connect)
     Rectangle {
+        id: background
+
         anchors.fill: parent
+
         radius: 10
-        color: rowHover.containsMouse
-            ? Colors.surfaceContainerHighest
-            : (root.network.connected
-                ? Qt.rgba(Colors.primaryContainer.r, Colors.primaryContainer.g, Colors.primaryContainer.b, 0.3)
-                : "transparent")
 
-        Behavior on color { ColorAnimation { duration: 120 } }
+        color:
+            rootHover.containsMouse
+                ? Colors.surfaceContainerHighest
+                : root.network.connected
+                    ? Qt.rgba(
+                        Colors.primaryContainer.r,
+                        Colors.primaryContainer.g,
+                        Colors.primaryContainer.b,
+                        0.28
+                    )
+                    : "transparent"
 
-        MouseArea {
-            id: rowHover
-            anchors.fill: parent
-            enabled: !root.network.stateChanging
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: {
-                if (root.network.connected) {
-                    root.network.disconnect();
-                    root._showPsk = false;
-                } else {
-                    root._showPsk = false;
-                    root.network.connect();
-                }
+        Behavior on color {
+            ColorAnimation {
+                duration: 120
             }
         }
     }
 
-    // Content sits on top so the TextField and Lock button consume clicks safely
-    ColumnLayout {
-        id: innerCol
-        anchors { top: parent.top; left: parent.left; right: parent.right; margins: 12 }
+    // ── Click handler ────────────────────────────────────────────────────────
+
+    MouseArea {
+        id: rootHover
+
+        anchors.fill: parent
+
+        hoverEnabled: true
+
+        enabled:
+            !root.network.stateChanging
+
+        cursorShape:
+            Qt.PointingHandCursor
+
+        onClicked: {
+            if (root.network.connected) {
+                root.network.disconnect();
+            } else {
+                root.networkSelected(root.network);
+            }
+        }
+    }
+
+    // ── Content ──────────────────────────────────────────────────────────────
+
+    RowLayout {
+        anchors {
+            fill: parent
+            leftMargin: 12
+            rightMargin: 12
+        }
+
         spacing: 10
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 10
-
-            // Signal strength icon
-            Text {
-                text: {
-                    if (!root.network.connected && root.network.state === ConnectionState.Connecting) return "󱑤";
-                    const s = root.network.signalStrength ?? 0;
-                    if (s < 0.25) return "󰤟";
-                    if (s < 0.50) return "󰤢";
-                    if (s < 0.75) return "󰤥";
-                    return "󰤨";
-                }
-                color: root.network.connected ? Colors.primary : Colors.on_SurfaceVariant
-                font.pixelSize: 16
-                font.family: Fonts.fontM
-                Behavior on color { ColorAnimation { duration: 120 } }
-            }
-
-            // SSID
-            Text {
-                text: root.network.name
-                color: root.network.connected ? Colors.on_Surface : Colors.on_SurfaceVariant
-                font.pixelSize: 12
-                font.bold: root.network.connected
-                font.family: Fonts.font
-                elide: Text.ElideRight
-                Layout.fillWidth: true
-                Behavior on color { ColorAnimation { duration: 120 } }
-            }
-
-            // Interactive Lock icon / Manual Password Toggle
-            Rectangle {
-                visible: root.network.security !== WifiSecurityType.Open && !root.network.connected
-                width: 24; height: 24; radius: 12
-                color: lockHover.containsMouse ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.1) : "transparent"
-                Behavior on color { ColorAnimation { duration: 120 } }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: root._showPsk ? "󰌑" : "󰌾" // Swaps from a lock to a key when open
-                    font.family: Fonts.fontM
-                    font.pixelSize: 14
-                    color: lockHover.containsMouse || root._showPsk ? Colors.primary : Colors.outline
-                    Behavior on color { ColorAnimation { duration: 120 } }
+        Text {
+            text: {
+                if (
+                    !root.network.connected &&
+                    root.network.state === ConnectionState.Connecting
+                ) {
+                    return "󱑤";
                 }
 
-                HoverHandler { id: lockHover }
+                const signal =
+                    root.network.signalStrength ?? 0;
 
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        root._showPsk = !root._showPsk;
-                        if (root._showPsk) pskField.forceActiveFocus();
-                    }
-                }
+                if (signal < 0.25)
+                    return "󰤟";
+
+                if (signal < 0.50)
+                    return "󰤢";
+
+                if (signal < 0.75)
+                    return "󰤥";
+
+                return "󰤨";
             }
 
-            // "Connected" chip
-            Rectangle {
-                visible: root.network.connected || root.network.stateChanging
-                width: chipRow.implicitWidth + 16
-                height: 22
-                radius: 11
-                color: root.network.connected ? Colors.primary : Colors.surfaceContainerHighest
+            font.family: Fonts.fontM
+            font.pixelSize: 16
 
-                Row {
-                    id: chipRow
-                    anchors.centerIn: parent
-                    spacing: 4
-                    Text {
-                        text: root.network.connected ? "󰄵" : "󱑤"
-                        color: root.network.connected ? Colors.on_Primary : Colors.on_SurfaceVariant
-                        font.pixelSize: 10
-                        font.family: Fonts.font
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    Text {
-                        text: root.network.connected ? "Connected" : "Connecting"
-                        color: root.network.connected ? Colors.on_Primary : Colors.on_SurfaceVariant
-                        font.pixelSize: 10
-                        font.bold: true
-                        font.family: Fonts.font
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-            }
+            color:
+                root.network.connected
+                    ? Colors.primary
+                    : Colors.on_SurfaceVariant
         }
 
-        // Password Row
-        RowLayout {
-            visible: root._showPsk
+        Text {
+            text:
+                root.network.name || "Unknown network"
+
             Layout.fillWidth: true
-            Layout.topMargin: 4
-            spacing: 8
 
-            TextField {
-                id: pskField
-                Layout.fillWidth: true
-                height: 32
-                placeholderText: "Password"
-                echoMode: TextInput.Password
+            elide:
+                Text.ElideRight
+
+            font.family: Fonts.font
+            font.pixelSize: 12
+
+            font.bold:
+                root.network.connected
+
+            color:
+                root.network.connected
+                    ? Colors.on_Surface
+                    : Colors.on_SurfaceVariant
+        }
+
+        // Security indicator
+        Text {
+            visible:
+                root.network.security !== WifiSecurityType.Open
+
+            text:
+                root.supportsPsk
+                    ? "󰌾"
+                    : "󰒃"
+
+            font.family: Fonts.fontM
+            font.pixelSize: 13
+
+            color:
+                Colors.outline
+        }
+
+        // Connection state
+        Rectangle {
+            visible:
+                root.network.connected ||
+                root.network.stateChanging
+
+            width:
+                stateLabel.implicitWidth + 16
+
+            height: 22
+
+            radius: 11
+
+            color:
+                root.network.connected
+                    ? Colors.primary
+                    : Colors.surfaceContainerHighest
+
+            Text {
+                id: stateLabel
+
+                anchors.centerIn: parent
+
+                text:
+                    root.network.connected
+                        ? "Connected"
+                        : "Connecting"
+
                 font.family: Fonts.font
-                font.pixelSize: 12
-                color: Colors.on_Surface
-                placeholderTextColor: Colors.outline
+                font.pixelSize: 9
+                font.bold: true
 
-                background: Rectangle {
-                    radius: 8
-                    color: Colors.surfaceContainerHigh
-                    border.width: 1
-                    border.color: pskField.activeFocus ? Colors.primary : Colors.outline
-                    Behavior on border.color { ColorAnimation { duration: Theme.hoverFadeDuration } }
-                }
-                Keys.onReturnPressed: {
-                    if (text.length > 0) {
-                        root.network.connectWithPsk(text);
-                        text = "";
-                    }
-                }
-            }
-
-            Rectangle {
-                width: 32; height: 32; radius: 8
-                color: confirmHover.containsMouse
-                    ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.2)
-                    : Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.1)
-                Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
-                HoverHandler { id: confirmHover }
-
-                Text { anchors.centerIn: parent; text: "󰌑"; font.family: Fonts.fontM; font.pixelSize: 14; color: Colors.primary }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (pskField.text.length > 0) {
-                            root.network.connectWithPsk(pskField.text);
-                            pskField.text = "";
-                        }
-                    }
-                }
+                color:
+                    root.network.connected
+                        ? Colors.on_Primary
+                        : Colors.on_SurfaceVariant
             }
         }
     }

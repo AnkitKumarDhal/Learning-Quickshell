@@ -5,3 +5,4 @@ singleton NetworkService      1.0 NetworkService.qml
 singleton ClipboardService    1.0 ClipboardService.qml
 singleton PolkitService       1.0 PolkitService.qml
 singleton KeybindsService     1.0 KeybindsService.qml
+singleton BluetoothService    1.0 BluetoothService.qml
