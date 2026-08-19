@@ -18,7 +18,7 @@ Item {
     function reset() { pageChanged(defaultPage) }
 
     implicitWidth:  orientation === "vertical"   ? 40 : 0
-    implicitHeight: orientation === "horizontal" ? 40 : 0
+    implicitHeight: orientation === "horizontal" ? 46 : 0
 
     // ── Scroll to Cycle Tabs ──────────────────────────────────────────────────
     property bool _scrollBusy: false
@@ -44,7 +44,12 @@ Item {
     // ── Horizontal ────────────────────────────────────────────────────────────
     Row {
         id:           hRow
-        anchors.fill: parent
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+        }
+        height:       40
         visible:      root.orientation === "horizontal"
 
         Repeater {
@@ -62,9 +67,9 @@ Item {
                     width:            Math.min(parent.width - 4, hIcon.implicitWidth + (hLabel.visible ? hLabel.implicitWidth + 8 : 0) + 24)
                     height:           parent.height - 8
                     radius:           height / 2
-                    color:            hTab.isActive ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.18) 
+                    color:            hTab.isActive ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.18)
                                                     : (hHov.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent")
-                    
+
                     Behavior on color { ColorAnimation { duration: 120 } }
                 }
 
@@ -79,7 +84,7 @@ Item {
                         font.family:            Fonts.font
                         anchors.verticalCenter: parent.verticalCenter
                         color:                  hTab.isActive ? Colors.primary : (hHov.containsMouse ? Qt.rgba(1,1,1,0.75) : Qt.rgba(1,1,1,0.4))
-                        
+
                         Behavior on color { ColorAnimation { duration: 120 } }
                     }
 
@@ -92,7 +97,7 @@ Item {
                         font.family:            Fonts.font
                         anchors.verticalCenter: parent.verticalCenter
                         color:                  hTab.isActive ? Colors.primary : (hHov.containsMouse ? Qt.rgba(1,1,1,0.75) : Qt.rgba(1,1,1,0.4))
-                        
+
                         Behavior on color { ColorAnimation { duration: 120 } }
                     }
                 }
@@ -139,7 +144,7 @@ Item {
                 height: vCol.tabH
                 radius: Theme.pillRadius
                 color:  vTab.isActive ? Colors.primary : (vHov.containsMouse ? Qt.rgba(1,1,1,0.08) : "transparent")
-                
+
                 Behavior on color { ColorAnimation { duration: 120 } }
 
                 Text {
@@ -148,7 +153,7 @@ Item {
                     font.pixelSize:   16
                     font.family:      Fonts.font
                     color:            vTab.isActive ? Colors.on_Primary : Colors.primary
-                    
+
                     Behavior on color { ColorAnimation { duration: 120 } }
                 }
 
