@@ -1,247 +1,197 @@
-import Qt5Compat.GraphicalEffects
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import qs.src.theme
 
+// Full-screen overlay for the custom tray menu. The visible menu is normal
+// QML; nested submenus stay inside the same window via TrayMenuLevel.
 PanelWindow {
     id: root
 
-    property var  menuHandle: null
-    property real menuX:      0
-    property real menuY:      0
-    property bool hasCurrent: false
-    property int  animLength: 400
-    property var  animCurve:  [0.05, 0, 0.133, 0.06, 0.166, 0.4, 0.208, 0.82, 0.25, 1, 1, 1]
+    property var menuHandle: null
+    property string itemTitle: ""
+    property int menuX: 0
+    property int menuY: 0
+    property bool menuOpen: false
+    property bool closing: false
 
-    // Methods
-    function open(handle, x, y) {
-        menuHandle  = handle
-        const safeX = Math.max(8, Math.min(x - 120, Screen.width - 248))
-        menuX       = safeX
-        menuY       = y - 32
-        hasCurrent  = true
+    readonly property int menuWidth: 272
 
-        grabTimer.restart()
-    }
-
-    function close() {
-        hasCurrent       = false
-        focusGrab.active = false
-        grabTimer.stop()
-    }
-
-    // Window Config
+    visible: menuOpen || closing
     color: "transparent"
-    anchors { top: true; bottom: true; left: true; right: true }
+    exclusionMode: ExclusionMode.Ignore
+    aboveWindows: true
 
-    WlrLayershell.layer:         WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: hasCurrent ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-
-    mask: Region {
-        item: hasCurrent ? root.contentItem : null
+    anchors {
+        top: true
+        bottom: true
+        left: true
+        right: true
     }
+
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus:
+        menuOpen
+            ? WlrKeyboardFocus.Exclusive
+            : WlrKeyboardFocus.None
 
     HyprlandFocusGrab {
-        id:        focusGrab
-        windows:   [root]
+        id: focusGrab
+        windows: [root]
         onCleared: root.close()
     }
 
-    Timer {
-        id:          grabTimer
-        interval:    50
-        onTriggered: focusGrab.active = true
-    }
-
+    // The panel deliberately covers the screen while open. This background
+    // MouseArea receives only clicks that are not consumed by the menu itself.
     MouseArea {
+        id: dismissArea
         anchors.fill: parent
-        enabled:      root.hasCurrent
-        onClicked:    root.close()
+        enabled: root.menuOpen
+        z: 0
+
+        acceptedButtons:
+            Qt.LeftButton |
+            Qt.RightButton |
+            Qt.MiddleButton
+
+        onClicked: root.close()
     }
 
-    // Menu Wrapper
+    Timer {
+        id: focusTimer
+        interval: 30
+
+        onTriggered: {
+            if (root.menuOpen)
+                focusGrab.active = true
+        }
+    }
+
+    Timer {
+        id: closeTimer
+        interval: Theme.animDuration
+
+        onTriggered: {
+            root.closing = false
+            root.menuHandle = null
+            root.itemTitle = ""
+        }
+    }
+
+    function open(handle, x, y, title) {
+        if (!handle)
+            return
+
+        closeTimer.stop()
+
+        menuHandle = handle
+        itemTitle = title || "Tray"
+        menuX = x
+        menuY = y + 4
+        closing = false
+        menuOpen = true
+
+        focusTimer.restart()
+    }
+
+    function close() {
+        if (!menuOpen && !closing)
+            return
+
+        focusTimer.stop()
+
+        menuOpen = false
+        closing = true
+
+        focusGrab.active = false
+        closeTimer.restart()
+    }
+
     Item {
-        id: wrapper
+        id: keyboardHandler
+        anchors.fill: parent
+        focus: root.menuOpen
 
-        readonly property real topPad:        8
-        readonly property real bottomPad:     8
-        readonly property real contentHeight: topPad + menuColumn.implicitHeight + bottomPad
+        Keys.onEscapePressed: root.close()
+    }
 
-        x:              root.menuX
-        y:              root.menuY
-        width:          240
-        visible:        height > 0
-        clip:           true
-        implicitHeight: root.hasCurrent ? Math.max(contentHeight, 52) : 0
+    // The menu level owns its own recursive submenu hierarchy. x/y are kept
+    // relative to this full-screen panel, which also makes multi-monitor use
+    // predictable because the panel is explicitly bound to TopBar's screen.
+    Item {
+        id: menuContainer
 
-        Behavior on implicitHeight {
-            NumberAnimation {
-                duration:           root.animLength
-                easing.type:        Easing.BezierSpline
-                easing.bezierCurve: root.animCurve
-            }
-        }
+        x: menuCard.x
+        y: menuCard.y
+        width: menuCard.width
+        height: menuCard.height
 
-        Rectangle {
-            id:                menuBg
-            anchors.fill:      parent
-            color:             Colors.background
-            clip:              true
-            bottomLeftRadius:  14
-            bottomRightRadius: 14
+        visible: root.menuOpen || root.closing
 
-            QsMenuOpener {
-                id:   opener
-                menu: root.menuHandle
-            }
+        TrayMenuLevel {
+            id: menuCard
 
-            Rectangle {
-                id: highlight
+            x: 0
+            y: 0
 
-                property real targetY: 0
-                property bool active:  false
+            menuHandle: root.menuHandle
+            menuTitle: root.itemTitle
+            menuWidth: root.menuWidth
+            hostWidth: root.width
+            hostHeight: root.height
+            hostX: menuContainer.x
 
-                x:       8
-                y:       menuColumn.y + targetY
-                width:   parent.width - 16
-                height:  36
-                radius:  8
-                color:   Colors.primary
-                opacity: active ? 0.15 : 0
+            property real targetScale:
+                root.menuOpen ? 1 : 0.96
 
-                Behavior on y       { NumberAnimation { duration: 200; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
-                Behavior on opacity { NumberAnimation { duration: 150 } }
-            }
+            scale: targetScale
+            transformOrigin: Item.TopRight
 
-            Column {
-                id:              menuColumn
-                spacing:         2
-                anchors {
-                    top:         parent.top
-                    left:        parent.left
-                    right:       parent.right
-                    topMargin:   8
-                    leftMargin:  8
-                    rightMargin: 8
-                }
-
-                onChildrenChanged: highlight.active = false
-
-                Repeater {
-                    model: opener.children
-
-                    delegate: Item {
-                        id: menuItem
-
-                        required property var modelData
-                        required property int index
-
-                        property bool isSeparator: modelData.isSeparator
-                        property bool hasChildren: modelData.hasChildren
-
-                        width:  menuColumn.width
-                        height: isSeparator ? 12 : 36
-
-                        Rectangle {
-                            visible:          isSeparator
-                            anchors.centerIn: parent
-                            width:            parent.width - 16
-                            height:           1
-                            color:            Colors.primary
-                            opacity:          0.5
-                        }
-
-                        Rectangle {
-                            visible: !isSeparator && highlight.active && highlight.targetY === menuItem.y
-                            width:   3
-                            height:  16
-                            radius:  2
-                            color:   Colors.primary
-                            anchors {
-                                left:           parent.left
-                                leftMargin:     4
-                                verticalCenter: parent.verticalCenter
-                            }
-                        }
-
-                        RowLayout {
-                            visible: !isSeparator
-                            spacing: 12
-                            anchors {
-                                fill:        parent
-                                leftMargin:  12
-                                rightMargin: 12
-                            }
-
-                            Item {
-                                Layout.preferredWidth:  20
-                                Layout.preferredHeight: 20
-
-                                Image {
-                                    anchors.centerIn: parent
-                                    width:            16
-                                    height:           16
-                                    source:           modelData.icon || ""
-                                    fillMode:         Image.PreserveAspectFit
-                                    visible:          modelData.icon !== undefined && modelData.icon !== ""
-                                    layer.enabled:    true
-                                    layer.effect:     ColorOverlay { color: Colors.primary }
-                                }
-                            }
-
-                            Text {
-                                text:              modelData.text || ""
-                                color:             Colors.primary
-                                font.pixelSize:    13
-                                font.bold:         true
-                                font.family:       Fonts.font
-                                verticalAlignment: Text.AlignVCenter
-                                elide:             Text.ElideRight
-                                Layout.fillWidth:  true
-                            }
-
-                            Text {
-                                visible:           menuItem.hasChildren
-                                text:              "›"
-                                color:             Colors.primary
-                                font.pixelSize:    16
-                                font.bold:         true
-                                opacity:           0.7
-                                verticalAlignment: Text.AlignVCenter
-                            }
-                        }
-
-                        // QsMenuAnchor for native submenu display
-                        QsMenuAnchor {
-                            id:   anchor
-                            menu: menuItem.hasChildren ? menuItem.modelData : null
-
-                            anchor.window:      root
-                            anchor.rect.x:      menuItem.x + wrapper.x + menuBg.x + menuColumn.x + menuItem.width
-                            anchor.rect.y:      menuItem.y + wrapper.y + menuBg.y + menuColumn.y
-                            anchor.rect.width:  0
-                            anchor.rect.height: menuItem.height
-                            anchor.edges:       Edges.Right | Edges.Top
-                        }
-
-                        MouseArea {
-                            id:           itemMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape:  isSeparator ? Qt.ArrowCursor : Qt.PointingHandCursor
-
-                            onEntered: { if (!menuItem.isSeparator) { highlight.targetY = menuItem.y; highlight.active = true } }
-                            onClicked: {
-                                if (menuItem.isSeparator) return
-                                menuItem.hasChildren ? anchor.open() : (menuItem.modelData.triggered(), root.close())
-                            }
-                        }
-                    }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.animDuration
+                    easing.type: Easing.OutCubic
                 }
             }
+
+            Behavior on targetScale {
+                NumberAnimation {
+                    duration: Theme.animDuration
+                    easing.type: Easing.OutCubic
+                }
+            }
+
+            opacity: root.menuOpen ? 1 : 0
+
+            onTriggered: root.close()
         }
+    }
+
+    // Position the root menu using a width-aware clamping strategy.
+    Binding {
+        target: menuContainer
+        property: "x"
+
+        value: Math.max(
+            8,
+            Math.min(
+                root.menuX - root.menuWidth + 12,
+                root.width - root.menuWidth - 8
+            )
+        )
+    }
+
+    Binding {
+        target: menuContainer
+        property: "y"
+
+        value: Math.max(
+            8,
+            Math.min(
+                root.menuY,
+                root.height - menuContainer.height - 8
+            )
+        )
     }
 }
