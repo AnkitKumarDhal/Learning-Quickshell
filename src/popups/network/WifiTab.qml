@@ -12,6 +12,8 @@ ColumnLayout {
     id: root
 
     property var selectedNetwork: null
+    property var pendingKnownNetwork: null
+    property bool showPassword: false
 
     signal networkSelected(var network)
 
@@ -30,6 +32,7 @@ ColumnLayout {
         8
 
     onSelectedNetworkChanged: {
+        root.showPassword = false
         if (root.selectedNetworkSupportsPsk) {
             Qt.callLater(function() {
                 passwordField.forceActiveFocus();
@@ -37,10 +40,32 @@ ColumnLayout {
         }
     }
 
+    // A remembered network is normally connected using its
+    // saved NetworkManager credentials. Only fall back to the
+    // password editor when those saved credentials are missing.
+    Connections {
+        target:
+            root.pendingKnownNetwork
+
+        function onConnectionFailed(reason) {
+            if (
+                reason === ConnectionFailReason.NoSecrets &&
+                root.pendingKnownNetwork !== null
+            ) {
+                root.selectedNetwork =
+                    root.pendingKnownNetwork;
+
+                root.pendingKnownNetwork =
+                    null;
+            }
+        }
+    }
+
     // ── Wi-Fi models ─────────────────────────────────────────────────────────
 
     ScriptModel {
-        id: wifiConnectedModel
+        id:
+            wifiConnectedModel
 
         objectProp:
             "name"
@@ -52,16 +77,21 @@ ColumnLayout {
             return [
                 ...NetworkService.wifiDevice.networks.values
             ]
-            .filter(network => network.connected)
+            .filter(
+                network =>
+                    network.connected
+            )
             .sort(
                 (a, b) =>
-                    b.signalStrength - a.signalStrength
+                    b.signalStrength -
+                    a.signalStrength
             );
         }
     }
 
     ScriptModel {
-        id: wifiAvailableModel
+        id:
+            wifiAvailableModel
 
         objectProp:
             "name"
@@ -73,13 +103,15 @@ ColumnLayout {
             return [
                 ...NetworkService.wifiDevice.networks.values
             ]
-            .filter(network =>
-                !network.connected &&
-                network !== root.selectedNetwork
+            .filter(
+                network =>
+                    !network.connected &&
+                    network !== root.selectedNetwork
             )
             .sort(
                 (a, b) =>
-                    b.signalStrength - a.signalStrength
+                    b.signalStrength -
+                    a.signalStrength
             );
         }
     }
@@ -214,7 +246,7 @@ ColumnLayout {
             spacing:
                 6
 
-            // ── Connected ────────────────────────────────────────────────────
+            // ── Connected ───────────────────────────────────────────────────
 
             Text {
                 visible:
@@ -334,18 +366,33 @@ ColumnLayout {
                         Layout.fillWidth:
                             true
 
-                        Text {
-                            text:
-                                "󰤨"
+                        spacing:
+                            8
 
-                            font.family:
-                                Fonts.fontM
+                        // Fixed icon area keeps the SSID perfectly aligned.
+                        Item {
+                            Layout.preferredWidth:
+                                24
 
-                            font.pixelSize:
-                                16
+                            Layout.preferredHeight:
+                                28
 
-                            color:
-                                Colors.on_PrimaryContainer
+                            Text {
+                                anchors.centerIn:
+                                    parent
+
+                                text:
+                                    "󰤨"
+
+                                font.family:
+                                    Fonts.fontM
+
+                                font.pixelSize:
+                                    18
+
+                                color:
+                                    Colors.on_PrimaryContainer
+                            }
                         }
 
                         ColumnLayout {
@@ -359,6 +406,12 @@ ColumnLayout {
                                 text:
                                     root.selectedNetwork?.name ??
                                     ""
+
+                                Layout.fillWidth:
+                                    true
+
+                                elide:
+                                    Text.ElideRight
 
                                 font.family:
                                     Fonts.font
@@ -386,24 +439,38 @@ ColumnLayout {
                                     9
 
                                 color:
-                                    Colors.on_SurfaceVariant
+                                    Colors.surfaceContainerHighest
                             }
+                        }
+
+                        // Explicit spacer guarantees that the close button stays
+                        // at the far right of the editor.
+                        Item {
+                            Layout.fillWidth:
+                                true
                         }
 
                         Rectangle {
                             width:
-                                24
+                                28
 
                             height:
-                                24
+                                28
 
                             radius:
-                                12
+                                14
 
                             color:
                                 closeConnectHover.hovered
                                     ? Colors.surfaceContainerHighest
                                     : "transparent"
+
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration:
+                                        Theme.hoverFadeDuration
+                                }
+                            }
 
                             HoverHandler {
                                 id:
@@ -421,7 +488,7 @@ ColumnLayout {
                                     Fonts.fontM
 
                                 font.pixelSize:
-                                    13
+                                    14
 
                                 color:
                                     Colors.on_PrimaryContainer
@@ -462,11 +529,13 @@ ColumnLayout {
                             height:
                                 34
 
+                            rightPadding: 42
+
                             placeholderText:
                                 "Password"
 
                             echoMode:
-                                TextInput.Password
+                                showPassword ? TextInput.Normal : TextInput.Password
 
                             font.family:
                                 Fonts.font
@@ -480,22 +549,102 @@ ColumnLayout {
                             placeholderTextColor:
                                 Colors.outline
 
-                            background:
-                                Rectangle {
-                                    radius:
-                                        8
+                            background: Rectangle {
+                                radius: 8
+                                color: Colors.surfaceContainer
+                                border.width: passwordField.activeFocus ? 1 : 0
+                                border.color: Colors.primary
+                            }
+
+                            Rectangle {
+                                id:
+                                    passwordVisibilityButton
+
+                                anchors {
+                                    top:
+                                        parent.top
+
+                                    right:
+                                        parent.right
+
+                                    bottom:
+                                        parent.bottom
+                                }
+
+                                width:
+                                    42
+
+                                color:
+                                    "transparent"
+
+                                z:
+                                    10
+
+                                HoverHandler {
+                                    id:
+                                        passwordVisibilityHover
+
+                                    cursorShape:
+                                        Qt.PointingHandCursor
+                                }
+
+                                Text {
+                                    anchors.centerIn:
+                                        parent
+
+                                    text:
+                                        root.showPassword
+                                            ? "󰈉"
+                                            : "󰈈"
+
+                                    font.family:
+                                        Fonts.fontM
+
+                                    font.pixelSize:
+                                        15
 
                                     color:
-                                        Colors.surfaceContainer
+                                        passwordVisibilityHover.hovered
+                                            ? Colors.primary
+                                            : Colors.outline
 
-                                    border.width:
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration:
+                                                Theme.hoverFadeDuration
+                                        }
+                                    }
+                                }
+
+                                MouseArea {
+                                    anchors.fill:
+                                        parent
+
+                                    z:
                                         1
 
-                                    border.color:
-                                        passwordField.activeFocus
-                                            ? Colors.primary
-                                            : Colors.outlineVariant
+                                    acceptedButtons:
+                                        Qt.LeftButton
+
+                                    cursorShape:
+                                        Qt.PointingHandCursor
+
+                                    onPressed:
+                                        mouse.accepted = true
+
+                                    onReleased:
+                                        mouse.accepted = true
+
+                                    onClicked: {
+                                        mouse.accepted = true;
+
+                                        root.showPassword =
+                                            !root.showPassword;
+
+                                        passwordField.forceActiveFocus();
+                                    }
                                 }
+                            }
 
                             Keys.onReturnPressed: {
                                 if (
@@ -622,7 +771,7 @@ ColumnLayout {
                 }
             }
 
-            // ── Available ────────────────────────────────────────────────────
+            // ── Available ───────────────────────────────────────────────────
 
             Text {
                 visible:
@@ -666,16 +815,30 @@ ColumnLayout {
 
                         onNetworkSelected:
                             (network) => {
+                                // Open networks connect immediately.
                                 if (
                                     network.security ===
                                     WifiSecurityType.Open
                                 ) {
                                     network.connect();
-                                } else {
-                                    root.networkSelected(
-                                        network
-                                    );
+                                    return;
                                 }
+
+                                // Known networks already have saved
+                                // NetworkManager connection settings.
+                                if (network.known) {
+                                    root.pendingKnownNetwork =
+                                        network;
+
+                                    network.connect();
+                                    return;
+                                }
+
+                                // Unknown secured network:
+                                // show the password editor.
+                                root.networkSelected(
+                                    network
+                                );
                             }
                     }
             }
