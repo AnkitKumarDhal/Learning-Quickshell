@@ -9,142 +9,78 @@ import qs.src.theme
 ColumnLayout {
     id: root
 
-    Layout.fillWidth:
-        true
-
-    spacing:
-        8
-
-    // ── Bluetooth models ─────────────────────────────────────────────────────
+    Layout.fillWidth: true
+    spacing: 8
 
     ScriptModel {
-        id:
-            btConnectedModel
+        id: btConnectedModel
 
-        objectProp:
-            "address"
-
-        values:
-            NetworkService.bluetooth.connectedDevices
+        objectProp: "address"
+        values: NetworkService.bluetooth.connectedDevices
     }
 
     ScriptModel {
-        id:
-            btPairedModel
+        id: btPairedModel
 
-        objectProp:
-            "address"
-
-        values:
-            NetworkService.bluetooth.pairedDevices
+        objectProp: "address"
+        values: NetworkService.bluetooth.pairedDevices
     }
 
     ScriptModel {
-        id:
-            btAvailableModel
+        id: btAvailableModel
 
-        objectProp:
-            "address"
-
-        values:
-            NetworkService.bluetooth.availableDevices
+        objectProp: "address"
+        values: NetworkService.bluetooth.availableDevices
     }
-
-    // ── Header / Scan ────────────────────────────────────────────────────────
 
     RowLayout {
-        Layout.fillWidth:
-            true
+        Layout.fillWidth: true
 
         Text {
-            text:
-                NetworkService.bluetooth.scanning
-                    ? "Scanning for devices…"
-                    : "Bluetooth devices"
+            text: NetworkService.bluetooth.scanning ? "Scanning for devices…" : "Bluetooth devices"
 
-            font.family:
-                Fonts.font
+            font.family: Fonts.font
+            font.pixelSize: 14
+            font.bold: true
 
-            font.pixelSize:
-                14
+            color: Colors.on_SurfaceVariant
 
-            font.bold:
-                true
-
-            color:
-                Colors.on_SurfaceVariant
-
-            Layout.fillWidth:
-                true
+            Layout.fillWidth: true
         }
 
         Rectangle {
-            width:
-                scanLabel.implicitWidth + 20
+            width: scanLabel.implicitWidth + 20
+            height: 28
+            radius: 14
 
-            height:
-                28
+            color: NetworkService.bluetooth.scanning || btScanHover.hovered ? Colors.primary : Colors.surfaceContainerHighest
 
-            radius:
-                14
-
-            color:
-                NetworkService.bluetooth.scanning ||
-                btScanHover.hovered
-                    ? Colors.primary
-                    : Colors.surfaceContainerHighest
-
-            Behavior on color {
-                ColorAnimation {
-                    duration:
-                        Theme.hoverFadeDuration
-                }
-            }
+            Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
             Text {
-                id:
-                    scanLabel
+                id: scanLabel
 
-                anchors.centerIn:
-                    parent
+                anchors.centerIn: parent
+                text: NetworkService.bluetooth.scanning ? "Stop" : "Scan"
 
-                text:
-                    NetworkService.bluetooth.scanning
-                        ? "Stop"
-                        : "Scan"
+                font.family: Fonts.font
+                font.pixelSize: 10
+                font.bold: true
 
-                font.family:
-                    Fonts.font
-
-                font.pixelSize:
-                    10
-
-                font.bold:
-                    true
-
-                color:
-                    NetworkService.bluetooth.scanning ||
-                    btScanHover.hovered
-                        ? Colors.on_Primary
-                        : Colors.on_Surface
+                color: NetworkService.bluetooth.scanning || btScanHover.hovered ? Colors.on_Primary : Colors.on_Surface
             }
 
             HoverHandler {
-                id:
-                    btScanHover
+                id: btScanHover
             }
 
             MouseArea {
-                anchors.fill:
-                    parent
+                anchors.fill: parent
 
-                cursorShape:
-                    Qt.PointingHandCursor
+                cursorShape: Qt.PointingHandCursor
 
                 onClicked: {
-                    if (
-                        NetworkService.bluetooth.scanning
-                    ) {
+                    if (NetworkService.bluetooth.scanning) {
                         NetworkService.bluetooth.stopScan();
                     } else {
                         NetworkService.bluetooth.scan();
@@ -155,78 +91,45 @@ ColumnLayout {
     }
 
     Flickable {
-        Layout.fillWidth:
-            true
+        Layout.fillWidth: true
+        Layout.preferredHeight: Math.min(contentColumn.implicitHeight, 320)
 
-        Layout.preferredHeight:
-            Math.min(
-                contentColumn.implicitHeight,
-                320
-            )
+        contentHeight: contentColumn.implicitHeight
+        clip: true
 
-        contentHeight:
-            contentColumn.implicitHeight
-
-        clip:
-            true
-
-        boundsBehavior:
-            Flickable.StopAtBounds
+        boundsBehavior: Flickable.StopAtBounds
 
         ColumnLayout {
-            id:
-                contentColumn
+            id: contentColumn
 
-            width:
-                parent.width
-
-            spacing:
-                6
-
-            // ── Connected ───────────────────────────────────────────────────
+            width: parent.width
+            spacing: 6
 
             Text {
-                visible:
-                    btConnectedModel.values.length > 0
+                visible: btConnectedModel.values.length > 0
+                text: "Connected"
 
-                text:
-                    "Connected"
+                font.family: Fonts.font
+                font.pixelSize: 10
+                font.bold: true
 
-                font.family:
-                    Fonts.font
-
-                font.pixelSize:
-                    10
-
-                font.bold:
-                    true
-
-                color:
-                    Colors.on_SurfaceVariant
-
-                topPadding:
-                    2
+                color: Colors.on_SurfaceVariant
+                topPadding: 2
             }
 
             Repeater {
-                model:
-                    btConnectedModel
+                model: btConnectedModel
 
                 delegate:
                     Rectangle {
                         required property var modelData
 
-                        Layout.fillWidth:
-                            true
+                        Layout.fillWidth: true
 
-                        implicitHeight:
-                            52
+                        implicitHeight: 52
+                        radius: 10
 
-                        radius:
-                            10
-
-                        color:
-                            connectedHover.hovered
+                        color: connectedHover.hovered
                                 ? Colors.surfaceContainerHighest
                                 : Qt.rgba(
                                     Colors.primaryContainer.r,
@@ -235,580 +138,325 @@ ColumnLayout {
                                     0.28
                                 )
 
-                        Behavior on color {
-                            ColorAnimation {
-                                duration:
-                                    Theme.hoverFadeDuration
-                            }
-                        }
+                        Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                         HoverHandler {
-                            id:
-                                connectedHover
+                            id: connectedHover
                         }
 
                         RowLayout {
                             anchors {
-                                fill:
-                                    parent
-
-                                leftMargin:
-                                    12
-
-                                rightMargin:
-                                    10
+                                fill: parent
+                                leftMargin: 12
+                                rightMargin: 10
                             }
 
-                            spacing:
-                                9
+                            spacing: 9
 
                             Text {
-                                text:
-                                    modelData.icon.includes(
-                                        "headphones"
-                                    )
+                                text: modelData.icon.includes("headphones")
                                         ? "󰋋"
-                                        : modelData.icon.includes(
-                                            "keyboard"
-                                        )
+                                        : modelData.icon.includes("keyboard")
                                             ? "󰌌"
-                                            : modelData.icon.includes(
-                                                "mouse"
-                                            )
+                                            : modelData.icon.includes("mouse")
                                                 ? "󰍽"
                                                 : "󰂯"
 
-                                font.family:
-                                    Fonts.fontM
+                                font.family: Fonts.fontM
+                                font.pixelSize: 17
 
-                                font.pixelSize:
-                                    17
-
-                                color:
-                                    Colors.primary
+                                color: Colors.primary
                             }
 
                             ColumnLayout {
-                                Layout.fillWidth:
-                                    true
+                                Layout.fillWidth: true
 
-                                spacing:
-                                    1
+                                spacing: 1
 
                                 Text {
-                                    text:
-                                        modelData.name
+                                    text: modelData.name
 
-                                    font.family:
-                                        Fonts.font
+                                    font.family: Fonts.font
+                                    font.pixelSize: 11
+                                    font.bold: true
 
-                                    font.pixelSize:
-                                        11
+                                    color: Colors.on_Surface
+                                    elide: Text.ElideRight
 
-                                    font.bold:
-                                        true
-
-                                    color:
-                                        Colors.on_Surface
-
-                                    elide:
-                                        Text.ElideRight
-
-                                    Layout.fillWidth:
-                                        true
+                                    Layout.fillWidth: true
                                 }
 
                                 Text {
-                                    text:
-                                        modelData.batteryAvailable
-                                            ? Math.round(
-                                                modelData.battery *
-                                                100
-                                            ) + "%"
-                                            : "Connected"
+                                    text: modelData.batteryAvailable ? Math.round(modelData.battery * 100) + "%" : "Connected"
 
-                                    font.family:
-                                        Fonts.font
-
-                                    font.pixelSize:
-                                        9
-
-                                    color:
-                                        Colors.on_SurfaceVariant
+                                    font.family: Fonts.font
+                                    font.pixelSize: 9
+                                    color: Colors.on_SurfaceVariant
                                 }
                             }
 
                             Rectangle {
-                                width:
-                                    disconnectLabel.implicitWidth +
-                                    18
+                                width: disconnectLabel.implicitWidth + 18
+                                height: 24
+                                radius: 12
 
-                                height:
-                                    24
-
-                                radius:
-                                    12
-
-                                color:
-                                    disconnectHover.hovered
-                                        ? Colors.primary
-                                        : Colors.primary
+                                color: disconnectHover.hovered ? Colors.primary : Colors.primary
 
                                 Text {
-                                    id:
-                                        disconnectLabel
+                                    id: disconnectLabel
 
-                                    anchors.centerIn:
-                                        parent
+                                    anchors.centerIn: parent
+                                    text: "Disconnect"
 
-                                    text:
-                                        "Disconnect"
+                                    font.family: Fonts.font
+                                    font.pixelSize: 9
+                                    font.bold: true
 
-                                    font.family:
-                                        Fonts.font
-
-                                    font.pixelSize:
-                                        9
-
-                                    font.bold:
-                                        true
-
-                                    color:
-                                        Colors.on_Primary
+                                    color: Colors.on_Primary
                                 }
 
                                 HoverHandler {
-                                    id:
-                                        disconnectHover
+                                    id: disconnectHover
                                 }
 
                                 MouseArea {
-                                    anchors.fill:
-                                        parent
+                                    anchors.fill: parent
 
-                                    cursorShape:
-                                        Qt.PointingHandCursor
+                                    cursorShape: Qt.PointingHandCursor
 
-                                    onClicked:
-                                        NetworkService.bluetooth.disconnect(
-                                            modelData.address
-                                        )
+                                    onClicked: NetworkService.bluetooth.disconnect(modelData.address)
                                 }
                             }
                         }
                     }
             }
 
-            // ── Paired ───────────────────────────────────────────────────────
-
             Text {
-                visible:
-                    btPairedModel.values.length > 0
+                visible: btPairedModel.values.length > 0
+                text: "Paired devices"
 
-                text:
-                    "Paired devices"
+                font.family: Fonts.font
+                font.pixelSize: 10
+                font.bold: true
 
-                font.family:
-                    Fonts.font
+                color: Colors.on_SurfaceVariant
 
-                font.pixelSize:
-                    10
-
-                font.bold:
-                    true
-
-                color:
-                    Colors.on_SurfaceVariant
-
-                topPadding:
-                    6
+                topPadding: 6
             }
 
             Repeater {
-                model:
-                    btPairedModel
+                model: btPairedModel
 
                 delegate:
                     Rectangle {
                         required property var modelData
 
-                        Layout.fillWidth:
-                            true
+                        Layout.fillWidth: true
+                        implicitHeight: 46
+                        radius: 10
 
-                        implicitHeight:
-                            46
+                        color: pairedHover.hovered ? Colors.surfaceContainerHighest : "transparent"
 
-                        radius:
-                            10
-
-                        color:
-                            pairedHover.hovered
-                                ? Colors.surfaceContainerHighest
-                                : "transparent"
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration:
-                                    Theme.hoverFadeDuration
-                            }
-                        }
+                        Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                         HoverHandler {
-                            id:
-                                pairedHover
+                            id: pairedHover
                         }
 
                         RowLayout {
                             anchors {
-                                fill:
-                                    parent
+                                fill: parent
 
-                                leftMargin:
-                                    12
-
-                                rightMargin:
-                                    10
+                                leftMargin: 12
+                                rightMargin: 10
                             }
 
-                            spacing:
-                                9
+                            spacing: 9
 
                             Text {
-                                text:
-                                    "󰂯"
+                                text: "󰂯"
 
-                                font.family:
-                                    Fonts.fontM
+                                font.family: Fonts.fontM
+                                font.pixelSize: 16
 
-                                font.pixelSize:
-                                    16
-
-                                color:
-                                    Colors.on_SurfaceVariant
+                                color: Colors.on_SurfaceVariant
                             }
 
                             Text {
-                                text:
-                                    modelData.name
+                                text: modelData.name
 
-                                font.family:
-                                    Fonts.font
+                                font.family: Fonts.font
+                                font.pixelSize: 11
 
-                                font.pixelSize:
-                                    11
+                                color: Colors.on_SurfaceVariant
+                                elide: Text.ElideRight
 
-                                color:
-                                    Colors.on_SurfaceVariant
-
-                                elide:
-                                    Text.ElideRight
-
-                                Layout.fillWidth:
-                                    true
+                                Layout.fillWidth: true
                             }
 
                             Rectangle {
-                                width:
-                                    connectLabel.implicitWidth +
-                                    18
+                                width: connectLabel.implicitWidth + 18
+                                height: 24
+                                radius: 12
 
-                                height:
-                                    24
+                                color: pairedConnectHover.hovered ? Colors.primary : Colors.primaryContainer
 
-                                radius:
-                                    12
-
-                                color:
-                                    pairedConnectHover.hovered
-                                        ? Colors.primary
-                                        : Colors.primaryContainer
-
-                                Behavior on color {
-                                    ColorAnimation {
-                                        duration:
-                                            Theme.hoverFadeDuration
-                                    }
-                                }
+                                Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                                 HoverHandler {
-                                    id:
-                                        pairedConnectHover
+                                    id: pairedConnectHover
                                 }
 
                                 Text {
-                                    id:
-                                        connectLabel
+                                    id: connectLabel
 
-                                    anchors.centerIn:
-                                        parent
+                                    anchors.centerIn: parent
+                                    text: "Connect"
 
-                                    text:
-                                        "Connect"
+                                    font.family: Fonts.font
+                                    font.pixelSize: 9
+                                    font.bold: true
 
-                                    font.family:
-                                        Fonts.font
-
-                                    font.pixelSize:
-                                        9
-
-                                    font.bold:
-                                        true
-
-                                    color:
-                                        pairedConnectHover.hovered
-                                            ? Colors.on_Primary
-                                            : Colors.on_PrimaryContainer
+                                    color: pairedConnectHover.hovered ? Colors.on_Primary : Colors.on_PrimaryContainer
                                 }
 
                                 MouseArea {
-                                    anchors.fill:
-                                        parent
+                                    anchors.fill: parent
 
-                                    cursorShape:
-                                        Qt.PointingHandCursor
+                                    cursorShape: Qt.PointingHandCursor
 
-                                    onClicked:
-                                        NetworkService.bluetooth.connect(
-                                            modelData.address
-                                        )
+                                    onClicked: NetworkService.bluetooth.connect(modelData.address)
                                 }
                             }
 
                             Rectangle {
-                                width:
-                                    26
+                                width: 26
+                                height: 26
+                                radius: 13
 
-                                height:
-                                    26
+                                color: removeHover.hovered ? Colors.errorContainer : "transparent"
 
-                                radius:
-                                    13
-
-                                color:
-                                    removeHover.hovered
-                                        ? Colors.errorContainer
-                                        : "transparent"
-
-                                Behavior on color {
-                                    ColorAnimation {
-                                        duration:
-                                            Theme.hoverFadeDuration
-                                    }
-                                }
+                                Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                                 HoverHandler {
-                                    id:
-                                        removeHover
+                                    id: removeHover
                                 }
 
                                 Text {
-                                    anchors.centerIn:
-                                        parent
+                                    anchors.centerIn: parent
+                                    text: "󰆴"
 
-                                    text:
-                                        "󰆴"
+                                    font.family: Fonts.fontM
+                                    font.pixelSize: 13
 
-                                    font.family:
-                                        Fonts.fontM
-
-                                    font.pixelSize:
-                                        13
-
-                                    color:
-                                        removeHover.hovered
-                                            ? Colors.on_ErrorContainer
-                                            : Colors.outline
+                                    color: removeHover.hovered ? Colors.on_ErrorContainer : Colors.outline
                                 }
 
                                 MouseArea {
-                                    anchors.fill:
-                                        parent
+                                    anchors.fill: parent
 
-                                    cursorShape:
-                                        Qt.PointingHandCursor
+                                    cursorShape: Qt.PointingHandCursor
 
-                                    onClicked:
-                                        NetworkService.bluetooth.remove(
-                                            modelData.address
-                                        )
+                                    onClicked: NetworkService.bluetooth.remove(modelData.address)
                                 }
                             }
                         }
                     }
             }
 
-            // ── Nearby ───────────────────────────────────────────────────────
-
             Text {
-                visible:
-                    btAvailableModel.values.length > 0
+                visible: btAvailableModel.values.length > 0
+                text: "Nearby devices"
 
-                text:
-                    "Nearby devices"
+                font.family: Fonts.font
+                font.pixelSize: 10
+                font.bold: true
 
-                font.family:
-                    Fonts.font
-
-                font.pixelSize:
-                    10
-
-                font.bold:
-                    true
-
-                color:
-                    Colors.on_SurfaceVariant
-
-                topPadding:
-                    6
+                color: Colors.on_SurfaceVariant
+                topPadding: 6
             }
 
             Repeater {
-                model:
-                    btAvailableModel
+                model: btAvailableModel
 
                 delegate:
                     Rectangle {
                         required property var modelData
 
-                        Layout.fillWidth:
-                            true
+                        Layout.fillWidth: true
+                        implicitHeight: 46
+                        radius: 10
 
-                        implicitHeight:
-                            46
+                        color: availableHover.hovered ? Colors.surfaceContainerHighest : "transparent"
 
-                        radius:
-                            10
-
-                        color:
-                            availableHover.hovered
-                                ? Colors.surfaceContainerHighest
-                                : "transparent"
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration:
-                                    Theme.hoverFadeDuration
-                            }
-                        }
+                        Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                         HoverHandler {
-                            id:
-                                availableHover
+                            id: availableHover
                         }
 
                         RowLayout {
                             anchors {
-                                fill:
-                                    parent
-
-                                leftMargin:
-                                    12
-
-                                rightMargin:
-                                    10
+                                fill: parent
+                                leftMargin: 12
+                                rightMargin: 10
                             }
 
-                            spacing:
-                                9
+                            spacing: 9
 
                             Text {
-                                text:
-                                    "󰂯"
+                                text: "󰂯"
 
-                                font.family:
-                                    Fonts.fontM
+                                font.family: Fonts.fontM
+                                font.pixelSize: 16
 
-                                font.pixelSize:
-                                    16
-
-                                color:
-                                    Colors.on_SurfaceVariant
+                                color: Colors.on_SurfaceVariant
                             }
 
                             Text {
-                                text:
-                                    modelData.name
+                                text: modelData.name
 
-                                font.family:
-                                    Fonts.font
+                                font.family: Fonts.font
+                                font.pixelSize: 11
 
-                                font.pixelSize:
-                                    11
+                                color: Colors.on_SurfaceVariant
+                                elide: Text.ElideRight
 
-                                color:
-                                    Colors.on_SurfaceVariant
-
-                                elide:
-                                    Text.ElideRight
-
-                                Layout.fillWidth:
-                                    true
+                                Layout.fillWidth: true
                             }
 
                             Rectangle {
-                                width:
-                                    pairLabel.implicitWidth +
-                                    18
+                                width: pairLabel.implicitWidth + 18
+                                height: 24
+                                radius: 12
 
-                                height:
-                                    24
+                                color: availablePairHover.hovered ? Colors.primaryContainer : Colors.primary
 
-                                radius:
-                                    12
-
-                                color:
-                                    availablePairHover.hovered
-                                        ? Colors.primaryContainer
-                                        : Colors.primary
-
-                                Behavior on color {
-                                    ColorAnimation {
-                                        duration:
-                                            Theme.hoverFadeDuration
-                                    }
-                                }
+                                Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                                 HoverHandler {
-                                    id:
-                                        availablePairHover
+                                    id: availablePairHover
                                 }
 
                                 Text {
-                                    id:
-                                        pairLabel
+                                    id: pairLabel
 
-                                    anchors.centerIn:
-                                        parent
+                                    anchors.centerIn: parent
+                                    text: "Pair"
 
-                                    text:
-                                        "Pair"
+                                    font.family: Fonts.font
+                                    font.pixelSize: 9
+                                    font.bold: true
 
-                                    font.family:
-                                        Fonts.font
-
-                                    font.pixelSize:
-                                        9
-
-                                    font.bold:
-                                        true
-
-                                    color:
-                                        availablePairHover.hovered
-                                            ? Colors.on_PrimaryContainer
-                                            : Colors.on_Primary
+                                    color: availablePairHover.hovered ? Colors.on_PrimaryContainer : Colors.on_Primary
                                 }
 
                                 MouseArea {
-                                    anchors.fill:
-                                        parent
+                                    anchors.fill: parent
 
-                                    cursorShape:
-                                        Qt.PointingHandCursor
+                                    cursorShape: Qt.PointingHandCursor
 
-                                    onClicked:
-                                        NetworkService.bluetooth.pair(
-                                            modelData.address
-                                        )
+                                    onClicked: NetworkService.bluetooth.pair(modelData.address)
                                 }
                             }
                         }
@@ -822,54 +470,31 @@ ColumnLayout {
                     btPairedModel.values.length === 0 &&
                     btAvailableModel.values.length === 0
 
-                Layout.alignment:
-                    Qt.AlignHCenter
+                Layout.alignment: Qt.AlignHCenter
+                text: "No Bluetooth devices"
 
-                text:
-                    "No Bluetooth devices"
+                font.family: Fonts.font
+                font.pixelSize: 10
 
-                font.family:
-                    Fonts.font
+                color: Colors.outline
 
-                font.pixelSize:
-                    10
-
-                color:
-                    Colors.outline
-
-                topPadding:
-                    12
-
-                bottomPadding:
-                    12
+                topPadding: 12
+                bottomPadding: 12
             }
 
             Text {
-                visible:
-                    !NetworkService.bluetooth.enabled
+                visible: !NetworkService.bluetooth.enabled
+                Layout.alignment: Qt.AlignHCenter
 
-                Layout.alignment:
-                    Qt.AlignHCenter
+                text: NetworkService.bluetooth.available ? "Bluetooth is disabled" : "No Bluetooth adapter found"
 
-                text:
-                    NetworkService.bluetooth.available
-                        ? "Bluetooth is disabled"
-                        : "No Bluetooth adapter found"
+                font.family: Fonts.font
+                font.pixelSize: 10
 
-                font.family:
-                    Fonts.font
+                color: Colors.outline
 
-                font.pixelSize:
-                    10
-
-                color:
-                    Colors.outline
-
-                topPadding:
-                    12
-
-                bottomPadding:
-                    12
+                topPadding: 12
+                bottomPadding: 12
             }
         }
     }

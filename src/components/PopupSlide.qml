@@ -2,31 +2,22 @@ import QtQuick
 import qs.src.state
 import qs.src.theme
 
-// Slide-in/out animation container for all popups.
-// Always bind your PopupWindow.visible to slide.windowVisible
-
 Item {
     id: root
 
-    // ── Required ──────────────────────────────────────────────────────────────
     property string edge: "top" // "top" | "bottom" | "left" | "right"
     property bool   open: false
 
-    // ── Hover-to-open (Optional) ──────────────────────────────────────────────
     property bool hoverEnabled:   false
     property bool triggerHovered: false
 
-    // ── Timing ────────────────────────────────────────────────────────────────
     property int slideDuration: Theme.slideInDuration
     property int closeDelay:    Theme.hoverCloseDelay
 
-    // ── Output ────────────────────────────────────────────────────────────────
-    // Bind your PopupWindow.visible to this
     property bool windowVisible: false
 
     signal closeRequested()
 
-    // ── Internal ──────────────────────────────────────────────────────────────
     property bool _selfHovered: false
     property bool _ready: false
 
@@ -43,14 +34,12 @@ Item {
         else { hoverEnabled ? hoverCloseTimer.restart() : slideCloseTimer.restart() }
     }
 
-    // Wait for slide animation to finish before hiding the window
     Timer {
         id:          slideCloseTimer
         interval:    root.slideDuration + 20
         onTriggered: root.windowVisible = false
     }
 
-    // Hover leave — wait then emit closeRequested
     Timer {
         id:          hoverCloseTimer
         interval:    root.closeDelay
@@ -62,7 +51,6 @@ Item {
         }
     }
 
-    // ── Sliding Item ──────────────────────────────────────────────────────────
     Item {
         id:     inner
         width:  parent.width

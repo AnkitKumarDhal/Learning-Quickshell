@@ -10,68 +10,32 @@ import qs.src.components
 PillBase {
     id: root
 
-    readonly property bool hasWifi:
-        NetworkService.wifiDevice !== null
+    border.color: Colors.primary
+    border.width: Popups.networkOpen ? 1 : 0
+    Behavior on border.width { NumberAnimation { duration: 150 } }
 
-    readonly property bool hasEthernet:
-        SystemStats.activeInterface !== ""
+    readonly property bool hasWifi: NetworkService.wifiDevice !== null
+    readonly property bool hasEthernet: SystemStats.activeInterface !== ""
+    readonly property bool hasBluetooth: NetworkService.bluetooth.available
 
-    readonly property bool hasBluetooth:
-        NetworkService.bluetooth.available
-
-    visible:
-        hasWifi ||
-        hasBluetooth ||
-        hasEthernet
-
-    // ── Wi-Fi state ──────────────────────────────────────────────────────────
+    visible: hasWifi || hasBluetooth || hasEthernet
 
     readonly property string wifiIcon: {
-        if (!hasWifi)
-            return hasEthernet ? "󰈀" : "󰤭";
-
-        if (!NetworkService.wifiEnabled)
-            return "󰤭";
-
-        if (!NetworkService.wifiConnected)
-            return "󰤭";
-
+        if (!hasWifi) return hasEthernet ? "󰈀" : "󰤭";
+        if (!NetworkService.wifiEnabled) return "󰤭";
+        if (!NetworkService.wifiConnected) return "󰤭";
         const signal = NetworkService.signalStrength;
 
-        if (signal < 0.25)
-            return "󰤟";
-
-        if (signal < 0.50)
-            return "󰤢";
-
-        if (signal < 0.75)
-            return "󰤥";
-
+        if (signal < 0.25) return "󰤟";
+        if (signal < 0.50) return "󰤢";
+        if (signal < 0.75) return "󰤥";
         return "󰤨";
     }
 
-    readonly property bool wifiGood:
-        hasWifi &&
-        NetworkService.wifiEnabled &&
-        NetworkService.wifiConnected
-
-    // ── Bluetooth state ──────────────────────────────────────────────────────
-
-    readonly property string bluetoothIcon:
-        !hasBluetooth
-            ? ""
-            : NetworkService.bluetooth.enabled
-                ? "󰂯"
-                : "󰂲"
-
-    readonly property bool bluetoothGood:
-        hasBluetooth &&
-        NetworkService.bluetooth.enabled
-
-    readonly property int bluetoothCount:
-        NetworkService.bluetooth.connectedDeviceCount
-
-    // ── Main interaction ─────────────────────────────────────────────────────
+    readonly property bool wifiGood: hasWifi && NetworkService.wifiEnabled && NetworkService.wifiConnected
+    readonly property string bluetoothIcon: !hasBluetooth ? "" : NetworkService.bluetooth.enabled ? "󰂯" : "󰂲"
+    readonly property bool bluetoothGood: hasBluetooth && NetworkService.bluetooth.enabled
+    readonly property int bluetoothCount: NetworkService.bluetooth.connectedDeviceCount
 
     onClicked: {
         const wasOpen = Popups.networkOpen;
@@ -79,10 +43,7 @@ PillBase {
         Popups.networkOpen = !wasOpen;
 
         if (!wasOpen) {
-            Popups.networkTab =
-                wifiGood ? 0 :
-                bluetoothGood ? 1 :
-                0;
+            Popups.networkTab = wifiGood ? 0 : bluetoothGood ? 1 : 0;
         }
     }
 
@@ -91,18 +52,13 @@ PillBase {
         Popups.networkTab = 1;
     }
 
-    // ── Wi-Fi ────────────────────────────────────────────────────────────────
-
     Text {
         text: root.wifiIcon
 
         font.family: Fonts.fontM
         font.pixelSize: 14
 
-        color:
-            root.wifiGood
-                ? Colors.primary
-                : Colors.outline
+        color: root.wifiGood ? Colors.primary : Colors.outline
 
         Behavior on color {
             ColorAnimation {
@@ -112,12 +68,8 @@ PillBase {
     }
 
     Text {
-        visible:
-            root.wifiGood &&
-            NetworkService.ssid.length > 0
-
-        text:
-            NetworkService.ssid
+        visible: root.wifiGood && NetworkService.ssid.length > 0
+        text: NetworkService.ssid
 
         font.family: Fonts.font
         font.pixelSize: 12
@@ -130,37 +82,25 @@ PillBase {
         Layout.maximumWidth: 105
     }
 
-    // ── Separator ────────────────────────────────────────────────────────────
-
     Rectangle {
-        visible:
-            root.hasWifi &&
-            root.hasBluetooth
+        visible: root.hasWifi && root.hasBluetooth
 
         Layout.preferredWidth: 1
         Layout.preferredHeight: 13
 
         radius: 1
-
         color: Colors.outlineVariant
-
         opacity: 0.8
     }
 
-    // ── Bluetooth ────────────────────────────────────────────────────────────
-
     Text {
         visible: root.hasBluetooth
-
         text: root.bluetoothIcon
 
         font.family: Fonts.fontM
         font.pixelSize: 14
 
-        color:
-            root.bluetoothGood
-                ? Colors.primary
-                : Colors.outline
+        color: root.bluetoothGood ? Colors.primary : Colors.outline
 
         Behavior on color {
             ColorAnimation {
@@ -169,16 +109,10 @@ PillBase {
         }
     }
 
-    // Small connected-device count.
-    // Hidden when zero so the normal state remains extremely compact.
-
     Rectangle {
-        visible:
-            root.bluetoothCount > 0
+        visible: root.bluetoothCount > 0
 
-        Layout.preferredWidth:
-            countText.implicitWidth + 8
-
+        Layout.preferredWidth: countText.implicitWidth + 8
         Layout.preferredHeight: 16
 
         radius: 8
@@ -189,11 +123,7 @@ PillBase {
             id: countText
 
             anchors.centerIn: parent
-
-            text:
-                root.bluetoothCount > 9
-                    ? "9+"
-                    : String(root.bluetoothCount)
+            text: root.bluetoothCount > 9 ? "9+" : String(root.bluetoothCount)
 
             font.family: Fonts.font
             font.pixelSize: 9
@@ -203,14 +133,8 @@ PillBase {
         }
     }
 
-    // ── Ethernet fallback ────────────────────────────────────────────────────
-
     Text {
-        visible:
-            !root.hasWifi &&
-            root.hasEthernet &&
-            !root.hasBluetooth
-
+        visible: !root.hasWifi && root.hasEthernet && !root.hasBluetooth
         text: SystemStats.activeInterface
 
         font.family: Fonts.font

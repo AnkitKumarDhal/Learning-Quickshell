@@ -7,15 +7,12 @@ Item {
 
     height: 34
 
-    // ── Inputs ────────────────────────────────────────────────────────────
     property var categories:  []
     property int activeIndex: 0
     property bool searchActive: false
 
-    // ── Outputs ───────────────────────────────────────────────────────────
     signal categorySelected(int index)
 
-    // ── Tab strip ─────────────────────────────────────────────────────────
     ListView {
         anchors.fill: parent
 

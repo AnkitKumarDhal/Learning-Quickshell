@@ -13,14 +13,8 @@ PillBase {
 
     hoverExpand: true
 
-    border.color:
-        Colors.primary
-
-    border.width:
-        Popups.notificationsOpen ||
-        NotificationService.notificationsSuppressed
-            ? 1
-            : 0
+    border.color: Colors.primary
+    border.width: Popups.notificationsOpen || NotificationService.notificationsSuppressed ? 1 : 0
 
     Behavior on border.width {
         NumberAnimation {
@@ -32,48 +26,34 @@ PillBase {
         spacing: 8
 
         Text {
-            text:
-                NotificationService.notificationsSuppressed
-                    ? "󰂛"
-                    : "󰂚"
-
-            color:
-                Colors.primary
+            text: NotificationService.notificationsSuppressed ? "󰂛" : "󰂚"
+            color: Colors.primary
 
             font.pointSize: 11
             font.family: Fonts.font
 
-            verticalAlignment:
-                Text.AlignVCenter
+            verticalAlignment: Text.AlignVCenter
         }
 
         Text {
-            visible:
-                NotificationService.notificationCount > 0
+            visible: NotificationService.notificationCount > 0
+            text: NotificationService.notificationCount
 
-            text:
-                NotificationService.notificationCount
-
-            color:
-                Colors.primary
+            color: Colors.primary
 
             font.pointSize: 11
             font.bold: true
             font.family: Fonts.font
 
-            verticalAlignment:
-                Text.AlignVCenter
+            verticalAlignment: Text.AlignVCenter
         }
     }
 
-    // Left click: open/close the notification panel on the monitor where
-    // this button was clicked.
     onClicked: {
         NotificationService.panelScreen = root.screen
         Popups.notificationsOpen = !Popups.notificationsOpen
     }
 
-    // Right click: toggle notification suppression / gaming mode.
     onRightClicked:
         NotificationService.toggleSuppressed()
 }

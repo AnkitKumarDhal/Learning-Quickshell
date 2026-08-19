@@ -12,7 +12,6 @@ Item {
     Layout.fillWidth:       true
     Layout.preferredHeight: width   // always square
 
-    // ── Art (masked) ──────────────────────────────────────────────────────────
     Rectangle {
         id:           artMask
         anchors.fill: parent
@@ -30,7 +29,6 @@ Item {
         layer.effect:  OpacityMask { maskSource: artMask }
     }
 
-    // ── Placeholder ───────────────────────────────────────────────────────────
     Rectangle {
         anchors.fill: parent
         visible:      !root.hasArt

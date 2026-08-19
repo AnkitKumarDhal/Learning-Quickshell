@@ -10,6 +10,10 @@ PillBase {
 
     hoverExpand: true
 
+    border.color: Colors.primary
+    border.width: Popups.volumeOpen ? 1 : 0
+    Behavior on border.width { NumberAnimation { duration: 150 } }
+
     function getIcon(): string {
         if (VolumeService.muted || VolumeService.volume <= 0.0) return " "
         if (VolumeService.volume >= 0.7) return " "

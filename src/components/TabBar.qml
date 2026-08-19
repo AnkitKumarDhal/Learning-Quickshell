@@ -1,10 +1,6 @@
 import QtQuick
 import qs.src.theme
 
-// Reusable tab switcher — horizontal or vertical.
-// Horizontal: icon + label pill row with bottom divider. Used by multi-tab popups.
-// Vertical:   icon-only solid pill column. Reserved for future use.
-
 Item {
     id: root
 
@@ -20,7 +16,6 @@ Item {
     implicitWidth:  orientation === "vertical"   ? 40 : 0
     implicitHeight: orientation === "horizontal" ? 46 : 0
 
-    // ── Scroll to Cycle Tabs ──────────────────────────────────────────────────
     property bool _scrollBusy: false
 
     Timer {
@@ -41,7 +36,7 @@ Item {
         }
     }
 
-    // ── Horizontal ────────────────────────────────────────────────────────────
+    // Horizontal
     Row {
         id:           hRow
         anchors {
@@ -113,7 +108,7 @@ Item {
         }
     }
 
-    // Bottom divider — horizontal only
+    // Bottom divider ( horizontal only )
     Rectangle {
         visible:        root.orientation === "horizontal"
         anchors.bottom: parent.bottom
@@ -124,7 +119,7 @@ Item {
         opacity:        0.5
     }
 
-    // ── Vertical ──────────────────────────────────────────────────────────────
+    // Vertical
     Column {
         id:               vCol
         anchors.centerIn: parent

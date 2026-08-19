@@ -12,12 +12,10 @@ PillBase {
 
     hoverExpand: true
 
-    // SystemMonitor.qml — remove all polling, just bind:
     property real cpuUsage: SystemStats.cpuUsage * 100
     property real memUsed:  SystemStats.memUsedGb
     property real memTotal: SystemStats.memTotalGb
 
-    // ── Display ───────────────────────────────────────────────────────────────
     Row {
         spacing: 8
 

@@ -8,7 +8,6 @@ Item {
 
     height: 36
 
-    // ── Outputs ───────────────────────────────────────────────────────────
     readonly property alias text: field.text
 
     signal escapePressed()
@@ -20,7 +19,6 @@ Item {
     function forceActiveFocus() { field.forceActiveFocus() }
     function insertText(value)  { field.insert(field.cursoPosition, value) }
 
-    // ── Layout ────────────────────────────────────────────────────────────
     RowLayout {
         anchors.fill: parent
         spacing: 8

@@ -13,7 +13,7 @@ PillBase {
     hoverExpand: false  // tray expands differently via its own toggle
     hoverEnabled: false
     mouseEnabled: false
-    // Cache system tray items to avoid repeated property access
+
     property var _cachedTrayItems: SystemTray.items.values
 
     visible: root._cachedTrayItems.length > 0

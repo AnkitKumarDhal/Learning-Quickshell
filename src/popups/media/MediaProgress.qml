@@ -2,14 +2,11 @@ import QtQuick
 import QtQuick.Layouts
 import qs.src.theme
 
-// Scrubber + time labels.
-// Parent owns _position and _seeking; we communicate back via signals.
-
 ColumnLayout {
     id: root
 
     required property var  player
-    required property real position    // seconds (float)
+    required property real position
     required property bool seeking
 
     signal seekStarted(real pos)
@@ -21,7 +18,6 @@ ColumnLayout {
 
     visible: root.player !== null && (root.player.positionSupported ?? false)
 
-    // ── Scrubber ──────────────────────────────────────────────────────────────
     Item {
         Layout.fillWidth:       true
         Layout.preferredHeight: 16
@@ -75,26 +71,21 @@ ColumnLayout {
                 root.seekStarted((mouse.x / width) * (root.player?.length ?? 0))
             }
             onPositionChanged: (mouse) => {
-                if (pressed)
-                    root.seekMoved(Math.max(0,
-                        Math.min(mouse.x / width, 1.0) * (root.player?.length ?? 0)))
+                if (pressed) root.seekMoved(Math.max(0, Math.min(mouse.x / width, 1.0) * (root.player?.length ?? 0)))
             }
             onReleased: (mouse) => {
-                root.seekReleased(Math.max(0,
-                    Math.min(mouse.x / width, 1.0) * (root.player?.length ?? 0)))
+                root.seekReleased(Math.max(0, Math.min(mouse.x / width, 1.0) * (root.player?.length ?? 0)))
             }
         }
     }
 
-    // ── Time labels ───────────────────────────────────────────────────────────
     RowLayout {
         Layout.fillWidth: true
 
         Text {
             text: {
-                const s = Math.floor(root.position)   // position is already seconds
-                return "%1:%2".arg(Math.floor(s / 60))
-                              .arg(String(s % 60).padStart(2, "0"))
+                const s = Math.floor(root.position)
+                return "%1:%2".arg(Math.floor(s / 60)).arg(String(s % 60).padStart(2, "0"))
             }
             color:          Colors.on_SurfaceVariant
             font.family:    Fonts.font
@@ -106,8 +97,7 @@ ColumnLayout {
         Text {
             text: {
                 const s = Math.floor(root.player?.length ?? 0)
-                return "%1:%2".arg(Math.floor(s / 60))
-                              .arg(String(s % 60).padStart(2, "0"))
+                return "%1:%2".arg(Math.floor(s / 60)).arg(String(s % 60).padStart(2, "0"))
             }
             color:          Colors.on_SurfaceVariant
             font.family:    Fonts.font

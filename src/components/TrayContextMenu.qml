@@ -9,7 +9,6 @@ import qs.src.theme
 PanelWindow {
     id: root
 
-    // ── Properties ────────────────────────────────────────────────────────────
     property var  menuHandle: null
     property real menuX:      0
     property real menuY:      0
@@ -17,13 +16,14 @@ PanelWindow {
     property int  animLength: 400
     property var  animCurve:  [0.05, 0, 0.133, 0.06, 0.166, 0.4, 0.208, 0.82, 0.25, 1, 1, 1]
 
-    // ── Methods ───────────────────────────────────────────────────────────────
+    // Methods
     function open(handle, x, y) {
-        menuHandle = handle
+        menuHandle  = handle
         const safeX = Math.max(8, Math.min(x - 120, Screen.width - 248))
-        menuX = safeX
-        menuY = y - 32
-        hasCurrent = true
+        menuX       = safeX
+        menuY       = y - 32
+        hasCurrent  = true
+
         grabTimer.restart()
     }
 
@@ -33,10 +33,10 @@ PanelWindow {
         grabTimer.stop()
     }
 
-    // ── Window Config ─────────────────────────────────────────────────────────
+    // Window Config
     color: "transparent"
     anchors { top: true; bottom: true; left: true; right: true }
-    
+
     WlrLayershell.layer:         WlrLayer.Overlay
     WlrLayershell.keyboardFocus: hasCurrent ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
@@ -56,14 +56,13 @@ PanelWindow {
         onTriggered: focusGrab.active = true
     }
 
-    // Click outside to close
     MouseArea {
         anchors.fill: parent
         enabled:      root.hasCurrent
         onClicked:    root.close()
     }
 
-    // ── Menu Wrapper ──────────────────────────────────────────────────────────
+    // Menu Wrapper
     Item {
         id: wrapper
 
@@ -118,8 +117,8 @@ PanelWindow {
             }
 
             Column {
-                id: menuColumn
-                spacing: 2
+                id:              menuColumn
+                spacing:         2
                 anchors {
                     top:         parent.top
                     left:        parent.left
@@ -146,7 +145,6 @@ PanelWindow {
                         width:  menuColumn.width
                         height: isSeparator ? 12 : 36
 
-                        // Separator line
                         Rectangle {
                             visible:          isSeparator
                             anchors.centerIn: parent
@@ -156,7 +154,6 @@ PanelWindow {
                             opacity:          0.5
                         }
 
-                        // Active indicator bar
                         Rectangle {
                             visible: !isSeparator && highlight.active && highlight.targetY === menuItem.y
                             width:   3
