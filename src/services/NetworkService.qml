@@ -56,10 +56,25 @@ Singleton {
     // ── Wi-Fi scanning ───────────────────────────────────────────────────────
 
     property bool scannerActive: false
+    readonly property bool wifiScanning: root.wifiDevice?.scannerEnabled ?? false
 
     function _updateScanner() {
         if (root.wifiDevice)
             root.wifiDevice.scannerEnabled = root.scannerActive;
+    }
+
+    function scanWifi() {
+        if (!root.wifiDevice || !root.wifiEnabled) {
+            return;
+        }
+
+        root.wifiDevice.scannerEnabled = false;
+
+        Qt.callLater(function() {
+            if (root.wifiDevice && root.scannerActive && root.wifiEnabled) {
+                root.wifiDevice.scannerEnabled = true;
+            }
+        })
     }
 
     onScannerActiveChanged: root._updateScanner()

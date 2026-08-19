@@ -25,6 +25,7 @@ PanelWindow {
     }
 
     implicitWidth: 400
+
     implicitHeight:
         root.screen
             ? root.screen.height
@@ -56,9 +57,18 @@ PanelWindow {
             root.selectedNetwork = null;
     }
 
+    onSelectedNetworkChanged: {
+        if (root.selectedNetworkSupportsPsk) {
+            Qt.callLater(function() {
+                passwordField.forceActiveFocus();
+            });
+        }
+    }
+
     // If the selected network becomes connected, close the editor.
     Connections {
-        target: root.selectedNetwork
+        target:
+            root.selectedNetwork
 
         function onConnectedChanged() {
             if (root.selectedNetwork?.connected)
@@ -66,12 +76,13 @@ PanelWindow {
         }
     }
 
-    // ── Wi-Fi model ──────────────────────────────────────────────────────────
+    // ── Wi-Fi models ─────────────────────────────────────────────────────────
 
     ScriptModel {
-        id: wifiNetworkModel
+        id: wifiConnectedModel
 
-        objectProp: "name"
+        objectProp:
+            "name"
 
         values: {
             if (!NetworkService.wifiDevice)
@@ -79,12 +90,36 @@ PanelWindow {
 
             return [
                 ...NetworkService.wifiDevice.networks.values
-            ].sort((a, b) => {
-                if (a.connected !== b.connected)
-                    return a.connected ? -1 : 1;
+            ]
+            .filter(network => network.connected)
+            .sort(
+                (a, b) =>
+                    b.signalStrength - a.signalStrength
+            );
+        }
+    }
 
-                return b.signalStrength - a.signalStrength;
-            });
+    ScriptModel {
+        id: wifiAvailableModel
+
+        objectProp:
+            "name"
+
+        values: {
+            if (!NetworkService.wifiDevice)
+                return [];
+
+            return [
+                ...NetworkService.wifiDevice.networks.values
+            ]
+            .filter(network =>
+                !network.connected &&
+                network !== root.selectedNetwork
+            )
+            .sort(
+                (a, b) =>
+                    b.signalStrength - a.signalStrength
+            );
         }
     }
 
@@ -93,7 +128,8 @@ PanelWindow {
     ScriptModel {
         id: btConnectedModel
 
-        objectProp: "address"
+        objectProp:
+            "address"
 
         values:
             NetworkService.bluetooth.connectedDevices
@@ -102,7 +138,8 @@ PanelWindow {
     ScriptModel {
         id: btPairedModel
 
-        objectProp: "address"
+        objectProp:
+            "address"
 
         values:
             NetworkService.bluetooth.pairedDevices
@@ -111,7 +148,8 @@ PanelWindow {
     ScriptModel {
         id: btAvailableModel
 
-        objectProp: "address"
+        objectProp:
+            "address"
 
         values:
             NetworkService.bluetooth.availableDevices
@@ -120,37 +158,45 @@ PanelWindow {
     // ── Scanner lifecycle ────────────────────────────────────────────────────
 
     Binding {
-        target: NetworkService
-        property: "scannerActive"
-        value: Popups.networkOpen
+        target:
+            NetworkService
+
+        property:
+            "scannerActive"
+
+        value:
+            Popups.networkOpen
     }
 
     // ── Popup mask ───────────────────────────────────────────────────────────
 
-    mask: Region {
-        x:
-            root.implicitWidth -
-            connectivityCard.width -
-            Theme.barMargin
+    mask:
+        Region {
+            x:
+                root.implicitWidth -
+                connectivityCard.width -
+                Theme.barMargin
 
-        y:
-            Theme.barHeight + 8
+            y:
+                Theme.barHeight + 8
 
-        width:
-            connectivityCard.width
+            width:
+                connectivityCard.width
 
-        height:
-            connectivityCard.height
-    }
+            height:
+                connectivityCard.height
+        }
 
     // ── Slide wrapper ────────────────────────────────────────────────────────
 
     PopupSlide {
         id: slide
 
-        anchors.fill: parent
+        anchors.fill:
+            parent
 
-        edge: "top"
+        edge:
+            "top"
 
         open:
             Popups.networkOpen
@@ -158,14 +204,17 @@ PanelWindow {
         onCloseRequested:
             Popups.networkOpen = false
 
-        // ── Main card ─────────────────────────────────────────────────────────
+        // ── Main card ────────────────────────────────────────────────────────
 
         Rectangle {
             id: connectivityCard
 
             anchors {
-                top: parent.top
-                right: parent.right
+                top:
+                    parent.top
+
+                right:
+                    parent.right
 
                 topMargin:
                     Theme.barHeight + 8
@@ -174,7 +223,8 @@ PanelWindow {
                     Theme.barMargin
             }
 
-            width: 380
+            width:
+                380
 
             height:
                 mainColumn.implicitHeight + 24
@@ -191,30 +241,43 @@ PanelWindow {
             border.color:
                 Colors.outlineVariant
 
-            clip: true
-
-            // ── Main content ────────────────────────────────────────────────
+            clip:
+                true
 
             ColumnLayout {
                 id: mainColumn
 
                 anchors {
-                    top: parent.top
-                    left: parent.left
-                    right: parent.right
+                    top:
+                        parent.top
 
-                    topMargin: 14
-                    leftMargin: 14
-                    rightMargin: 14
-                    bottomMargin: 14
+                    left:
+                        parent.left
+
+                    right:
+                        parent.right
+
+                    topMargin:
+                        14
+
+                    leftMargin:
+                        14
+
+                    rightMargin:
+                        14
+
+                    bottomMargin:
+                        14
                 }
 
-                spacing: 10
+                spacing:
+                    10
 
                 // ── Header ──────────────────────────────────────────────────
 
                 RowLayout {
-                    Layout.fillWidth: true
+                    Layout.fillWidth:
+                        true
 
                     Text {
                         text:
@@ -223,27 +286,59 @@ PanelWindow {
                         font.family:
                             Fonts.font
 
-                        font.pixelSize: 16
-                        font.bold: true
+                        font.pixelSize:
+                            16
+
+                        font.bold:
+                            true
 
                         color:
                             Colors.on_Surface
 
-                        Layout.fillWidth: true
+                        Layout.fillWidth:
+                            true
                     }
 
-                    Text {
-                        text: "󰅖"
+                    Rectangle {
+                        width:
+                            28
 
-                        font.family:
-                            Fonts.fontM
-                        font.pixelSize: 15
+                        height:
+                            28
+
+                        radius:
+                            14
 
                         color:
-                            Colors.outline
+                            closeHover.hovered
+                                ? Colors.surfaceContainerHighest
+                                : "transparent"
+
+                        HoverHandler {
+                            id:
+                                closeHover
+                        }
+
+                        Text {
+                            anchors.centerIn:
+                                parent
+
+                            text:
+                                "󰅖"
+
+                            font.family:
+                                Fonts.fontM
+
+                            font.pixelSize:
+                                15
+
+                            color:
+                                Colors.outline
+                        }
 
                         MouseArea {
-                            anchors.fill: parent
+                            anchors.fill:
+                                parent
 
                             cursorShape:
                                 Qt.PointingHandCursor
@@ -257,17 +352,22 @@ PanelWindow {
                 // ── Status cards ─────────────────────────────────────────────
 
                 RowLayout {
-                    Layout.fillWidth: true
+                    Layout.fillWidth:
+                        true
 
-                    spacing: 8
+                    spacing:
+                        8
 
-                    // Wi-Fi status card
+                    // Wi-Fi
                     Rectangle {
-                        Layout.fillWidth: true
+                        Layout.fillWidth:
+                            true
 
-                        implicitHeight: 66
+                        implicitHeight:
+                            66
 
-                        radius: 12
+                        radius:
+                            12
 
                         color:
                             NetworkService.wifiConnected
@@ -276,18 +376,25 @@ PanelWindow {
 
                         Behavior on color {
                             ColorAnimation {
-                                duration: Theme.hoverFadeDuration
+                                duration:
+                                    Theme.hoverFadeDuration
                             }
                         }
 
                         RowLayout {
                             anchors {
-                                fill: parent
-                                leftMargin: 12
-                                rightMargin: 12
+                                fill:
+                                    parent
+
+                                leftMargin:
+                                    12
+
+                                rightMargin:
+                                    12
                             }
 
-                            spacing: 10
+                            spacing:
+                                10
 
                             Text {
                                 text: {
@@ -315,7 +422,8 @@ PanelWindow {
                                 font.family:
                                     Fonts.fontM
 
-                                font.pixelSize: 20
+                                font.pixelSize:
+                                    20
 
                                 color:
                                     NetworkService.wifiConnected
@@ -324,21 +432,29 @@ PanelWindow {
                             }
 
                             ColumnLayout {
-                                Layout.fillWidth: true
+                                Layout.fillWidth:
+                                    true
 
-                                spacing: 1
+                                spacing:
+                                    1
 
                                 Text {
-                                    text: "Wi-Fi"
+                                    text:
+                                        "Wi-Fi"
 
                                     font.family:
                                         Fonts.font
 
-                                    font.pixelSize: 10
-                                    font.bold: true
+                                    font.pixelSize:
+                                        10
+
+                                    font.bold:
+                                        true
 
                                     color:
-                                        NetworkService.wifiConnected ? Colors.surfaceContainerHighest : Colors.on_SurfaceVariant
+                                        NetworkService.wifiConnected
+                                            ? Colors.on_PrimaryContainer
+                                            : Colors.on_SurfaceVariant
                                 }
 
                                 Text {
@@ -346,27 +462,43 @@ PanelWindow {
                                         !NetworkService.wifiEnabled
                                             ? "Disabled"
                                             : NetworkService.wifiConnected
-                                                ? (NetworkService.ssid || "Connected")
+                                                ? (
+                                                    NetworkService.ssid ||
+                                                    "Connected"
+                                                )
                                                 : "Not connected"
 
                                     font.family:
                                         Fonts.font
 
-                                    font.pixelSize: 11
-                                    font.bold: true
+                                    font.pixelSize:
+                                        11
 
-                                    color: NetworkService.wifiConnected ? Colors.on_PrimaryContainer : Colors.on_Surface
+                                    font.bold:
+                                        true
+
+                                    color:
+                                        NetworkService.wifiConnected
+                                            ? Colors.on_PrimaryContainer
+                                            : Colors.on_Surface
+
                                     elide:
                                         Text.ElideRight
 
-                                    Layout.fillWidth: true
+                                    Layout.fillWidth:
+                                        true
                                 }
                             }
 
                             Rectangle {
-                                width: 38
-                                height: 22
-                                radius: 11
+                                width:
+                                    38
+
+                                height:
+                                    22
+
+                                radius:
+                                    11
 
                                 color:
                                     NetworkService.wifiEnabled
@@ -382,9 +514,14 @@ PanelWindow {
                                     Colors.outlineVariant
 
                                 Rectangle {
-                                    width: 16
-                                    height: 16
-                                    radius: 8
+                                    width:
+                                        16
+
+                                    height:
+                                        16
+
+                                    radius:
+                                        8
 
                                     anchors.verticalCenter:
                                         parent.verticalCenter
@@ -411,7 +548,8 @@ PanelWindow {
                                 }
 
                                 MouseArea {
-                                    anchors.fill: parent
+                                    anchors.fill:
+                                        parent
 
                                     enabled:
                                         NetworkService.wifiHardwareEnabled ?? true
@@ -428,13 +566,16 @@ PanelWindow {
                         }
                     }
 
-                    // Bluetooth status card
+                    // Bluetooth
                     Rectangle {
-                        Layout.fillWidth: true
+                        Layout.fillWidth:
+                            true
 
-                        implicitHeight: 66
+                        implicitHeight:
+                            66
 
-                        radius: 12
+                        radius:
+                            12
 
                         color:
                             NetworkService.bluetooth.connectedDeviceCount > 0
@@ -443,18 +584,25 @@ PanelWindow {
 
                         Behavior on color {
                             ColorAnimation {
-                                duration: Theme.hoverFadeDuration
+                                duration:
+                                    Theme.hoverFadeDuration
                             }
                         }
 
                         RowLayout {
                             anchors {
-                                fill: parent
-                                leftMargin: 12
-                                rightMargin: 12
+                                fill:
+                                    parent
+
+                                leftMargin:
+                                    12
+
+                                rightMargin:
+                                    12
                             }
 
-                            spacing: 10
+                            spacing:
+                                10
 
                             Text {
                                 text:
@@ -465,30 +613,37 @@ PanelWindow {
                                 font.family:
                                     Fonts.fontM
 
-                                font.pixelSize: 20
+                                font.pixelSize:
+                                    20
 
                                 color:
-                                    NetworkService.bluetooth.connectedDeviceCount > 0
+                                    NetworkService.bluetooth.enabled
                                         ? Colors.on_PrimaryContainer
                                         : Colors.outline
                             }
 
                             ColumnLayout {
-                                Layout.fillWidth: true
+                                Layout.fillWidth:
+                                    true
 
-                                spacing: 1
+                                spacing:
+                                    1
 
                                 Text {
-                                    text: "Bluetooth"
+                                    text:
+                                        "Bluetooth"
 
                                     font.family:
                                         Fonts.font
 
-                                    font.pixelSize: 10
-                                    font.bold: true
+                                    font.pixelSize:
+                                        10
+
+                                    font.bold:
+                                        true
 
                                     color:
-                                        NetworkService.bluetooth.connectedDeviceCount > 0 ? Colors.surfaceContainerHighest : Colors.on_SurfaceVariant
+                                        NetworkService.bluetooth.connectedDeviceCount > 0 ? Colors.on_PrimaryContainer : Colors.on_SurfaceVariant
                                 }
 
                                 Text {
@@ -498,25 +653,38 @@ PanelWindow {
                                             : !NetworkService.bluetooth.enabled
                                                 ? "Disabled"
                                                 : NetworkService.bluetooth.connectedDeviceCount > 0
-                                                    ? NetworkService.bluetooth.connectedDeviceCount + " connected"
+                                                    ? (
+                                                        NetworkService.bluetooth.connectedDeviceCount +
+                                                        " connected"
+                                                    )
                                                     : "Ready"
 
                                     font.family:
                                         Fonts.font
 
-                                    font.pixelSize: 11
-                                    font.bold: true
+                                    font.pixelSize:
+                                        11
 
-                                    color: NetworkService.bluetooth.connectedDeviceCount > 0 ? Colors.on_PrimaryContainer : Colors.on_Surface
+                                    font.bold:
+                                        true
 
-                                    Layout.fillWidth: true
+                                    color:
+                                        NetworkService.bluetooth.connectedDeviceCount > 0 ? Colors.on_PrimaryContainer : Colors.on_Surface
+
+                                    Layout.fillWidth:
+                                        true
                                 }
                             }
 
                             Rectangle {
-                                width: 38
-                                height: 22
-                                radius: 11
+                                width:
+                                    38
+
+                                height:
+                                    22
+
+                                radius:
+                                    11
 
                                 color:
                                     NetworkService.bluetooth.enabled
@@ -537,9 +705,14 @@ PanelWindow {
                                         : 0.45
 
                                 Rectangle {
-                                    width: 16
-                                    height: 16
-                                    radius: 8
+                                    width:
+                                        16
+
+                                    height:
+                                        16
+
+                                    radius:
+                                        8
 
                                     anchors.verticalCenter:
                                         parent.verticalCenter
@@ -566,7 +739,8 @@ PanelWindow {
                                 }
 
                                 MouseArea {
-                                    anchors.fill: parent
+                                    anchors.fill:
+                                        parent
 
                                     enabled:
                                         NetworkService.bluetooth.available
@@ -587,7 +761,8 @@ PanelWindow {
                 // ── Detail tabs ──────────────────────────────────────────────
 
                 TabBar {
-                    Layout.fillWidth: true
+                    Layout.fillWidth:
+                        true
 
                     orientation:
                         "horizontal"
@@ -601,33 +776,43 @@ PanelWindow {
 
                     model: [
                         {
-                            key: "wifi",
-                            icon: "󰤨",
-                            label: "Wi-Fi"
+                            key:
+                                "wifi",
+                            icon:
+                                "󰤨",
+                            label:
+                                "Wi-Fi"
                         },
                         {
-                            key: "bluetooth",
-                            icon: "󰂯",
-                            label: "Bluetooth"
+                            key:
+                                "bluetooth",
+                            icon:
+                                "󰂯",
+                            label:
+                                "Bluetooth"
                         },
                         {
-                            key: "hotspot",
-                            icon: "󰀂",
-                            label: "Hotspot"
+                            key:
+                                "hotspot",
+                            icon:
+                                "󰀂",
+                            label:
+                                "Hotspot"
                         }
                     ]
 
-                    onPageChanged: (key) => {
-                        const index =
-                            [
-                                "wifi",
-                                "bluetooth",
-                                "hotspot"
-                            ].indexOf(key);
+                    onPageChanged:
+                        (key) => {
+                            const index =
+                                [
+                                    "wifi",
+                                    "bluetooth",
+                                    "hotspot"
+                                ].indexOf(key);
 
-                        if (index >= 0)
-                            Popups.networkTab = index;
-                    }
+                            if (index >= 0)
+                                Popups.networkTab = index;
+                        }
                 }
 
                 // ═════════════════════════════════════════════════════════════
@@ -638,274 +823,125 @@ PanelWindow {
                     visible:
                         Popups.networkTab === 0
 
-                    Layout.fillWidth: true
+                    Layout.fillWidth:
+                        true
 
-                    spacing: 8
+                    spacing:
+                        8
 
-                    // Selected connection editor
-                    Rectangle {
-                        visible:
-                            root.selectedNetwork !== null
+                    // ── Header / scan control ────────────────────────────────
 
-                        Layout.fillWidth: true
+                    RowLayout {
+                        Layout.fillWidth:
+                            true
 
-                        implicitHeight:
-                            selectedEditorColumn.implicitHeight + 20
+                        Text {
+                            text:
+                                NetworkService.wifiScanning
+                                    ? "Wi-Fi networks · Scanning"
+                                    : "Wi-Fi networks"
 
-                        radius: 12
+                            font.family:
+                                Fonts.font
 
-                        color:
-                            Colors.primaryContainer
+                            font.pixelSize:
+                                11
 
-                        border.width: 1
+                            font.bold:
+                                true
 
-                        border.color:
-                            Colors.primary
+                            color:
+                                Colors.on_SurfaceVariant
 
-                        ColumnLayout {
-                            id: selectedEditorColumn
+                            Layout.fillWidth:
+                                true
+                        }
 
-                            anchors {
-                                fill: parent
-                                margins: 10
-                            }
+                        Rectangle {
+                            width:
+                                wifiScanLabel.implicitWidth + 20
 
-                            spacing: 8
+                            height:
+                                28
 
-                            RowLayout {
-                                Layout.fillWidth: true
+                            radius:
+                                14
 
-                                Text {
-                                    text:
-                                        "󰤨"
+                            color:
+                                wifiScanHover.hovered
+                                    ? Colors.primary
+                                    : Colors.surfaceContainerHighest
 
-                                    font.family:
-                                        Fonts.fontM
-
-                                    font.pixelSize: 16
-
-                                    color:
-                                        Colors.on_PrimaryContainer
-                                }
-
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-
-                                    spacing: 1
-
-                                    Text {
-                                        text:
-                                            root.selectedNetwork?.name ??
-                                            ""
-
-                                        font.family:
-                                            Fonts.font
-
-                                        font.pixelSize: 12
-                                        font.bold: true
-
-                                        color:
-                                            Colors.on_PrimaryContainer
-                                    }
-
-                                    Text {
-                                        text:
-                                            root.selectedNetworkSupportsPsk
-                                                ? "Enter Wi-Fi password"
-                                                : "Additional authentication may be required"
-
-                                        font.family:
-                                            Fonts.font
-
-                                        font.pixelSize: 9
-
-                                        color:
-                                            Colors.on_SurfaceVariant
-                                    }
-                                }
-
-                                Text {
-                                    text: "󰅖"
-
-                                    font.family:
-                                        Fonts.fontM
-
-                                    font.pixelSize: 13
-
-                                    color:
-                                        Colors.on_PrimaryContainer
-
-                                    MouseArea {
-                                        anchors.fill: parent
-
-                                        cursorShape:
-                                            Qt.PointingHandCursor
-
-                                        onClicked:
-                                            root.selectedNetwork = null
-                                    }
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration:
+                                        Theme.hoverFadeDuration
                                 }
                             }
 
-                            // PSK editor
-                            RowLayout {
-                                visible:
-                                    root.selectedNetworkSupportsPsk
+                            Text {
+                                id:
+                                    wifiScanLabel
 
-                                Layout.fillWidth: true
+                                anchors.centerIn:
+                                    parent
 
-                                spacing: 8
+                                text:
+                                    "Scan"
 
-                                TextField {
-                                    id: passwordField
+                                font.family:
+                                    Fonts.font
 
-                                    Layout.fillWidth: true
+                                font.pixelSize:
+                                    10
 
-                                    height: 34
-
-                                    placeholderText:
-                                        "Password"
-
-                                    echoMode:
-                                        TextInput.Password
-
-                                    font.family:
-                                        Fonts.font
-
-                                    font.pixelSize: 11
-
-                                    color:
-                                        Colors.on_Surface
-
-                                    placeholderTextColor:
-                                        Colors.outline
-
-                                    background: Rectangle {
-                                        radius: 8
-
-                                        color:
-                                            Colors.surfaceContainer
-
-                                        border.width: 1
-
-                                        border.color:
-                                            passwordField.activeFocus
-                                                ? Colors.primary
-                                                : Colors.outlineVariant
-                                    }
-
-                                    Keys.onReturnPressed: {
-                                        if (
-                                            root.selectedNetworkSupportsPsk &&
-                                            text.length > 0
-                                        ) {
-                                            root.selectedNetwork.connectWithPsk(
-                                                text
-                                            );
-
-                                            text = "";
-                                        }
-                                    }
-
-                                    Component.onCompleted:
-                                        forceActiveFocus()
-                                }
-
-                                Rectangle {
-                                    width: 34
-                                    height: 28
-
-                                    radius: 8
-
-                                    color: Colors.on_Surface
-
-                                    Text {
-                                        anchors.centerIn: parent
-
-                                        text: "󰌑"
-
-                                        font.family:
-                                            Fonts.fontM
-
-                                        font.pixelSize: 14
-
-                                        color: Colors.on_Primary
-                                    }
-
-                                    HoverHandler {
-                                        id: confirmHover
-                                    }
-
-                                    MouseArea {
-                                        anchors.fill: parent
-
-                                        cursorShape:
-                                            Qt.PointingHandCursor
-
-                                        onClicked: {
-                                            if (
-                                                passwordField.text.length > 0 &&
-                                                root.selectedNetworkSupportsPsk
-                                            ) {
-                                                root.selectedNetwork.connectWithPsk(
-                                                    passwordField.text
-                                                );
-
-                                                passwordField.text = "";
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Non-PSK secured network
-                            Rectangle {
-                                visible:
-                                    root.selectedNetwork !== null &&
-                                    !root.selectedNetworkSupportsPsk &&
-                                    root.selectedNetwork.security !== WifiSecurityType.Open
-
-                                Layout.fillWidth: true
-
-                                implicitHeight: 34
-
-                                radius: 8
+                                font.bold:
+                                    true
 
                                 color:
-                                    Colors.surfaceContainer
+                                    wifiScanHover.hovered
+                                        ? Colors.on_Primary
+                                        : Colors.on_Surface
+                            }
 
-                                Text {
-                                    anchors.centerIn: parent
+                            HoverHandler {
+                                id:
+                                    wifiScanHover
+                            }
 
-                                    text:
-                                        "This network does not use PSK authentication."
+                            MouseArea {
+                                anchors.fill:
+                                    parent
 
-                                    font.family:
-                                        Fonts.font
+                                enabled:
+                                    NetworkService.wifiEnabled
 
-                                    font.pixelSize: 9
+                                cursorShape:
+                                    Qt.PointingHandCursor
 
-                                    color:
-                                        Colors.on_SurfaceVariant
-                                }
+                                onClicked:
+                                    NetworkService.scanWifi()
                             }
                         }
                     }
 
-                    // Network list
+                    // ── Wi-Fi contents ───────────────────────────────────────
+
                     Flickable {
-                        Layout.fillWidth: true
+                        Layout.fillWidth:
+                            true
 
                         Layout.preferredHeight:
                             Math.min(
-                                wifiListColumn.implicitHeight,
-                                300
+                                wifiContent.implicitHeight,
+                                320
                             )
 
                         contentHeight:
-                            wifiListColumn.implicitHeight
+                            wifiContent.implicitHeight
 
-                        clip: true
+                        clip:
+                            true
 
                         boundsBehavior:
                             Flickable.StopAtBounds
@@ -914,58 +950,503 @@ PanelWindow {
                             NetworkService.wifiEnabled
 
                         ColumnLayout {
-                            id: wifiListColumn
+                            id:
+                                wifiContent
 
                             width:
                                 parent.width
 
-                            spacing: 4
+                            spacing:
+                                6
+
+                            // Connected
+                            Text {
+                                visible:
+                                    wifiConnectedModel.values.length > 0
+
+                                text:
+                                    "Connected"
+
+                                font.family:
+                                    Fonts.font
+
+                                font.pixelSize:
+                                    10
+
+                                font.bold:
+                                    true
+
+                                color:
+                                    Colors.on_SurfaceVariant
+
+                                topPadding:
+                                    2
+
+                                bottomPadding:
+                                    2
+                            }
 
                             Repeater {
                                 model:
-                                    wifiNetworkModel
+                                    wifiConnectedModel
 
-                                delegate: NetworkRow {
-                                    required property var modelData
+                                delegate:
+                                    NetworkRow {
+                                        required property var modelData
 
-                                    Layout.fillWidth: true
+                                        Layout.fillWidth:
+                                            true
 
-                                    network:
-                                        modelData
+                                        network:
+                                            modelData
 
-                                    onNetworkSelected: (network) => {
-                                        root.selectedNetwork = network;
+                                        onNetworkSelected:
+                                            (network) => {
+                                                root.selectedNetwork =
+                                                    network;
+                                            }
+                                    }
+                            }
 
-                                        if (
-                                            network.security ===
-                                            WifiSecurityType.Open
-                                        ) {
-                                            network.connect();
+                            // Connect
+                            Text {
+                                visible:
+                                    root.selectedNetwork !== null
+
+                                text:
+                                    "Connect"
+
+                                font.family:
+                                    Fonts.font
+
+                                font.pixelSize:
+                                    10
+
+                                font.bold:
+                                    true
+
+                                color:
+                                    Colors.on_SurfaceVariant
+
+                                topPadding:
+                                    6
+
+                                bottomPadding:
+                                    2
+                            }
+
+                            // Selected network editor
+                            Rectangle {
+                                visible:
+                                    root.selectedNetwork !== null
+
+                                Layout.fillWidth:
+                                    true
+
+                                implicitHeight:
+                                    selectedEditorColumn.implicitHeight +
+                                    20
+
+                                radius:
+                                    12
+
+                                color:
+                                    Colors.primaryContainer
+
+                                border.width:
+                                    1
+
+                                border.color:
+                                    Colors.primary
+
+                                ColumnLayout {
+                                    id:
+                                        selectedEditorColumn
+
+                                    anchors {
+                                        fill:
+                                            parent
+
+                                        margins:
+                                            10
+                                    }
+
+                                    spacing:
+                                        8
+
+                                    RowLayout {
+                                        Layout.fillWidth:
+                                            true
+
+                                        Text {
+                                            text:
+                                                "󰤨"
+
+                                            font.family:
+                                                Fonts.fontM
+
+                                            font.pixelSize:
+                                                16
+
+                                            color:
+                                                Colors.on_PrimaryContainer
+                                        }
+
+                                        ColumnLayout {
+                                            Layout.fillWidth:
+                                                true
+
+                                            spacing:
+                                                1
+
+                                            Text {
+                                                text:
+                                                    root.selectedNetwork?.name ??
+                                                    ""
+
+                                                font.family:
+                                                    Fonts.font
+
+                                                font.pixelSize:
+                                                    12
+
+                                                font.bold:
+                                                    true
+
+                                                color:
+                                                    Colors.on_PrimaryContainer
+                                            }
+
+                                            Text {
+                                                text:
+                                                    root.selectedNetworkSupportsPsk
+                                                        ? "Enter Wi-Fi password"
+                                                        : "Additional authentication may be required"
+
+                                                font.family:
+                                                    Fonts.font
+
+                                                font.pixelSize:
+                                                    9
+
+                                                color:
+                                                    Colors.on_SurfaceVariant
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            width:
+                                                24
+
+                                            height:
+                                                24
+
+                                            radius:
+                                                12
+
+                                            color:
+                                                closeConnectHover.hovered
+                                                    ? Colors.surfaceContainerHighest
+                                                    : "transparent"
+
+                                            HoverHandler {
+                                                id:
+                                                    closeConnectHover
+                                            }
+
+                                            Text {
+                                                anchors.centerIn:
+                                                    parent
+
+                                                text:
+                                                    "󰅖"
+
+                                                font.family:
+                                                    Fonts.fontM
+
+                                                font.pixelSize:
+                                                    13
+
+                                                color:
+                                                    Colors.on_PrimaryContainer
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill:
+                                                    parent
+
+                                                cursorShape:
+                                                    Qt.PointingHandCursor
+
+                                                onClicked:
+                                                    root.selectedNetwork =
+                                                        null
+                                            }
+                                        }
+                                    }
+
+                                    // PSK editor
+                                    RowLayout {
+                                        visible:
+                                            root.selectedNetworkSupportsPsk
+
+                                        Layout.fillWidth:
+                                            true
+
+                                        spacing:
+                                            8
+
+                                        TextField {
+                                            id:
+                                                passwordField
+
+                                            Layout.fillWidth:
+                                                true
+
+                                            height:
+                                                34
+
+                                            placeholderText:
+                                                "Password"
+
+                                            echoMode:
+                                                TextInput.Password
+
+                                            font.family:
+                                                Fonts.font
+
+                                            font.pixelSize:
+                                                11
+
+                                            color:
+                                                Colors.on_Surface
+
+                                            placeholderTextColor:
+                                                Colors.outline
+
+                                            background:
+                                                Rectangle {
+                                                    radius:
+                                                        8
+
+                                                    color:
+                                                        Colors.surfaceContainer
+
+                                                    border.width:
+                                                        1
+
+                                                    border.color:
+                                                        passwordField.activeFocus
+                                                            ? Colors.primary
+                                                            : Colors.outlineVariant
+                                                }
+
+                                            Keys.onReturnPressed: {
+                                                if (
+                                                    root.selectedNetworkSupportsPsk &&
+                                                    text.length > 0
+                                                ) {
+                                                    root.selectedNetwork.connectWithPsk(
+                                                        text
+                                                    );
+
+                                                    text = "";
+                                                }
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            width:
+                                                34
+
+                                            height:
+                                                34
+
+                                            radius:
+                                                8
+
+                                            color:
+                                                confirmHover.hovered
+                                                    ? Colors.primary
+                                                    : Colors.on_Surface
+
+                                            Behavior on color {
+                                                ColorAnimation {
+                                                    duration:
+                                                        Theme.hoverFadeDuration
+                                                }
+                                            }
+
+                                            HoverHandler {
+                                                id:
+                                                    confirmHover
+                                            }
+
+                                            Text {
+                                                anchors.centerIn:
+                                                    parent
+
+                                                text:
+                                                    "󰌑"
+
+                                                font.family:
+                                                    Fonts.fontM
+
+                                                font.pixelSize:
+                                                    14
+
+                                                color:
+                                                    Colors.on_Primary
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill:
+                                                    parent
+
+                                                cursorShape:
+                                                    Qt.PointingHandCursor
+
+                                                onClicked: {
+                                                    if (
+                                                        root.selectedNetworkSupportsPsk &&
+                                                        passwordField.text.length > 0
+                                                    ) {
+                                                        root.selectedNetwork.connectWithPsk(
+                                                            passwordField.text
+                                                        );
+
+                                                        passwordField.text =
+                                                            "";
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Non-PSK
+                                    Rectangle {
+                                        visible:
+                                            root.selectedNetwork !== null &&
+                                            !root.selectedNetworkSupportsPsk &&
+                                            root.selectedNetwork.security !== WifiSecurityType.Open
+
+                                        Layout.fillWidth:
+                                            true
+
+                                        implicitHeight:
+                                            34
+
+                                        radius:
+                                            8
+
+                                        color:
+                                            Colors.surfaceContainer
+
+                                        Text {
+                                            anchors.centerIn:
+                                                parent
+
+                                            text:
+                                                "This network does not use PSK authentication."
+
+                                            font.family:
+                                                Fonts.font
+
+                                            font.pixelSize:
+                                                9
+
+                                            color:
+                                                Colors.on_SurfaceVariant
                                         }
                                     }
                                 }
                             }
 
+                            // Available
                             Text {
                                 visible:
-                                    wifiNetworkModel.values.length === 0
+                                    wifiAvailableModel.values.length > 0
+
+                                text:
+                                    "Available"
+
+                                font.family:
+                                    Fonts.font
+
+                                font.pixelSize:
+                                    10
+
+                                font.bold:
+                                    true
+
+                                color:
+                                    Colors.on_SurfaceVariant
+
+                                topPadding:
+                                    6
+
+                                bottomPadding:
+                                    2
+                            }
+
+                            Repeater {
+                                model:
+                                    wifiAvailableModel
+
+                                delegate:
+                                    NetworkRow {
+                                        required property var modelData
+
+                                        Layout.fillWidth:
+                                            true
+
+                                        network:
+                                            modelData
+
+                                        onNetworkSelected:
+                                            (network) => {
+                                                if (
+                                                    network.security ===
+                                                    WifiSecurityType.Open
+                                                ) {
+                                                    network.connect();
+                                                    return;
+                                                }
+
+                                                root.selectedNetwork =
+                                                    network;
+                                            }
+                                    }
+                            }
+
+                            Text {
+                                visible:
+                                    wifiConnectedModel.values.length === 0 &&
+                                    root.selectedNetwork === null &&
+                                    wifiAvailableModel.values.length === 0
 
                                 Layout.alignment:
                                     Qt.AlignHCenter
 
                                 text:
-                                    "Scanning…"
+                                    NetworkService.wifiScanning
+                                        ? "Scanning…"
+                                        : "No Wi-Fi networks found"
 
                                 font.family:
                                     Fonts.font
 
-                                font.pixelSize: 10
+                                font.pixelSize:
+                                    10
 
                                 color:
                                     Colors.outline
 
-                                topPadding: 8
-                                bottomPadding: 8
+                                topPadding:
+                                    10
+
+                                bottomPadding:
+                                    10
                             }
                         }
                     }
@@ -983,13 +1464,17 @@ PanelWindow {
                         font.family:
                             Fonts.font
 
-                        font.pixelSize: 10
+                        font.pixelSize:
+                            10
 
                         color:
                             Colors.outline
 
-                        topPadding: 8
-                        bottomPadding: 8
+                        topPadding:
+                            8
+
+                        bottomPadding:
+                            8
                     }
                 }
 
@@ -1001,13 +1486,16 @@ PanelWindow {
                     visible:
                         Popups.networkTab === 1
 
-                    Layout.fillWidth: true
+                    Layout.fillWidth:
+                        true
 
-                    spacing: 8
+                    spacing:
+                        8
 
                     // Scan control
                     RowLayout {
-                        Layout.fillWidth: true
+                        Layout.fillWidth:
+                            true
 
                         Text {
                             text:
@@ -1018,32 +1506,48 @@ PanelWindow {
                             font.family:
                                 Fonts.font
 
-                            font.pixelSize: 11
-                            font.bold: true
+                            font.pixelSize:
+                                11
+
+                            font.bold:
+                                true
 
                             color:
                                 Colors.on_SurfaceVariant
 
-                            Layout.fillWidth: true
+                            Layout.fillWidth:
+                                true
                         }
 
                         Rectangle {
                             width:
                                 scanLabel.implicitWidth + 20
 
-                            height: 28
+                            height:
+                                28
 
-                            radius: 14
+                            radius:
+                                14
 
                             color:
-                                NetworkService.bluetooth.scanning
+                                NetworkService.bluetooth.scanning ||
+                                btScanHover.hovered
                                     ? Colors.primary
                                     : Colors.surfaceContainerHighest
 
-                            Text {
-                                id: scanLabel
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration:
+                                        Theme.hoverFadeDuration
+                                }
+                            }
 
-                                anchors.centerIn: parent
+                            Text {
+                                id:
+                                    scanLabel
+
+                                anchors.centerIn:
+                                    parent
 
                                 text:
                                     NetworkService.bluetooth.scanning
@@ -1053,17 +1557,27 @@ PanelWindow {
                                 font.family:
                                     Fonts.font
 
-                                font.pixelSize: 10
-                                font.bold: true
+                                font.pixelSize:
+                                    10
+
+                                font.bold:
+                                    true
 
                                 color:
-                                    NetworkService.bluetooth.scanning
+                                    NetworkService.bluetooth.scanning ||
+                                    btScanHover.hovered
                                         ? Colors.on_Primary
                                         : Colors.on_Surface
                             }
 
+                            HoverHandler {
+                                id:
+                                    btScanHover
+                            }
+
                             MouseArea {
-                                anchors.fill: parent
+                                anchors.fill:
+                                    parent
 
                                 cursorShape:
                                     Qt.PointingHandCursor
@@ -1092,152 +1606,224 @@ PanelWindow {
                         font.family:
                             Fonts.font
 
-                        font.pixelSize: 10
-                        font.bold: true
+                        font.pixelSize:
+                            10
+
+                        font.bold:
+                            true
 
                         color:
                             Colors.on_SurfaceVariant
 
-                        topPadding: 4
+                        topPadding:
+                            4
                     }
 
                     ColumnLayout {
-                        Layout.fillWidth: true
+                        Layout.fillWidth:
+                            true
 
-                        spacing: 4
+                        spacing:
+                            4
 
                         Repeater {
                             model:
                                 btConnectedModel
 
-                            delegate: Rectangle {
-                                required property var modelData
+                            delegate:
+                                Rectangle {
+                                    required property var modelData
 
-                                Layout.fillWidth: true
+                                    Layout.fillWidth:
+                                        true
 
-                                implicitHeight: 52
+                                    implicitHeight:
+                                        52
 
-                                radius: 10
+                                    radius:
+                                        10
 
-                                color:
-                                    Colors.primaryContainer
+                                    color:
+                                        connectedHover.hovered
+                                            ? Colors.surfaceContainerHighest
+                                            : Qt.rgba(
+                                                Colors.primaryContainer.r,
+                                                Colors.primaryContainer.g,
+                                                Colors.primaryContainer.b,
+                                                0.28
+                                            )
 
-                                RowLayout {
-                                    anchors {
-                                        fill: parent
-                                        leftMargin: 12
-                                        rightMargin: 10
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration:
+                                                Theme.hoverFadeDuration
+                                        }
                                     }
 
-                                    spacing: 9
-
-                                    Text {
-                                        text:
-                                            modelData.icon
-                                                .includes("headphones")
-                                                ? "󰋋"
-                                                : modelData.icon
-                                                    .includes("keyboard")
-                                                    ? "󰌌"
-                                                    : modelData.icon
-                                                        .includes("mouse")
-                                                        ? "󰍽"
-                                                        : "󰂯"
-
-                                        font.family:
-                                            Fonts.fontM
-
-                                        font.pixelSize: 17
-
-                                        color:
-                                            Colors.primary
+                                    HoverHandler {
+                                        id:
+                                            connectedHover
                                     }
 
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
+                                    RowLayout {
+                                        anchors {
+                                            fill:
+                                                parent
 
-                                        spacing: 1
+                                            leftMargin:
+                                                12
+
+                                            rightMargin:
+                                                10
+                                        }
+
+                                        spacing:
+                                            9
 
                                         Text {
                                             text:
-                                                modelData.name
-
-                                            font.family:
-                                                Fonts.font
-
-                                            font.pixelSize: 11
-                                            font.bold: true
-
-                                            color:
-                                                Colors.on_Surface
-
-                                            elide:
-                                                Text.ElideRight
-
-                                            Layout.fillWidth: true
-                                        }
-
-                                        Text {
-                                            text:
-                                                modelData.batteryAvailable
-                                                    ? Math.round(
-                                                        modelData.battery * 100
-                                                    ) + "%"
-                                                    : "Connected"
-
-                                            font.family:
-                                                Fonts.font
-
-                                            font.pixelSize: 9
-
-                                            color:
-                                                Colors.outline
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        width:
-                                            disconnectLabel.implicitWidth + 18
-
-                                        height: 24
-
-                                        radius: 12
-
-                                        color:
-                                            Colors.surfaceContainerHighest
-
-                                        Text {
-                                            id: disconnectLabel
-
-                                            anchors.centerIn: parent
-
-                                            text: "Disconnect"
-
-                                            font.family:
-                                                Fonts.font
-
-                                            font.pixelSize: 9
-
-                                            font.bold: true
-
-                                            color:
-                                                Colors.on_Surface
-                                        }
-
-                                        MouseArea {
-                                            anchors.fill: parent
-
-                                            cursorShape:
-                                                Qt.PointingHandCursor
-
-                                            onClicked:
-                                                NetworkService.bluetooth.disconnect(
-                                                    modelData.address
+                                                modelData.icon.includes(
+                                                    "headphones"
                                                 )
+                                                    ? "󰋋"
+                                                    : modelData.icon.includes(
+                                                        "keyboard"
+                                                    )
+                                                        ? "󰌌"
+                                                        : modelData.icon.includes(
+                                                            "mouse"
+                                                        )
+                                                            ? "󰍽"
+                                                            : "󰂯"
+
+                                            font.family:
+                                                Fonts.fontM
+
+                                            font.pixelSize:
+                                                17
+
+                                            color:
+                                                Colors.primary
+                                        }
+
+                                        ColumnLayout {
+                                            Layout.fillWidth:
+                                                true
+
+                                            spacing:
+                                                1
+
+                                            Text {
+                                                text:
+                                                    modelData.name
+
+                                                font.family:
+                                                    Fonts.font
+
+                                                font.pixelSize:
+                                                    11
+
+                                                font.bold:
+                                                    true
+
+                                                color:
+                                                    Colors.on_Surface
+
+                                                elide:
+                                                    Text.ElideRight
+
+                                                Layout.fillWidth:
+                                                    true
+                                            }
+
+                                            Text {
+                                                text:
+                                                    modelData.batteryAvailable
+                                                        ? Math.round(
+                                                            modelData.battery *
+                                                            100
+                                                        ) + "%"
+                                                        : "Connected"
+
+                                                font.family:
+                                                    Fonts.font
+
+                                                font.pixelSize:
+                                                    9
+
+                                                color:
+                                                    Colors.on_SurfaceVariant
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            width:
+                                                disconnectLabel.implicitWidth +
+                                                18
+
+                                            height:
+                                                24
+
+                                            radius:
+                                                12
+
+                                            color:
+                                                disconnectHover.hovered
+                                                    ? Colors.primary
+                                                    : Colors.surfaceContainerHighest
+
+                                            Behavior on color {
+                                                ColorAnimation {
+                                                    duration:
+                                                        Theme.hoverFadeDuration
+                                                }
+                                            }
+
+                                            HoverHandler {
+                                                id:
+                                                    disconnectHover
+                                            }
+
+                                            Text {
+                                                id:
+                                                    disconnectLabel
+
+                                                anchors.centerIn:
+                                                    parent
+
+                                                text:
+                                                    "Disconnect"
+
+                                                font.family:
+                                                    Fonts.font
+
+                                                font.pixelSize:
+                                                    9
+
+                                                font.bold:
+                                                    true
+
+                                                color:
+                                                    disconnectHover.hovered
+                                                        ? Colors.on_Primary
+                                                        : Colors.on_Surface
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill:
+                                                    parent
+
+                                                cursorShape:
+                                                    Qt.PointingHandCursor
+
+                                                onClicked:
+                                                    NetworkService.bluetooth.disconnect(
+                                                        modelData.address
+                                                    )
+                                            }
                                         }
                                     }
                                 }
-                            }
                         }
                     }
 
@@ -1252,141 +1838,237 @@ PanelWindow {
                         font.family:
                             Fonts.font
 
-                        font.pixelSize: 10
-                        font.bold: true
+                        font.pixelSize:
+                            10
+
+                        font.bold:
+                            true
 
                         color:
                             Colors.on_SurfaceVariant
 
-                        topPadding: 4
+                        topPadding:
+                            4
                     }
 
                     ColumnLayout {
-                        Layout.fillWidth: true
+                        Layout.fillWidth:
+                            true
 
-                        spacing: 4
+                        spacing:
+                            4
 
                         Repeater {
                             model:
                                 btPairedModel
 
-                            delegate: Rectangle {
-                                required property var modelData
+                            delegate:
+                                Rectangle {
+                                    required property var modelData
 
-                                Layout.fillWidth: true
+                                    Layout.fillWidth:
+                                        true
 
-                                implicitHeight: 46
+                                    implicitHeight:
+                                        46
 
-                                radius: 10
+                                    radius:
+                                        10
 
-                                color:
-                                    Colors.surfaceContainerHigh
+                                    color:
+                                        pairedHover.hovered
+                                            ? Colors.surfaceContainerHighest
+                                            : "transparent"
 
-                                RowLayout {
-                                    anchors {
-                                        fill: parent
-                                        leftMargin: 12
-                                        rightMargin: 10
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration:
+                                                Theme.hoverFadeDuration
+                                        }
                                     }
 
-                                    spacing: 9
-
-                                    Text {
-                                        text: "󰂯"
-
-                                        font.family:
-                                            Fonts.fontM
-
-                                        font.pixelSize: 16
-
-                                        color:
-                                            Colors.outline
+                                    HoverHandler {
+                                        id:
+                                            pairedHover
                                     }
 
-                                    Text {
-                                        text:
-                                            modelData.name
+                                    RowLayout {
+                                        anchors {
+                                            fill:
+                                                parent
 
-                                        font.family:
-                                            Fonts.font
+                                            leftMargin:
+                                                12
 
-                                        font.pixelSize: 11
+                                            rightMargin:
+                                                10
+                                        }
 
-                                        color:
-                                            Colors.on_Surface
-
-                                        elide:
-                                            Text.ElideRight
-
-                                        Layout.fillWidth: true
-                                    }
-
-                                    Rectangle {
-                                        width:
-                                            connectLabel.implicitWidth + 18
-
-                                        height: 24
-
-                                        radius: 12
-
-                                        color:
-                                            Colors.primaryContainer
+                                        spacing:
+                                            9
 
                                         Text {
-                                            id: connectLabel
+                                            text:
+                                                "󰂯"
 
-                                            anchors.centerIn: parent
+                                            font.family:
+                                                Fonts.fontM
 
-                                            text: "Connect"
+                                            font.pixelSize:
+                                                16
+
+                                            color:
+                                                Colors.on_SurfaceVariant
+                                        }
+
+                                        Text {
+                                            text:
+                                                modelData.name
 
                                             font.family:
                                                 Fonts.font
 
-                                            font.pixelSize: 9
-                                            font.bold: true
+                                            font.pixelSize:
+                                                11
 
                                             color:
-                                                Colors.on_PrimaryContainer
+                                                Colors.on_SurfaceVariant
+
+                                            elide:
+                                                Text.ElideRight
+
+                                            Layout.fillWidth:
+                                                true
                                         }
 
-                                        MouseArea {
-                                            anchors.fill: parent
+                                        Rectangle {
+                                            width:
+                                                connectLabel.implicitWidth +
+                                                18
 
-                                            cursorShape:
-                                                Qt.PointingHandCursor
+                                            height:
+                                                24
 
-                                            onClicked:
-                                                NetworkService.bluetooth.connect(
-                                                    modelData.address
-                                                )
+                                            radius:
+                                                12
+
+                                            color:
+                                                pairedConnectHover.hovered
+                                                    ? Colors.primary
+                                                    : Colors.primaryContainer
+
+                                            Behavior on color {
+                                                ColorAnimation {
+                                                    duration:
+                                                        Theme.hoverFadeDuration
+                                                }
+                                            }
+
+                                            HoverHandler {
+                                                id:
+                                                    pairedConnectHover
+                                            }
+
+                                            Text {
+                                                id:
+                                                    connectLabel
+
+                                                anchors.centerIn:
+                                                    parent
+
+                                                text:
+                                                    "Connect"
+
+                                                font.family:
+                                                    Fonts.font
+
+                                                font.pixelSize:
+                                                    9
+
+                                                font.bold:
+                                                    true
+
+                                                color:
+                                                    pairedConnectHover.hovered
+                                                        ? Colors.on_Primary
+                                                        : Colors.on_PrimaryContainer
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill:
+                                                    parent
+
+                                                cursorShape:
+                                                    Qt.PointingHandCursor
+
+                                                onClicked:
+                                                    NetworkService.bluetooth.connect(
+                                                        modelData.address
+                                                    )
+                                            }
                                         }
-                                    }
 
-                                    Text {
-                                        text: "󰆴"
+                                        Rectangle {
+                                            width:
+                                                26
 
-                                        font.family:
-                                            Fonts.fontM
+                                            height:
+                                                26
 
-                                        font.pixelSize: 13
+                                            radius:
+                                                13
 
-                                        color:
-                                            Colors.outline
+                                            color:
+                                                removeHover.hovered
+                                                    ? Colors.errorContainer
+                                                    : "transparent"
 
-                                        MouseArea {
-                                            anchors.fill: parent
+                                            Behavior on color {
+                                                ColorAnimation {
+                                                    duration:
+                                                        Theme.hoverFadeDuration
+                                                }
+                                            }
 
-                                            cursorShape:
-                                                Qt.PointingHandCursor
+                                            HoverHandler {
+                                                id:
+                                                    removeHover
+                                            }
 
-                                            onClicked:
-                                                NetworkService.bluetooth.remove(
-                                                    modelData.address
-                                                )
+                                            Text {
+                                                anchors.centerIn:
+                                                    parent
+
+                                                text:
+                                                    "󰆴"
+
+                                                font.family:
+                                                    Fonts.fontM
+
+                                                font.pixelSize:
+                                                    13
+
+                                                color:
+                                                    removeHover.hovered
+                                                        ? Colors.on_ErrorContainer
+                                                        : Colors.outline
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill:
+                                                    parent
+
+                                                cursorShape:
+                                                    Qt.PointingHandCursor
+
+                                                onClicked:
+                                                    NetworkService.bluetooth.remove(
+                                                        modelData.address
+                                                    )
+                                            }
                                         }
                                     }
                                 }
-                            }
                         }
                     }
 
@@ -1401,117 +2083,176 @@ PanelWindow {
                         font.family:
                             Fonts.font
 
-                        font.pixelSize: 10
-                        font.bold: true
+                        font.pixelSize:
+                            10
+
+                        font.bold:
+                            true
 
                         color:
                             Colors.on_SurfaceVariant
 
-                        topPadding: 4
+                        topPadding:
+                            4
                     }
 
                     ColumnLayout {
-                        Layout.fillWidth: true
+                        Layout.fillWidth:
+                            true
 
-                        spacing: 4
+                        spacing:
+                            4
 
                         Repeater {
                             model:
                                 btAvailableModel
 
-                            delegate: Rectangle {
-                                required property var modelData
+                            delegate:
+                                Rectangle {
+                                    required property var modelData
 
-                                Layout.fillWidth: true
+                                    Layout.fillWidth:
+                                        true
 
-                                implicitHeight: 46
+                                    implicitHeight:
+                                        46
 
-                                radius: 10
+                                    radius:
+                                        10
 
-                                color:
-                                    Colors.surfaceContainerHigh
+                                    color:
+                                        availableHover.hovered
+                                            ? Colors.surfaceContainerHighest
+                                            : "transparent"
 
-                                RowLayout {
-                                    anchors {
-                                        fill: parent
-                                        leftMargin: 12
-                                        rightMargin: 10
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration:
+                                                Theme.hoverFadeDuration
+                                        }
                                     }
 
-                                    spacing: 9
-
-                                    Text {
-                                        text: "󰂯"
-
-                                        font.family:
-                                            Fonts.fontM
-
-                                        font.pixelSize: 16
-
-                                        color:
-                                            Colors.outline
+                                    HoverHandler {
+                                        id:
+                                            availableHover
                                     }
 
-                                    Text {
-                                        text:
-                                            modelData.name
+                                    RowLayout {
+                                        anchors {
+                                            fill:
+                                                parent
 
-                                        font.family:
-                                            Fonts.font
+                                            leftMargin:
+                                                12
 
-                                        font.pixelSize: 11
+                                            rightMargin:
+                                                10
+                                        }
 
-                                        color:
-                                            Colors.on_Surface
-
-                                        elide:
-                                            Text.ElideRight
-
-                                        Layout.fillWidth: true
-                                    }
-
-                                    Rectangle {
-                                        width:
-                                            pairLabel.implicitWidth + 18
-
-                                        height: 24
-
-                                        radius: 12
-
-                                        color:
-                                            Colors.primary
+                                        spacing:
+                                            9
 
                                         Text {
-                                            id: pairLabel
+                                            text:
+                                                "󰂯"
 
-                                            anchors.centerIn: parent
+                                            font.family:
+                                                Fonts.fontM
 
-                                            text: "Pair"
+                                            font.pixelSize:
+                                                16
+
+                                            color:
+                                                Colors.on_SurfaceVariant
+                                        }
+
+                                        Text {
+                                            text:
+                                                modelData.name
 
                                             font.family:
                                                 Fonts.font
 
-                                            font.pixelSize: 9
-                                            font.bold: true
+                                            font.pixelSize:
+                                                11
 
                                             color:
-                                                Colors.on_Primary
+                                                Colors.on_Surface
+
+                                            elide:
+                                                Text.ElideRight
+
+                                            Layout.fillWidth:
+                                                true
                                         }
 
-                                        MouseArea {
-                                            anchors.fill: parent
+                                        Rectangle {
+                                            width:
+                                                pairLabel.implicitWidth + 18
 
-                                            cursorShape:
-                                                Qt.PointingHandCursor
+                                            height:
+                                                24
 
-                                            onClicked:
-                                                NetworkService.bluetooth.pair(
-                                                    modelData.address
-                                                )
+                                            radius:
+                                                12
+
+                                            color:
+                                                availablePairHover.hovered
+                                                    ? Colors.primaryContainer
+                                                    : Colors.primary
+
+                                            Behavior on color {
+                                                ColorAnimation {
+                                                    duration:
+                                                        Theme.hoverFadeDuration
+                                                }
+                                            }
+
+                                            HoverHandler {
+                                                id:
+                                                    availablePairHover
+                                            }
+
+                                            Text {
+                                                id:
+                                                    pairLabel
+
+                                                anchors.centerIn:
+                                                    parent
+
+                                                text:
+                                                    "Pair"
+
+                                                font.family:
+                                                    Fonts.font
+
+                                                font.pixelSize:
+                                                    9
+
+                                                font.bold:
+                                                    true
+
+                                                color:
+                                                    availablePairHover.hovered
+                                                        ? Colors.on_PrimaryContainer
+                                                        : Colors.on_Primary
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill:
+                                                    parent
+
+                                                cursorShape:
+                                                    Qt.PointingHandCursor
+
+                                                onClicked:
+                                                    NetworkService.bluetooth.pair(
+                                                        modelData.address
+                                                    )
+                                            }
                                         }
                                     }
                                 }
-                            }
                         }
                     }
 
@@ -1531,13 +2272,17 @@ PanelWindow {
                         font.family:
                             Fonts.font
 
-                        font.pixelSize: 10
+                        font.pixelSize:
+                            10
 
                         color:
                             Colors.outline
 
-                        topPadding: 12
-                        bottomPadding: 12
+                        topPadding:
+                            12
+
+                        bottomPadding:
+                            12
                     }
 
                     Text {
@@ -1555,13 +2300,17 @@ PanelWindow {
                         font.family:
                             Fonts.font
 
-                        font.pixelSize: 10
+                        font.pixelSize:
+                            10
 
                         color:
                             Colors.outline
 
-                        topPadding: 12
-                        bottomPadding: 12
+                        topPadding:
+                            12
+
+                        bottomPadding:
+                            12
                     }
                 }
 
@@ -1573,25 +2322,30 @@ PanelWindow {
                     visible:
                         Popups.networkTab === 2
 
-                    Layout.fillWidth: true
+                    Layout.fillWidth:
+                        true
 
-                    spacing: 6
+                    spacing:
+                        6
 
                     Text {
                         Layout.alignment:
                             Qt.AlignHCenter
 
-                        text: "󰀂"
+                        text:
+                            "󰀂"
 
                         font.family:
                             Fonts.fontM
 
-                        font.pixelSize: 32
+                        font.pixelSize:
+                            32
 
                         color:
                             Colors.outline
 
-                        topPadding: 12
+                        topPadding:
+                            12
                     }
 
                     Text {
@@ -1604,12 +2358,14 @@ PanelWindow {
                         font.family:
                             Fonts.font
 
-                        font.pixelSize: 11
+                        font.pixelSize:
+                            11
 
                         color:
                             Colors.outline
 
-                        bottomPadding: 12
+                        bottomPadding:
+                            12
                     }
                 }
             }
