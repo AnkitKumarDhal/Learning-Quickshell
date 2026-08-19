@@ -12,7 +12,6 @@ PillBase {
     hoverEnabled: false
 
     onClicked: (mouse) => {
-        // find which dot was clicked by x position
         const dotWidth   = 12
         const activeDotW = 30
         let x = mouse.x - Theme.pillPadding / 2
@@ -22,11 +21,10 @@ PillBase {
                 Hyprland.dispatch("hl.dsp.focus({ workspace = " + (i + 1) + " })")
                 return
             }
-            x -= w + Theme.barSpacing  // 8 = spacing
+            x -= w + Theme.barSpacing
         }
     }
 
-    // Cache workspace list to avoid repeated property access in Repeater
     property var _cachedWorkspaces: Hyprland.workspaces.values
 
     property int dotCount: {
@@ -48,7 +46,6 @@ PillBase {
             delegate: Rectangle {
                 readonly property int wsId: index + 1
 
-                // Use cached workspace list instead of accessing Hyprland.workspaces.values repeatedly
                 property var hyprWs: {
                     let wss = root._cachedWorkspaces
                     for (let i = 0; i < wss.length; i++) {

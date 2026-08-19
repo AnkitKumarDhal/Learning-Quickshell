@@ -5,17 +5,14 @@ import qs.src.theme
 Item {
     id: root
 
-    // ── Inputs ────────────────────────────────────────────────────────────
     property var emojis: []
 
-    // ── Outputs ───────────────────────────────────────────────────────────
     signal emojiSelected(string emoji)
     signal typedChar(string ch)
 
     function forceActiveFocus() { grid.forceActiveFocus() }
     function resetIndex()       { grid.currentIndex = 0  }
 
-    // ── Grid ──────────────────────────────────────────────────────────────
     GridView {
         id: grid
 
@@ -92,7 +89,6 @@ Item {
         }
     }
 
-    // ── Empty state ───────────────────────────────────────────────────────
     Text {
         anchors.centerIn: parent
         visible: !root.emojis || root.emojis.length === 0

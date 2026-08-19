@@ -12,7 +12,6 @@ RowLayout {
     Layout.fillWidth: true
     spacing:          0
 
-    // ── Helper: icon button ───────────────────────────────────────────────────
     component IconBtn: Item {
         property string icon:      ""
         property color  iconColor: Colors.on_Surface
@@ -70,7 +69,7 @@ RowLayout {
 
     Item { Layout.fillWidth: true }
 
-    // Play / Pause — bigger
+    // Play / Pause
     Item {
         Layout.preferredWidth:  52
         Layout.preferredHeight: 52

@@ -12,7 +12,7 @@ Row {
 
     spacing: 6
 
-    property var players: Mpris.players.values
+    property var players:     Mpris.players.values
     property var _lastActive: null
 
     property var _currentlyPlaying: {
@@ -54,7 +54,7 @@ Row {
 
     visible: activePlayer !== null
 
-    // ── Prev button ───────────────────────────────────────────────────────────
+    // Previous button
     PillBase {
         hoverExpand:   true
         implicitWidth: Theme.pillHeight
@@ -70,7 +70,7 @@ Row {
         onClicked: if (root.activePlayer) root.activePlayer.previous()
     }
 
-    // ── Center pill — art + title ─────────────────────────────────────────────
+    // Center pill — art + title
     PillBase {
         hoverExpand: false
 
@@ -126,7 +126,7 @@ Row {
         }
     }
 
-    // ── Next button ───────────────────────────────────────────────────────────
+    // Next button
     PillBase {
         hoverExpand:   true
         implicitWidth: Theme.pillHeight

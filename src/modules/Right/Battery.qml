@@ -11,7 +11,6 @@ PillBase {
     visible:     BatteryService.hasBattery
     hoverExpand: true
 
-    // Highlight border when popup is open
     border.color: Colors.primary
     border.width: Popups.batteryOpen ? 1 : 0
     Behavior on border.width { NumberAnimation { duration: 150 } }

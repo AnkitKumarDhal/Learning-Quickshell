@@ -2,15 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import qs.src.theme
 
-// Scrollable content container for popup pages.
-// Wrap your popup's inner content in this instead of a plain Column.
-//
-// Usage:
-//   PopupPage {
-//       anchors.fill: parent
-//       // children go here
-//   }
-
 Item {
     id: root
 
@@ -31,7 +22,7 @@ Item {
 
         ScrollBar.vertical: ScrollBar {
             policy: contentCol.implicitHeight + root.padV * 2 > flick.height ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
-            
+
             contentItem: Rectangle {
                 implicitWidth:  3
                 implicitHeight: 40
@@ -42,9 +33,9 @@ Item {
         }
 
         Column {
-            id: contentCol
+            id:      contentCol
             spacing: 8
-            anchors {
+            anchors  {
                 top:         parent.top
                 topMargin:   root.padV
                 left:        parent.left

@@ -7,11 +7,9 @@ Item {
 
     height: 56
 
-    // ── Inputs ────────────────────────────────────────────────────────────
     property int  resultCount: 0
     property bool showCount:   false
 
-    // ── Outputs ───────────────────────────────────────────────────────────
     readonly property alias text: searchInput.text
 
     signal escapePressed()
@@ -23,12 +21,10 @@ Item {
     function clear()            { searchInput.text = "" }
     function forceActiveFocus() { searchInput.forceActiveFocus() }
 
-    // ── Layout ────────────────────────────────────────────────────────────
     RowLayout {
         anchors.fill: parent
         spacing: 0
 
-        // Search icon
         Text {
             text:             "󰍉"
             color:            Colors.primary
@@ -38,7 +34,6 @@ Item {
             Layout.alignment: Qt.AlignVCenter
         }
 
-        // Text input
         TextInput {
             id: searchInput
             Layout.fillWidth:  true
@@ -92,7 +87,6 @@ Item {
             }
         }
 
-        // Result count badge
         Text {
             visible:          root.showCount
             text:             root.resultCount + " result" + (root.resultCount === 1 ? "" : "s")

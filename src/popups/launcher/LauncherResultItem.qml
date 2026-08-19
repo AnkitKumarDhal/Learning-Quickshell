@@ -6,17 +6,14 @@ import qs.src.theme
 Item {
     id: root
 
-    // ── Inputs ────────────────────────────────────────────────────────────
     property var  appData:    ({})
     property bool isSelected: false
 
-    // ── Outputs ───────────────────────────────────────────────────────────
     signal activated()
     signal hovered()
 
     height: 54
 
-    // ── Selection background ──────────────────────────────────────────────
     Rectangle {
         anchors.fill: parent
         topRightRadius: 15
@@ -29,7 +26,6 @@ Item {
         Behavior on color { ColorAnimation { duration: 80 } }
     }
 
-    // ── Left accent bar ───────────────────────────────────────────────────
     Rectangle {
         anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
         width:   3
@@ -39,12 +35,10 @@ Item {
         Behavior on opacity { NumberAnimation { duration: 120 } }
     }
 
-    // ── Row content ───────────────────────────────────────────────────────
     RowLayout {
         anchors { fill: parent; leftMargin: 16; rightMargin: 14 }
         spacing: 12
 
-        // App icon — real icon with letter fallback
         Rectangle {
             width:  36
             height: 36
@@ -79,7 +73,6 @@ Item {
             }
         }
 
-        // Name + comment
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 2
@@ -107,7 +100,6 @@ Item {
             }
         }
 
-        // Enter hint on selected row
         Text {
             visible:        root.isSelected
             text:           "↵"
@@ -118,7 +110,6 @@ Item {
         }
     }
 
-    // ── Mouse ─────────────────────────────────────────────────────────────
     MouseArea {
         id:           hov
         anchors.fill: parent
