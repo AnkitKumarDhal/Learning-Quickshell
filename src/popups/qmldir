@@ -5,7 +5,6 @@ VolumePopup          1.0    VolumePopup.qml
 VolumeSlider         1.0    VolumeSlider.qml
 DeviceRow            1.0    DeviceRow.qml
 NetworkPopup         1.0    NetworkPopup.qml
-NetworkRow           1.0    NetworkRow.qml
 MediaPopup           1.0    MediaPopup.qml
 Launcher             1.0    Launcher.qml
 ClipboardPopup       1.0    ClipboardPopup.qml
