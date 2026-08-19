@@ -76,7 +76,7 @@ PanelWindow {
             "scannerActive"
 
         value:
-            Popups.networkOpen && Popups.networkTab !== 2 && !HotspotService.active
+            Popups.networkOpen
     }
 
     // ── Popup mask ───────────────────────────────────────────────────────────

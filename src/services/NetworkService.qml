@@ -60,16 +60,7 @@ Singleton {
 
     function _updateScanner() {
         if (root.wifiDevice)
-            root.wifiDevice.scannerEnabled = root.scannerActive && !HotspotService.active;
-    }
-
-    Connections {
-        target:
-            HotspotService
-
-        function onActiveChanged() {
-            root._updateScanner();
-        }
+            root.wifiDevice.scannerEnabled = root.scannerActive;
     }
 
     function scanWifi() {
