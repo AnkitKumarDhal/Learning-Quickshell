@@ -622,12 +622,11 @@ FocusScope {
                                 visible:
                                     !menuItem.hasButton &&
                                     modelData.icon !== undefined &&
-                                    modelData.icon !== "" &&
-                                    Quickshell.hasThemeIcon(modelData.icon)
+                                    modelData.icon !== ""
                                 anchors.centerIn: parent
                                 width: 18
                                 height: 18
-                                source: Quickshell.iconPath(modelData.icon, true)
+                                source: modelData.icon || ""
                                 mipmap: true
                             }
 

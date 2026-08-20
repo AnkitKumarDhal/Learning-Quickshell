@@ -364,6 +364,97 @@ RowLayout {
                         modelData.title
                     )
 
+                Timer {
+                    id: pinnedTooltipTimer
+
+                    interval: 500
+                    repeat: false
+
+                    onTriggered: {
+                        if (
+                            pinnedHover.containsMouse &&
+                            pinnedDelegate.hasTooltip
+                        ) {
+                            pinnedTooltip.visible = true
+                        }
+                    }
+                }
+                PopupWindow {
+                    id: pinnedTooltip
+
+                    visible: false
+
+                    anchor.item: pinnedHover
+
+                    anchor.edges:
+                        Edges.Bottom | Edges.Left
+
+                    anchor.gravity:
+                        Edges.Top | Edges.Left
+
+                    // margins: 6
+
+                    width:
+                        Math.min(
+                            280,
+                            Math.max(
+                                120,
+                                pinnedTooltipText.implicitWidth + 20
+                            )
+                        )
+
+                    height:
+                        pinnedTooltipText.implicitHeight + 16
+
+                    color: "transparent"
+
+                    Rectangle {
+                        anchors.fill: parent
+
+                        radius: 8
+
+                        color:
+                            Colors.surfaceContainerHigh
+
+                        border.width: 1
+                        border.color:
+                            Colors.outlineVariant
+
+                        Text {
+                            id: pinnedTooltipText
+
+                            anchors.fill: parent
+                            anchors.margins: 10
+
+                            text:
+                                modelData.tooltipTitle ||
+                                modelData.tooltipDescription ||
+                                modelData.title ||
+                                ""
+
+                            color:
+                                Colors.on_Surface
+
+                            font.family:
+                                Fonts.font
+
+                            font.pixelSize:
+                                11
+
+                            wrapMode:
+                                Text.WordWrap
+
+                            maximumLineCount: 3
+
+                            elide:
+                                Text.ElideRight
+
+                            verticalAlignment:
+                                Text.AlignVCenter
+                        }
+                    }
+                }
+
                 Rectangle {
                     anchors.fill:
                         parent
@@ -491,93 +582,6 @@ RowLayout {
                     }
                 }
 
-                Rectangle {
-                    visible:
-                        pinnedDelegate.hasTooltip &&
-                        pinnedHover.containsMouse
-
-                    z:
-                        100
-
-                    x:
-                        Math.max(
-                            -80,
-                            Math.min(
-                                -20,
-                                (
-                                    parent.width -
-                                    width
-                                ) / 2
-                            )
-                        )
-
-                    y:
-                        parent.height + 7
-
-                    width:
-                        Math.min(
-                            260,
-                            Math.max(
-                                120,
-                                pinnedTooltipText.implicitWidth +
-                                20
-                            )
-                        )
-
-                    height:
-                        pinnedTooltipText.implicitHeight +
-                        14
-
-                    radius:
-                        8
-
-                    color:
-                        Colors.surfaceContainerHigh
-
-                    border.width:
-                        1
-
-                    border.color:
-                        Colors.outlineVariant
-
-                    Text {
-                        id:
-                            pinnedTooltipText
-
-                        anchors.fill:
-                            parent
-
-                        anchors.margins:
-                            10
-
-                        text:
-                            modelData.tooltipTitle ||
-                            modelData.tooltipDescription ||
-                            modelData.title ||
-                            ""
-
-                        color:
-                            Colors.on_Surface
-
-                        font.family:
-                            Fonts.font
-
-                        font.pixelSize:
-                            11
-
-                        wrapMode:
-                            Text.WordWrap
-
-                        maximumLineCount:
-                            3
-
-                        elide:
-                            Text.ElideRight
-
-                        verticalAlignment:
-                            Text.AlignVCenter
-                    }
-                }
 
                 MouseArea {
                     id:
@@ -647,6 +651,16 @@ RowLayout {
                             delta > 0 ? 1 : -1,
                             horizontal
                         )
+                    }
+
+                    onEntered: pinnedTooltipTimer.restart()
+                    onExited: {
+                        pinnedTooltipTimer.stop()
+                        pinnedTooltip.visible = false
+                    }
+                    onCanceled: {
+                        pinnedTooltipTimer.stop()
+                        pinnedTooltip.visible = false
                     }
                 }
             }
@@ -730,6 +744,96 @@ RowLayout {
                             modelData.tooltipDescription ||
                             modelData.title
                         )
+Timer {
+    id: overflowTooltipTimer
+
+    interval: 500
+    repeat: false
+
+    onTriggered: {
+        if (
+            overflowHover.containsMouse &&
+            overflowDelegate.hasTooltip
+        ) {
+            overflowTooltip.visible = true
+        }
+    }
+}
+PopupWindow {
+    id: overflowTooltip
+
+    visible: false
+
+    anchor.item: overflowHover
+
+    anchor.edges:
+        Edges.Bottom | Edges.Left
+
+    anchor.gravity:
+        Edges.Top | Edges.Left
+
+    // margin: 6
+
+    width:
+        Math.min(
+            280,
+            Math.max(
+                120,
+                overflowTooltipText.implicitWidth + 20
+            )
+        )
+
+    height:
+        overflowTooltipText.implicitHeight + 16
+
+    color: "transparent"
+
+    Rectangle {
+        anchors.fill: parent
+
+        radius: 8
+
+        color:
+            Colors.surfaceContainerHigh
+
+        border.width: 1
+        border.color:
+            Colors.outlineVariant
+
+        Text {
+            id: overflowTooltipText
+
+            anchors.fill: parent
+            anchors.margins: 10
+
+            text:
+                modelData.tooltipTitle ||
+                modelData.tooltipDescription ||
+                modelData.title ||
+                ""
+
+            color:
+                Colors.on_Surface
+
+            font.family:
+                Fonts.font
+
+            font.pixelSize:
+                11
+
+            wrapMode:
+                Text.WordWrap
+
+            maximumLineCount: 3
+
+            elide:
+                Text.ElideRight
+
+            verticalAlignment:
+                Text.AlignVCenter
+        }
+    }
+}
 
                     opacity:
                         root.collapsed
@@ -888,94 +992,6 @@ RowLayout {
                         }
                     }
 
-                    Rectangle {
-                        visible:
-                            overflowDelegate.hasTooltip &&
-                            overflowHover.containsMouse
-
-                        z:
-                            100
-
-                        x:
-                            Math.max(
-                                -80,
-                                Math.min(
-                                    -20,
-                                    (
-                                        parent.width -
-                                        width
-                                    ) / 2
-                                )
-                            )
-
-                        y:
-                            parent.height + 7
-
-                        width:
-                            Math.min(
-                                260,
-                                Math.max(
-                                    120,
-                                    overflowTooltipText.implicitWidth +
-                                    20
-                                )
-                            )
-
-                        height:
-                            overflowTooltipText.implicitHeight +
-                            14
-
-                        radius:
-                            8
-
-                        color:
-                            Colors.surfaceContainerHigh
-
-                        border.width:
-                            1
-
-                        border.color:
-                            Colors.outlineVariant
-
-                        Text {
-                            id:
-                                overflowTooltipText
-
-                            anchors.fill:
-                                parent
-
-                            anchors.margins:
-                                10
-
-                            text:
-                                modelData.tooltipTitle ||
-                                modelData.tooltipDescription ||
-                                modelData.title ||
-                                ""
-
-                            color:
-                                Colors.on_Surface
-
-                            font.family:
-                                Fonts.font
-
-                            font.pixelSize:
-                                11
-
-                            wrapMode:
-                                Text.WordWrap
-
-                            maximumLineCount:
-                                3
-
-                            elide:
-                                Text.ElideRight
-
-                            verticalAlignment:
-                                Text.AlignVCenter
-                        }
-                    }
-
                     MouseArea {
                         id:
                             overflowHover
@@ -1045,6 +1061,20 @@ RowLayout {
                                 horizontal
                             )
                         }
+
+onEntered: {
+    overflowTooltipTimer.restart()
+}
+
+onExited: {
+    overflowTooltipTimer.stop()
+    overflowTooltip.visible = false
+}
+
+onCanceled: {
+    overflowTooltipTimer.stop()
+    overflowTooltip.visible = false
+}
                     }
                 }
             }
