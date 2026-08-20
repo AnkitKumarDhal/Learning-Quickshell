@@ -108,6 +108,15 @@ ShellRoot {
                     }
                 }
 
+                PopupLoader {
+                    open: Popups.sessionOpen
+                    popup: Component {
+                        SessionPopup {
+                            screen: modelData
+                        }
+                    }
+                }
+
                 PolkitPopup { screen: modelData }
                 KeybindsPopup { screen: modelData }
             }
@@ -173,5 +182,11 @@ PopupLoader {
         name:        "keybindsToggle"
         description: "Toggle keybinds viewer"
         onPressed:   Popups.keybindsOpen = !Popups.keybindsOpen
+    }
+    GlobalShortcut {
+        appid:       "quickshell"
+        name:        "sessionToggle"
+        description: "Toggle Session Manager"
+        onPressed:   Popups.sessionOpen = !Popups.sessionOpen
     }
 }
