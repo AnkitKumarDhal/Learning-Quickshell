@@ -13,3 +13,4 @@ WallpaperPopup       1.0    WallpaperPopup.qml
 BatteryPopup         1.0    BatteryPopup.qml
 PolkitPopup          1.0    PolkitPopup.qml
 KeybindsPopup        1.0    KeybindsPopup.qml
+SessionPopup         1.0    SessionPopup.qml

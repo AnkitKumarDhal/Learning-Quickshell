@@ -20,6 +20,7 @@ Singleton {
     property bool wallpaperOpen:     false
     property bool batteryOpen:       false
     property bool keybindsOpen:      false
+    property bool sessionOpen:       false
     property int  networkTab:        0
 
     // ── Mutual Exclusion ──────────────────────────────────────────────────────
@@ -38,6 +39,7 @@ Singleton {
     onWallpaperOpenChanged:     if (wallpaperOpen)     _closeOthers("wallpaper")
     onBatteryOpenChanged:       if (batteryOpen)       _closeOthers("battery")
     onKeybindsOpenChanged:      if (keybindsOpen)      _closeOthers("keybinds")
+    onSessionOpenChanged:       if (sessionOpen)       _closeOthers("session")
 
     function _closeOthers(keep) {
         if (keep !== "emoji")         emojiOpen         = false
@@ -52,6 +54,7 @@ Singleton {
         if (keep !== "wallpaper")     wallpaperOpen     = false
         if (keep !== "battery")       batteryOpen       = false
         if (keep !== "keybinds")      keybindsOpen      = false
+        if (keep !== "session")       sessionOpen       = false
     }
 
     // ── Aggregate State ───────────────────────────────────────────────────────
@@ -67,6 +70,7 @@ Singleton {
         wallpaperOpen     ||
         batteryOpen       ||
         networkOpen       ||
+        sessionOpen       ||
         keybindsOpen
 
     // ── Methods ───────────────────────────────────────────────────────────────
@@ -83,5 +87,6 @@ Singleton {
         wallpaperOpen     = false
         batteryOpen       = false
         keybindsOpen      = false
+        sessionOpen       = false
     }
 }
