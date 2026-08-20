@@ -1,6 +1,4 @@
-import Qt5Compat.GraphicalEffects
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
@@ -9,239 +7,283 @@ import qs.src.theme
 PanelWindow {
     id: root
 
-    property var  menuHandle: null
-    property real menuX:      0
-    property real menuY:      0
-    property bool hasCurrent: false
-    property int  animLength: 400
-    property var  animCurve:  [0.05, 0, 0.133, 0.06, 0.166, 0.4, 0.208, 0.82, 0.25, 1, 1, 1]
+    property var menuHandle: null
+    property string itemTitle: ""
 
-    // Methods
-    function open(handle, x, y) {
-        menuHandle  = handle
-        const safeX = Math.max(8, Math.min(x - 120, Screen.width - 248))
-        menuX       = safeX
-        menuY       = y - 32
-        hasCurrent  = true
+    // Point at which the tray menu wants to open.
+    property int menuX: 0
+    property int menuY: 0
 
-        grabTimer.restart()
-    }
+    property bool menuOpen: false
+    property bool closing: false
 
-    function close() {
-        hasCurrent       = false
-        focusGrab.active = false
-        grabTimer.stop()
-    }
+    readonly property int menuWidth: 272
+    readonly property int screenMargin: 8
 
-    // Window Config
+    visible: menuOpen || closing
+
     color: "transparent"
-    anchors { top: true; bottom: true; left: true; right: true }
 
-    WlrLayershell.layer:         WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: hasCurrent ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    exclusionMode: ExclusionMode.Ignore
+    aboveWindows: true
 
-    mask: Region {
-        item: hasCurrent ? root.contentItem : null
+    anchors {
+        top: true
+        bottom: true
+        left: true
+        right: true
     }
+
+    WlrLayershell.layer: WlrLayer.Overlay
+
+    WlrLayershell.keyboardFocus:
+        menuOpen
+            ? WlrKeyboardFocus.Exclusive
+            : WlrKeyboardFocus.None
 
     HyprlandFocusGrab {
-        id:        focusGrab
-        windows:   [root]
-        onCleared: root.close()
+        id: focusGrab
+
+        windows: [root]
+
+        onCleared: {
+            root.close()
+        }
+    }
+
+    /*
+     * Clicking anywhere outside the actual menu dismisses it.
+     *
+     * The menu itself has a higher z value, so its own MouseAreas receive
+     * clicks first.
+     */
+    MouseArea {
+        id: dismissArea
+
+        anchors.fill: parent
+
+        enabled: root.menuOpen
+
+        z: 0
+
+        acceptedButtons:
+            Qt.LeftButton |
+            Qt.RightButton |
+            Qt.MiddleButton
+
+        onClicked: {
+            root.close()
+        }
     }
 
     Timer {
-        id:          grabTimer
-        interval:    50
-        onTriggered: focusGrab.active = true
-    }
+        id: focusTimer
 
-    MouseArea {
-        anchors.fill: parent
-        enabled:      root.hasCurrent
-        onClicked:    root.close()
-    }
+        interval: 30
 
-    // Menu Wrapper
-    Item {
-        id: wrapper
-
-        readonly property real topPad:        8
-        readonly property real bottomPad:     8
-        readonly property real contentHeight: topPad + menuColumn.implicitHeight + bottomPad
-
-        x:              root.menuX
-        y:              root.menuY
-        width:          240
-        visible:        height > 0
-        clip:           true
-        implicitHeight: root.hasCurrent ? Math.max(contentHeight, 52) : 0
-
-        Behavior on implicitHeight {
-            NumberAnimation {
-                duration:           root.animLength
-                easing.type:        Easing.BezierSpline
-                easing.bezierCurve: root.animCurve
+        onTriggered: {
+            if (root.menuOpen) {
+                focusGrab.active = true
+                menuCard.resetKeyboard()
+                menuCard.forceActiveFocus()
             }
         }
+    }
 
-        Rectangle {
-            id:                menuBg
-            anchors.fill:      parent
-            color:             Colors.background
-            clip:              true
-            bottomLeftRadius:  14
-            bottomRightRadius: 14
+    Timer {
+        id: closeTimer
 
-            QsMenuOpener {
-                id:   opener
-                menu: root.menuHandle
-            }
+        interval: Theme.animDuration
 
-            Rectangle {
-                id: highlight
+        onTriggered: {
+            root.closing = false
+            root.menuHandle = null
+            root.itemTitle = ""
+        }
+    }
 
-                property real targetY: 0
-                property bool active:  false
+    /*
+     * Gives QML one event loop turn to populate QsMenuOpener before the
+     * initial keyboard selection is calculated.
+     */
+    Timer {
+        id: menuReadyTimer
 
-                x:       8
-                y:       menuColumn.y + targetY
-                width:   parent.width - 16
-                height:  36
-                radius:  8
-                color:   Colors.primary
-                opacity: active ? 0.15 : 0
+        interval: 0
 
-                Behavior on y       { NumberAnimation { duration: 200; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
-                Behavior on opacity { NumberAnimation { duration: 150 } }
-            }
+        onTriggered: {
+            if (!root.menuOpen)
+                return
 
-            Column {
-                id:              menuColumn
-                spacing:         2
-                anchors {
-                    top:         parent.top
-                    left:        parent.left
-                    right:       parent.right
-                    topMargin:   8
-                    leftMargin:  8
-                    rightMargin: 8
-                }
+            menuCard.resetKeyboard()
+            menuCard.forceActiveFocus()
+        }
+    }
 
-                onChildrenChanged: highlight.active = false
+    function open(handle, x, y, title) {
+        if (!handle)
+            return
 
-                Repeater {
-                    model: opener.children
+        closeTimer.stop()
 
-                    delegate: Item {
-                        id: menuItem
+        menuHandle = handle
+        itemTitle = title || "Tray"
 
-                        required property var modelData
-                        required property int index
+        menuX = x
+        menuY = y + 4
 
-                        property bool isSeparator: modelData.isSeparator
-                        property bool hasChildren: modelData.hasChildren
+        closing = false
+        menuOpen = true
 
-                        width:  menuColumn.width
-                        height: isSeparator ? 12 : 36
+        focusTimer.restart()
+        menuReadyTimer.restart()
+    }
 
-                        Rectangle {
-                            visible:          isSeparator
-                            anchors.centerIn: parent
-                            width:            parent.width - 16
-                            height:           1
-                            color:            Colors.primary
-                            opacity:          0.5
-                        }
+    function close() {
+        if (!menuOpen && !closing)
+            return
 
-                        Rectangle {
-                            visible: !isSeparator && highlight.active && highlight.targetY === menuItem.y
-                            width:   3
-                            height:  16
-                            radius:  2
-                            color:   Colors.primary
-                            anchors {
-                                left:           parent.left
-                                leftMargin:     4
-                                verticalCenter: parent.verticalCenter
-                            }
-                        }
+        focusTimer.stop()
+        menuReadyTimer.stop()
 
-                        RowLayout {
-                            visible: !isSeparator
-                            spacing: 12
-                            anchors {
-                                fill:        parent
-                                leftMargin:  12
-                                rightMargin: 12
-                            }
+        menuOpen = false
+        closing = true
 
-                            Item {
-                                Layout.preferredWidth:  20
-                                Layout.preferredHeight: 20
+        focusGrab.active = false
 
-                                Image {
-                                    anchors.centerIn: parent
-                                    width:            16
-                                    height:           16
-                                    source:           modelData.icon || ""
-                                    fillMode:         Image.PreserveAspectFit
-                                    visible:          modelData.icon !== undefined && modelData.icon !== ""
-                                    layer.enabled:    true
-                                    layer.effect:     ColorOverlay { color: Colors.primary }
-                                }
-                            }
+        closeTimer.restart()
+    }
 
-                            Text {
-                                text:              modelData.text || ""
-                                color:             Colors.primary
-                                font.pixelSize:    13
-                                font.bold:         true
-                                font.family:       Fonts.font
-                                verticalAlignment: Text.AlignVCenter
-                                elide:             Text.ElideRight
-                                Layout.fillWidth:  true
-                            }
+    Item {
+        id: menuContainer
 
-                            Text {
-                                visible:           menuItem.hasChildren
-                                text:              "›"
-                                color:             Colors.primary
-                                font.pixelSize:    16
-                                font.bold:         true
-                                opacity:           0.7
-                                verticalAlignment: Text.AlignVCenter
-                            }
-                        }
+        z: 10
 
-                        // QsMenuAnchor for native submenu display
-                        QsMenuAnchor {
-                            id:   anchor
-                            menu: menuItem.hasChildren ? menuItem.modelData : null
+        visible:
+            root.menuOpen ||
+            root.closing
 
-                            anchor.window:      root
-                            anchor.rect.x:      menuItem.x + wrapper.x + menuBg.x + menuColumn.x + menuItem.width
-                            anchor.rect.y:      menuItem.y + wrapper.y + menuBg.y + menuColumn.y
-                            anchor.rect.width:  0
-                            anchor.rect.height: menuItem.height
-                            anchor.edges:       Edges.Right | Edges.Top
-                        }
+        width: menuCard.width
+        height: menuCard.height
 
-                        MouseArea {
-                            id:           itemMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape:  isSeparator ? Qt.ArrowCursor : Qt.PointingHandCursor
+        TrayMenuLevel {
+            id: menuCard
 
-                            onEntered: { if (!menuItem.isSeparator) { highlight.targetY = menuItem.y; highlight.active = true } }
-                            onClicked: {
-                                if (menuItem.isSeparator) return
-                                menuItem.hasChildren ? anchor.open() : (menuItem.modelData.triggered(), root.close())
-                            }
-                        }
-                    }
+            x: 0
+            y: 0
+
+            menuHandle: root.menuHandle
+            menuTitle: root.itemTitle
+
+            menuWidth: root.menuWidth
+
+            hostWidth: root.width
+            hostHeight: root.height
+            hostX: menuContainer.x
+
+            opacity:
+                root.menuOpen
+                    ? 1
+                    : 0
+
+            scale:
+                root.menuOpen
+                    ? 1
+                    : 0.96
+
+            transformOrigin:
+                Item.TopRight
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.animDuration
+                    easing.type: Easing.OutCubic
                 }
             }
+
+            Behavior on scale {
+                NumberAnimation {
+                    duration: Theme.animDuration
+                    easing.type: Easing.OutCubic
+                }
+            }
+
+            onTriggered: {
+                root.close()
+            }
+        }
+    }
+
+    /*
+     * Smart horizontal positioning.
+     *
+     * Tray is normally on the right side of the screen, so the menu should
+     * open towards the left. If the tray/menu is on the other side, it opens
+     * towards the right instead.
+     */
+    Binding {
+        target: menuContainer
+        property: "x"
+
+        value: {
+            const openLeft =
+                root.menuX >
+                root.width / 2
+
+            const preferredX =
+                openLeft
+                    ? root.menuX - root.menuWidth + 12
+                    : root.menuX - 12
+
+            return Math.max(
+                root.screenMargin,
+                Math.min(
+                    preferredX,
+                    root.width -
+                    root.menuWidth -
+                    root.screenMargin
+                )
+            )
+        }
+    }
+
+    /*
+     * Smart vertical positioning.
+     *
+     * Normally the menu opens below the tray. If there isn't enough room,
+     * it opens upwards instead.
+     */
+    Binding {
+        target: menuContainer
+        property: "y"
+
+        value: {
+            const belowY = root.menuY
+            const aboveY =
+                root.menuY -
+                menuContainer.height -
+                8
+
+            const fitsBelow =
+                belowY +
+                menuContainer.height <=
+                root.height -
+                root.screenMargin
+
+            const preferredY =
+                fitsBelow
+                    ? belowY
+                    : aboveY
+
+            return Math.max(
+                root.screenMargin,
+                Math.min(
+                    preferredY,
+                    root.height -
+                    menuContainer.height -
+                    root.screenMargin
+                )
+            )
         }
     }
 }
