@@ -55,7 +55,7 @@ PillBase {
 
             Text {
                 anchors.centerIn: parent
-                text: root.collapsed ? "⌄" : "⌃"
+                text: root.collapsed ? "<" : ">"
                 color: Colors.primary
                 font.family: Fonts.font
                 font.pixelSize: 16
