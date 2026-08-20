@@ -20,118 +20,47 @@ PillBase {
     property int iconSpacing: 8
     property int toggleWidth: 28
 
+    /*
+     * Number of items from SystemTray.items.values that remain visible
+     * while the tray is collapsed.
+     *
+     * 2 = first two tray items remain visible
+     * 3 = first three tray items remain visible
+     */
+    property int pinnedCount: 1
+
     readonly property int trayCount:
         SystemTray.items.values.length
 
     /*
-     * Number of pinned icons allowed to remain visible while collapsed.
+     * The first N items in the actual tray model.
      *
-     * Change this to 1, 2, 3, etc.
-     */
-    property int collapsedVisibleItems: 2
-
-    /*
-     * Items that should remain visible while the tray is collapsed.
-     *
-     * Matching is case-insensitive and checks:
-     *   - SystemTrayItem.id
-     *   - title
-     *   - tooltipTitle
-     *   - tooltipDescription
-     *
-     * You don't need the exact value. A partial string is enough.
-     *
-     * Examples:
-     *   "kde connect"
-     *   "discord"
-     *   "heroic"
-     *   "music presence"
-     */
-    property list<string> pinnedItems: [
-        "kde connect",
-        "vesktop",
-        "heroic",
-        "music presence"
-    ]
-
-    /*
-     * Returns whether a tray item matches one of the configured pinned
-     * identifiers.
-     */
-    function isPinned(item) {
-        if (!item || root.pinnedItems.length === 0)
-            return false
-
-        const candidates = [
-            item.id,
-            item.title,
-            item.tooltipTitle,
-            item.tooltipDescription
-        ]
-
-        for (let p = 0; p < root.pinnedItems.length; ++p) {
-            const needle =
-                String(root.pinnedItems[p])
-                    .trim()
-                    .toLowerCase()
-
-            if (needle.length === 0)
-                continue
-
-            for (let c = 0; c < candidates.length; ++c) {
-                const value =
-                    String(candidates[c] || "")
-                        .toLowerCase()
-
-                if (
-                    value.length > 0 &&
-                    value.includes(needle)
-                ) {
-                    return true
-                }
-            }
-        }
-
-        return false
-    }
-
-    /*
-     * Build the list shown while collapsed.
-     *
-     * We preserve the actual tray order rather than rearranging applications
-     * according to the pin list.
+     * This intentionally uses the tray's real array order.
      */
     readonly property var collapsedItems: {
         const all = SystemTray.items.values
-        const result = []
 
-        for (let i = 0; i < all.length; ++i) {
-            if (root.isPinned(all[i])) {
-                result.push(all[i])
-
-                if (
-                    result.length >=
-                    root.collapsedVisibleItems
-                ) {
-                    break
-                }
-            }
-        }
-
-        return result
+        return all.slice(
+            0,
+            Math.min(
+                root.pinnedCount,
+                all.length
+            )
+        )
     }
 
+    /*
+     * Everything after the pinned items.
+     */
     readonly property var overflowItems: {
         const all = SystemTray.items.values
-        const pinned = root.collapsedItems
-        const result = []
 
-        for (let i = 0; i < all.length; ++i) {
-            if (pinned.indexOf(all[i]) === -1)
-                result.push(all[i])
-        }
-
-        return result
+        return all.slice(
+            Math.min(
+                root.pinnedCount,
+                all.length
+            )
+        )
     }
 
     readonly property int collapsedItemCount:
@@ -145,11 +74,15 @@ PillBase {
     mouseEnabled: false
 
     visible:
-        trayCount > 0
+        root.trayCount > 0
 
     function toggleCollapsed() {
-        collapsed = !collapsed
+        root.collapsed = !root.collapsed
     }
+
+    // ------------------------------------------------------------
+    // Main tray
+    // ------------------------------------------------------------
 
     RowLayout {
         id: trayLayout
@@ -224,10 +157,7 @@ PillBase {
             }
 
             /*
-             * Only count items that are actually hidden.
-             *
-             * Previously this showed the total number of tray items even
-             * when some icons were visible while collapsed.
+             * Number of icons currently hidden behind the collapsed tray.
              */
             Rectangle {
                 visible:
@@ -292,7 +222,8 @@ PillBase {
             }
 
             MouseArea {
-                id: toggleMouse
+                id:
+                    toggleMouse
 
                 anchors.fill:
                     parent
@@ -303,791 +234,906 @@ PillBase {
                 cursorShape:
                     Qt.PointingHandCursor
 
-                onClicked:
+                onClicked: {
                     root.toggleCollapsed()
+                }
             }
         }
 
-    // ------------------------------------------------------------
-// Tray icons
-// ------------------------------------------------------------
+        // --------------------------------------------------------
+        // Tray icons
+        //
+        // The pinned row never changes width when collapsing.
+        // The overflow row is the only thing that contracts.
+        // --------------------------------------------------------
 
-RowLayout {
-    id: iconContainer
+        RowLayout {
+            id:
+                iconContainer
 
-    Layout.preferredHeight: 24
+            Layout.preferredHeight:
+                24
 
-    spacing:
-        root.iconSpacing
+            spacing:
+                root.iconSpacing
 
-    // --------------------------------------------------------
-    // Pinned tray items
-    //
-    // This row NEVER changes width when collapsing.
-    // --------------------------------------------------------
+            // ----------------------------------------------------
+            // Pinned tray items
+            // ----------------------------------------------------
 
-    Row {
-        id: pinnedRow
+            Row {
+                id:
+                    pinnedRow
 
-        Layout.preferredWidth:
-            implicitWidth
+                Layout.preferredWidth:
+                    implicitWidth
 
-        Layout.preferredHeight:
-            root.iconSize
-
-        spacing:
-            root.iconSpacing
-
-        Repeater {
-            model:
-                root.collapsedItems
-
-            delegate: Item {
-                id: pinnedDelegate
-
-                required property var modelData
-
-                width:
+                Layout.preferredHeight:
                     root.iconSize
 
-                height:
-                    root.iconSize
+                spacing:
+                    root.iconSpacing
 
-                readonly property bool needsAttention:
-                    modelData.status ===
-                    Status.NeedsAttention
+                Repeater {
+                    model:
+                        root.collapsedItems
 
-                readonly property bool hasTooltip:
-                    Boolean(
-                        modelData.tooltipTitle ||
-                        modelData.tooltipDescription ||
-                        modelData.title
-                    )
+                    delegate: Item {
+                        id:
+                            pinnedDelegate
 
-                Timer {
-                    id: pinnedTooltipTimer
+                        required property var modelData
 
-                    interval: 500
-                    repeat: false
+                        width:
+                            root.iconSize
 
-                    onTriggered: {
-                        if (
-                            pinnedHover.containsMouse &&
-                            pinnedDelegate.hasTooltip
-                        ) {
-                            pinnedTooltip.visible = true
-                        }
-                    }
-                }
-                PopupWindow {
-                    id: pinnedTooltip
+                        height:
+                            root.iconSize
 
-                    visible: false
+                        readonly property bool needsAttention:
+                            modelData.status ===
+                            Status.NeedsAttention
 
-                    anchor.item: pinnedHover
-
-                    anchor.edges:
-                        Edges.Bottom | Edges.Left
-
-                    anchor.gravity:
-                        Edges.Top | Edges.Left
-
-                    // margins: 6
-
-                    width:
-                        Math.min(
-                            280,
-                            Math.max(
-                                120,
-                                pinnedTooltipText.implicitWidth + 20
-                            )
-                        )
-
-                    height:
-                        pinnedTooltipText.implicitHeight + 16
-
-                    color: "transparent"
-
-                    Rectangle {
-                        anchors.fill: parent
-
-                        radius: 8
-
-                        color:
-                            Colors.surfaceContainerHigh
-
-                        border.width: 1
-                        border.color:
-                            Colors.outlineVariant
-
-                        Text {
-                            id: pinnedTooltipText
-
-                            anchors.fill: parent
-                            anchors.margins: 10
-
-                            text:
+                        readonly property bool hasTooltip:
+                            Boolean(
                                 modelData.tooltipTitle ||
                                 modelData.tooltipDescription ||
-                                modelData.title ||
-                                ""
+                                modelData.title
+                            )
+
+                        // ------------------------------------------------
+                        // Tooltip timer
+                        // ------------------------------------------------
+
+                        Timer {
+                            id:
+                                pinnedTooltipTimer
+
+                            interval:
+                                500
+
+                            repeat:
+                                false
+
+                            onTriggered: {
+                                if (
+                                    pinnedHover.containsMouse &&
+                                    pinnedDelegate.hasTooltip
+                                ) {
+                                    pinnedTooltip.visible =
+                                        true
+                                }
+                            }
+                        }
+
+                        // ------------------------------------------------
+                        // Tooltip
+                        // ------------------------------------------------
+
+                        PopupWindow {
+                            id:
+                                pinnedTooltip
+
+                            visible:
+                                false
+
+                            anchor.item:
+                                pinnedHover
+
+                            anchor.edges:
+                                Edges.Bottom |
+                                Edges.Left
+
+                            anchor.gravity:
+                                Edges.Top |
+                                Edges.Left
+
+                            implicitWidth:
+                                Math.min(
+                                    280,
+                                    Math.max(
+                                        120,
+                                        pinnedTooltipText.implicitWidth +
+                                        20
+                                    )
+                                )
+
+                            implicitHeight:
+                                pinnedTooltipText.implicitHeight +
+                                16
 
                             color:
-                                Colors.on_Surface
+                                "transparent"
+
+                            Rectangle {
+                                anchors.fill:
+                                    parent
+
+                                radius:
+                                    8
+
+                                color:
+                                    Colors.surfaceContainerHigh
+
+                                border.width:
+                                    1
+
+                                border.color:
+                                    Colors.outlineVariant
+
+                                Text {
+                                    id:
+                                        pinnedTooltipText
+
+                                    anchors.fill:
+                                        parent
+
+                                    anchors.margins:
+                                        10
+
+                                    text:
+                                        modelData.tooltipTitle ||
+                                        modelData.tooltipDescription ||
+                                        modelData.title ||
+                                        ""
+
+                                    color:
+                                        Colors.on_Surface
+
+                                    font.family:
+                                        Fonts.font
+
+                                    font.pixelSize:
+                                        11
+
+                                    wrapMode:
+                                        Text.WordWrap
+
+                                    maximumLineCount:
+                                        3
+
+                                    elide:
+                                        Text.ElideRight
+
+                                    verticalAlignment:
+                                        Text.AlignVCenter
+                                }
+                            }
+                        }
+
+                        // ------------------------------------------------
+                        // Hover background
+                        // ------------------------------------------------
+
+                        Rectangle {
+                            anchors.fill:
+                                parent
+
+                            radius:
+                                7
+
+                            color:
+                                pinnedHover.containsMouse
+                                    ? Colors.primary
+                                    : "transparent"
+
+                            opacity:
+                                pinnedHover.containsMouse
+                                    ? 0.12
+                                    : 0
+
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration:
+                                        Theme.hoverFadeDuration
+                                }
+                            }
+                        }
+
+                        // ------------------------------------------------
+                        // Tray icon
+                        // ------------------------------------------------
+
+                        Image {
+                            anchors.centerIn:
+                                parent
+
+                            width:
+                                root.iconSize
+
+                            height:
+                                root.iconSize
+
+                            source:
+                                modelData.icon || ""
+
+                            fillMode:
+                                Image.PreserveAspectFit
+
+                            smooth:
+                                true
+
+                            mipmap:
+                                true
+                        }
+
+                        Text {
+                            visible:
+                                modelData.icon === ""
+
+                            anchors.centerIn:
+                                parent
+
+                            text:
+                                "◈"
+
+                            color:
+                                Colors.on_SurfaceVariant
 
                             font.family:
                                 Fonts.font
 
                             font.pixelSize:
-                                11
-
-                            wrapMode:
-                                Text.WordWrap
-
-                            maximumLineCount: 3
-
-                            elide:
-                                Text.ElideRight
-
-                            verticalAlignment:
-                                Text.AlignVCenter
-                        }
-                    }
-                }
-
-                Rectangle {
-                    anchors.fill:
-                        parent
-
-                    radius:
-                        7
-
-                    color:
-                        pinnedHover.containsMouse
-                            ? Colors.primary
-                            : "transparent"
-
-                    opacity:
-                        pinnedHover.containsMouse
-                            ? 0.12
-                            : 0
-
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration:
-                                Theme.hoverFadeDuration
-                        }
-                    }
-                }
-
-                Image {
-                    anchors.centerIn:
-                        parent
-
-                    width:
-                        root.iconSize
-
-                    height:
-                        root.iconSize
-
-                    source:
-                        modelData.icon || ""
-
-                    fillMode:
-                        Image.PreserveAspectFit
-
-                    smooth:
-                        true
-
-                    mipmap:
-                        true
-                }
-
-                Text {
-                    visible:
-                        modelData.icon === ""
-
-                    anchors.centerIn:
-                        parent
-
-                    text:
-                        "◈"
-
-                    color:
-                        Colors.on_SurfaceVariant
-
-                    font.family:
-                        Fonts.font
-
-                    font.pixelSize:
-                        13
-                }
-
-                Rectangle {
-                    visible:
-                        pinnedDelegate.needsAttention
-
-                    width:
-                        6
-
-                    height:
-                        6
-
-                    radius:
-                        3
-
-                    anchors.right:
-                        parent.right
-
-                    anchors.top:
-                        parent.top
-
-                    color:
-                        Colors.error
-
-                    border.width:
-                        1
-
-                    border.color:
-                        Colors.background
-
-                    SequentialAnimation on opacity {
-                        running:
-                            pinnedDelegate.needsAttention
-
-                        loops:
-                            Animation.Infinite
-
-                        NumberAnimation {
-                            to:
-                                0.35
-
-                            duration:
-                                650
-
-                            easing.type:
-                                Easing.InOutSine
+                                13
                         }
 
-                        NumberAnimation {
-                            to:
+                        // ------------------------------------------------
+                        // NeedsAttention
+                        // ------------------------------------------------
+
+                        Rectangle {
+                            visible:
+                                pinnedDelegate.needsAttention
+
+                            width:
+                                6
+
+                            height:
+                                6
+
+                            radius:
+                                3
+
+                            anchors.right:
+                                parent.right
+
+                            anchors.top:
+                                parent.top
+
+                            color:
+                                Colors.error
+
+                            border.width:
                                 1
 
-                            duration:
-                                650
+                            border.color:
+                                Colors.background
 
-                            easing.type:
-                                Easing.InOutSine
-                        }
-                    }
-                }
+                            SequentialAnimation on opacity {
+                                running:
+                                    pinnedDelegate.needsAttention
 
+                                loops:
+                                    Animation.Infinite
 
-                MouseArea {
-                    id:
-                        pinnedHover
+                                NumberAnimation {
+                                    to:
+                                        0.35
 
-                    anchors.fill:
-                        parent
+                                    duration:
+                                        650
 
-                    hoverEnabled:
-                        true
+                                    easing.type:
+                                        Easing.InOutSine
+                                }
 
-                    cursorShape:
-                        Qt.PointingHandCursor
+                                NumberAnimation {
+                                    to:
+                                        1
 
-                    acceptedButtons:
-                        Qt.LeftButton |
-                        Qt.RightButton |
-                        Qt.MiddleButton
+                                    duration:
+                                        650
 
-                    onClicked: (mouse) => {
-                        if (
-                            mouse.button ===
-                            Qt.LeftButton
-                        ) {
-                            if (
-                                modelData.onlyMenu &&
-                                modelData.hasMenu
-                            ) {
-                                root.openTrayMenu(
-                                    modelData,
-                                    pinnedDelegate
-                                )
-                            } else {
-                                modelData.activate()
-                            }
-                        } else if (
-                            mouse.button ===
-                            Qt.MiddleButton
-                        ) {
-                            modelData.secondaryActivate()
-                        } else if (
-                            mouse.button ===
-                            Qt.RightButton
-                        ) {
-                            root.openTrayMenu(
-                                modelData,
-                                pinnedDelegate
-                            )
-                        }
-                    }
-
-                    onWheel: (wheel) => {
-                        const horizontal =
-                            Math.abs(
-                                wheel.angleDelta.x
-                            ) >
-                            Math.abs(
-                                wheel.angleDelta.y
-                            )
-
-                        const delta =
-                            horizontal
-                                ? wheel.angleDelta.x
-                                : wheel.angleDelta.y
-
-                        modelData.scroll(
-                            delta > 0 ? 1 : -1,
-                            horizontal
-                        )
-                    }
-
-                    onEntered: pinnedTooltipTimer.restart()
-                    onExited: {
-                        pinnedTooltipTimer.stop()
-                        pinnedTooltip.visible = false
-                    }
-                    onCanceled: {
-                        pinnedTooltipTimer.stop()
-                        pinnedTooltip.visible = false
-                    }
-                }
-            }
-        }
-    }
-
-    // --------------------------------------------------------
-    // Overflow tray items
-    //
-    // These delegates always exist. Only the ROW'S visible
-    // width changes, so they are never destroyed.
-    // --------------------------------------------------------
-
-    Item {
-        id:
-            overflowViewport
-
-        Layout.preferredWidth:
-            root.collapsed
-                ? 0
-                : overflowRow.implicitWidth
-
-        Layout.minimumWidth:
-            0
-
-        Layout.maximumWidth:
-            overflowRow.implicitWidth
-
-        Layout.preferredHeight:
-            root.iconSize
-
-        clip:
-            true
-
-        Behavior on Layout.preferredWidth {
-            NumberAnimation {
-                duration:
-                    Theme.animDuration
-
-                easing.type:
-                    Easing.OutCubic
-            }
-        }
-
-        Row {
-            id:
-                overflowRow
-
-            width:
-                implicitWidth
-
-            height:
-                root.iconSize
-
-            spacing:
-                root.iconSpacing
-
-            Repeater {
-                model:
-                    root.overflowItems
-
-                delegate: Item {
-                    id:
-                        overflowDelegate
-
-                    required property var modelData
-
-                    width:
-                        root.iconSize
-
-                    height:
-                        root.iconSize
-
-                    readonly property bool needsAttention:
-                        modelData.status ===
-                        Status.NeedsAttention
-
-                    readonly property bool hasTooltip:
-                        Boolean(
-                            modelData.tooltipTitle ||
-                            modelData.tooltipDescription ||
-                            modelData.title
-                        )
-Timer {
-    id: overflowTooltipTimer
-
-    interval: 500
-    repeat: false
-
-    onTriggered: {
-        if (
-            overflowHover.containsMouse &&
-            overflowDelegate.hasTooltip
-        ) {
-            overflowTooltip.visible = true
-        }
-    }
-}
-PopupWindow {
-    id: overflowTooltip
-
-    visible: false
-
-    anchor.item: overflowHover
-
-    anchor.edges:
-        Edges.Bottom | Edges.Left
-
-    anchor.gravity:
-        Edges.Top | Edges.Left
-
-    // margin: 6
-
-    width:
-        Math.min(
-            280,
-            Math.max(
-                120,
-                overflowTooltipText.implicitWidth + 20
-            )
-        )
-
-    height:
-        overflowTooltipText.implicitHeight + 16
-
-    color: "transparent"
-
-    Rectangle {
-        anchors.fill: parent
-
-        radius: 8
-
-        color:
-            Colors.surfaceContainerHigh
-
-        border.width: 1
-        border.color:
-            Colors.outlineVariant
-
-        Text {
-            id: overflowTooltipText
-
-            anchors.fill: parent
-            anchors.margins: 10
-
-            text:
-                modelData.tooltipTitle ||
-                modelData.tooltipDescription ||
-                modelData.title ||
-                ""
-
-            color:
-                Colors.on_Surface
-
-            font.family:
-                Fonts.font
-
-            font.pixelSize:
-                11
-
-            wrapMode:
-                Text.WordWrap
-
-            maximumLineCount: 3
-
-            elide:
-                Text.ElideRight
-
-            verticalAlignment:
-                Text.AlignVCenter
-        }
-    }
-}
-
-                    opacity:
-                        root.collapsed
-                            ? 0
-                            : 1
-
-                    scale:
-                        root.collapsed
-                            ? 0.92
-                            : 1
-
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration:
-                                Theme.animDuration
-
-                            easing.type:
-                                Easing.OutCubic
-                        }
-                    }
-
-                    Behavior on scale {
-                        NumberAnimation {
-                            duration:
-                                Theme.animDuration
-
-                            easing.type:
-                                Easing.OutCubic
-                        }
-                    }
-
-                    Rectangle {
-                        anchors.fill:
-                            parent
-
-                        radius:
-                            7
-
-                        color:
-                            overflowHover.containsMouse
-                                ? Colors.primary
-                                : "transparent"
-
-                        opacity:
-                            overflowHover.containsMouse
-                                ? 0.12
-                                : 0
-
-                        Behavior on opacity {
-                            NumberAnimation {
-                                duration:
-                                    Theme.hoverFadeDuration
+                                    easing.type:
+                                        Easing.InOutSine
+                                }
                             }
                         }
-                    }
 
-                    Image {
-                        anchors.centerIn:
-                            parent
+                        // ------------------------------------------------
+                        // Interaction
+                        // ------------------------------------------------
 
-                        width:
-                            root.iconSize
+                        MouseArea {
+                            id:
+                                pinnedHover
 
-                        height:
-                            root.iconSize
+                            anchors.fill:
+                                parent
 
-                        source:
-                            modelData.icon || ""
+                            hoverEnabled:
+                                true
 
-                        fillMode:
-                            Image.PreserveAspectFit
+                            cursorShape:
+                                Qt.PointingHandCursor
 
-                        smooth:
-                            true
+                            acceptedButtons:
+                                Qt.LeftButton |
+                                Qt.RightButton |
+                                Qt.MiddleButton
 
-                        mipmap:
-                            true
-                    }
-
-                    Text {
-                        visible:
-                            modelData.icon === ""
-
-                        anchors.centerIn:
-                            parent
-
-                        text:
-                            "◈"
-
-                        color:
-                            Colors.on_SurfaceVariant
-
-                        font.family:
-                            Fonts.font
-
-                        font.pixelSize:
-                            13
-                    }
-
-                    Rectangle {
-                        visible:
-                            overflowDelegate.needsAttention
-
-                        width:
-                            6
-
-                        height:
-                            6
-
-                        radius:
-                            3
-
-                        anchors.right:
-                            parent.right
-
-                        anchors.top:
-                            parent.top
-
-                        color:
-                            Colors.error
-
-                        border.width:
-                            1
-
-                        border.color:
-                            Colors.background
-
-                        SequentialAnimation on opacity {
-                            running:
-                                overflowDelegate.needsAttention
-
-                            loops:
-                                Animation.Infinite
-
-                            NumberAnimation {
-                                to:
-                                    0.35
-
-                                duration:
-                                    650
-
-                                easing.type:
-                                    Easing.InOutSine
-                            }
-
-                            NumberAnimation {
-                                to:
-                                    1
-
-                                duration:
-                                    650
-
-                                easing.type:
-                                    Easing.InOutSine
-                            }
-                        }
-                    }
-
-                    MouseArea {
-                        id:
-                            overflowHover
-
-                        anchors.fill:
-                            parent
-
-                        hoverEnabled:
-                            true
-
-                        cursorShape:
-                            Qt.PointingHandCursor
-
-                        acceptedButtons:
-                            Qt.LeftButton |
-                            Qt.RightButton |
-                            Qt.MiddleButton
-
-                        onClicked: (mouse) => {
-                            if (
-                                mouse.button ===
-                                Qt.LeftButton
-                            ) {
+                            onClicked: (mouse) => {
                                 if (
-                                    modelData.onlyMenu &&
-                                    modelData.hasMenu
+                                    mouse.button ===
+                                    Qt.LeftButton
+                                ) {
+                                    if (
+                                        modelData.onlyMenu &&
+                                        modelData.hasMenu
+                                    ) {
+                                        root.openTrayMenu(
+                                            modelData,
+                                            pinnedDelegate
+                                        )
+                                    } else {
+                                        modelData.activate()
+                                    }
+                                } else if (
+                                    mouse.button ===
+                                    Qt.MiddleButton
+                                ) {
+                                    modelData.secondaryActivate()
+                                } else if (
+                                    mouse.button ===
+                                    Qt.RightButton
                                 ) {
                                     root.openTrayMenu(
                                         modelData,
-                                        overflowDelegate
+                                        pinnedDelegate
                                     )
-                                } else {
-                                    modelData.activate()
                                 }
-                            } else if (
-                                mouse.button ===
-                                Qt.MiddleButton
-                            ) {
-                                modelData.secondaryActivate()
-                            } else if (
-                                mouse.button ===
-                                Qt.RightButton
-                            ) {
-                                root.openTrayMenu(
-                                    modelData,
-                                    overflowDelegate
+                            }
+
+                            onWheel: (wheel) => {
+                                const horizontal =
+                                    Math.abs(
+                                        wheel.angleDelta.x
+                                    ) >
+                                    Math.abs(
+                                        wheel.angleDelta.y
+                                    )
+
+                                const delta =
+                                    horizontal
+                                        ? wheel.angleDelta.x
+                                        : wheel.angleDelta.y
+
+                                modelData.scroll(
+                                    delta > 0
+                                        ? 1
+                                        : -1,
+                                    horizontal
                                 )
                             }
-                        }
 
-                        onWheel: (wheel) => {
-                            const horizontal =
-                                Math.abs(
-                                    wheel.angleDelta.x
-                                ) >
-                                Math.abs(
-                                    wheel.angleDelta.y
+                            onEntered: {
+                                pinnedTooltipTimer.restart()
+                            }
+
+                            onExited: {
+                                pinnedTooltipTimer.stop()
+                                pinnedTooltip.visible =
+                                    false
+                            }
+
+                            onCanceled: {
+                                pinnedTooltipTimer.stop()
+                                pinnedTooltip.visible =
+                                    false
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ----------------------------------------------------
+            // Overflow tray items
+            //
+            // These delegates remain alive. Only the viewport
+            // width changes, which gives us the correct collapse
+            // animation without moving the pinned row.
+            // ----------------------------------------------------
+
+            Item {
+                id:
+                    overflowViewport
+
+                Layout.preferredWidth:
+                    root.collapsed
+                        ? 0
+                        : overflowRow.implicitWidth
+
+                Layout.minimumWidth:
+                    0
+
+                Layout.maximumWidth:
+                    overflowRow.implicitWidth
+
+                Layout.preferredHeight:
+                    root.iconSize
+
+                clip:
+                    true
+
+                Behavior on Layout.preferredWidth {
+                    NumberAnimation {
+                        duration:
+                            Theme.animDuration
+
+                        easing.type:
+                            Easing.OutCubic
+                    }
+                }
+
+                Row {
+                    id:
+                        overflowRow
+
+                    width:
+                        implicitWidth
+
+                    height:
+                        root.iconSize
+
+                    spacing:
+                        root.iconSpacing
+
+                    Repeater {
+                        model:
+                            root.overflowItems
+
+                        delegate: Item {
+                            id:
+                                overflowDelegate
+
+                            required property var modelData
+
+                            width:
+                                root.iconSize
+
+                            height:
+                                root.iconSize
+
+                            readonly property bool needsAttention:
+                                modelData.status ===
+                                Status.NeedsAttention
+
+                            readonly property bool hasTooltip:
+                                Boolean(
+                                    modelData.tooltipTitle ||
+                                    modelData.tooltipDescription ||
+                                    modelData.title
                                 )
 
-                            const delta =
-                                horizontal
-                                    ? wheel.angleDelta.x
-                                    : wheel.angleDelta.y
+                            // --------------------------------------------
+                            // Tooltip timer
+                            // --------------------------------------------
 
-                            modelData.scroll(
-                                delta > 0 ? 1 : -1,
-                                horizontal
-                            )
+                            Timer {
+                                id:
+                                    overflowTooltipTimer
+
+                                interval:
+                                    500
+
+                                repeat:
+                                    false
+
+                                onTriggered: {
+                                    if (
+                                        overflowHover.containsMouse &&
+                                        overflowDelegate.hasTooltip
+                                    ) {
+                                        overflowTooltip.visible =
+                                            true
+                                    }
+                                }
+                            }
+
+                            // --------------------------------------------
+                            // Tooltip
+                            // --------------------------------------------
+
+                            PopupWindow {
+                                id:
+                                    overflowTooltip
+
+                                visible:
+                                    false
+
+                                anchor.item:
+                                    overflowHover
+
+                                anchor.edges:
+                                    Edges.Bottom |
+                                    Edges.Left
+
+                                anchor.gravity:
+                                    Edges.Top |
+                                    Edges.Left
+
+                                implicitWidth:
+                                    Math.min(
+                                        280,
+                                        Math.max(
+                                            120,
+                                            overflowTooltipText.implicitWidth +
+                                            20
+                                        )
+                                    )
+
+                                implicitHeight:
+                                    overflowTooltipText.implicitHeight +
+                                    16
+
+                                color:
+                                    "transparent"
+
+                                Rectangle {
+                                    anchors.fill:
+                                        parent
+
+                                    radius:
+                                        8
+
+                                    color:
+                                        Colors.surfaceContainerHigh
+
+                                    border.width:
+                                        1
+
+                                    border.color:
+                                        Colors.outlineVariant
+
+                                    Text {
+                                        id:
+                                            overflowTooltipText
+
+                                        anchors.fill:
+                                            parent
+
+                                        anchors.margins:
+                                            10
+
+                                        text:
+                                            modelData.tooltipTitle ||
+                                            modelData.tooltipDescription ||
+                                            modelData.title ||
+                                            ""
+
+                                        color:
+                                            Colors.on_Surface
+
+                                        font.family:
+                                            Fonts.font
+
+                                        font.pixelSize:
+                                            11
+
+                                        wrapMode:
+                                            Text.WordWrap
+
+                                        maximumLineCount:
+                                            3
+
+                                        elide:
+                                            Text.ElideRight
+
+                                        verticalAlignment:
+                                            Text.AlignVCenter
+                                    }
+                                }
+                            }
+
+                            // --------------------------------------------
+                            // Overflow icon animation
+                            // --------------------------------------------
+
+                            opacity:
+                                root.collapsed
+                                    ? 0
+                                    : 1
+
+                            scale:
+                                root.collapsed
+                                    ? 0.92
+                                    : 1
+
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration:
+                                        Theme.animDuration
+
+                                    easing.type:
+                                        Easing.OutCubic
+                                }
+                            }
+
+                            Behavior on scale {
+                                NumberAnimation {
+                                    duration:
+                                        Theme.animDuration
+
+                                    easing.type:
+                                        Easing.OutCubic
+                                }
+                            }
+
+                            // --------------------------------------------
+                            // Hover background
+                            // --------------------------------------------
+
+                            Rectangle {
+                                anchors.fill:
+                                    parent
+
+                                radius:
+                                    7
+
+                                color:
+                                    overflowHover.containsMouse
+                                        ? Colors.primary
+                                        : "transparent"
+
+                                opacity:
+                                    overflowHover.containsMouse
+                                        ? 0.12
+                                        : 0
+
+                                Behavior on opacity {
+                                    NumberAnimation {
+                                        duration:
+                                            Theme.hoverFadeDuration
+                                    }
+                                }
+                            }
+
+                            // --------------------------------------------
+                            // Tray icon
+                            // --------------------------------------------
+
+                            Image {
+                                anchors.centerIn:
+                                    parent
+
+                                width:
+                                    root.iconSize
+
+                                height:
+                                    root.iconSize
+
+                                source:
+                                    modelData.icon || ""
+
+                                fillMode:
+                                    Image.PreserveAspectFit
+
+                                smooth:
+                                    true
+
+                                mipmap:
+                                    true
+                            }
+
+                            Text {
+                                visible:
+                                    modelData.icon === ""
+
+                                anchors.centerIn:
+                                    parent
+
+                                text:
+                                    "◈"
+
+                                color:
+                                    Colors.on_SurfaceVariant
+
+                                font.family:
+                                    Fonts.font
+
+                                font.pixelSize:
+                                    13
+                            }
+
+                            // --------------------------------------------
+                            // NeedsAttention
+                            // --------------------------------------------
+
+                            Rectangle {
+                                visible:
+                                    overflowDelegate.needsAttention
+
+                                width:
+                                    6
+
+                                height:
+                                    6
+
+                                radius:
+                                    3
+
+                                anchors.right:
+                                    parent.right
+
+                                anchors.top:
+                                    parent.top
+
+                                color:
+                                    Colors.error
+
+                                border.width:
+                                    1
+
+                                border.color:
+                                    Colors.background
+
+                                SequentialAnimation on opacity {
+                                    running:
+                                        overflowDelegate.needsAttention
+
+                                    loops:
+                                        Animation.Infinite
+
+                                    NumberAnimation {
+                                        to:
+                                            0.35
+
+                                        duration:
+                                            650
+
+                                        easing.type:
+                                            Easing.InOutSine
+                                    }
+
+                                    NumberAnimation {
+                                        to:
+                                            1
+
+                                        duration:
+                                            650
+
+                                        easing.type:
+                                            Easing.InOutSine
+                                    }
+                                }
+                            }
+
+                            // --------------------------------------------
+                            // Interaction
+                            // --------------------------------------------
+
+                            MouseArea {
+                                id:
+                                    overflowHover
+
+                                anchors.fill:
+                                    parent
+
+                                hoverEnabled:
+                                    true
+
+                                cursorShape:
+                                    Qt.PointingHandCursor
+
+                                acceptedButtons:
+                                    Qt.LeftButton |
+                                    Qt.RightButton |
+                                    Qt.MiddleButton
+
+                                onClicked: (mouse) => {
+                                    if (
+                                        mouse.button ===
+                                        Qt.LeftButton
+                                    ) {
+                                        if (
+                                            modelData.onlyMenu &&
+                                            modelData.hasMenu
+                                        ) {
+                                            root.openTrayMenu(
+                                                modelData,
+                                                overflowDelegate
+                                            )
+                                        } else {
+                                            modelData.activate()
+                                        }
+                                    } else if (
+                                        mouse.button ===
+                                        Qt.MiddleButton
+                                    ) {
+                                        modelData.secondaryActivate()
+                                    } else if (
+                                        mouse.button ===
+                                        Qt.RightButton
+                                    ) {
+                                        root.openTrayMenu(
+                                            modelData,
+                                            overflowDelegate
+                                        )
+                                    }
+                                }
+
+                                onWheel: (wheel) => {
+                                    const horizontal =
+                                        Math.abs(
+                                            wheel.angleDelta.x
+                                        ) >
+                                        Math.abs(
+                                            wheel.angleDelta.y
+                                        )
+
+                                    const delta =
+                                        horizontal
+                                            ? wheel.angleDelta.x
+                                            : wheel.angleDelta.y
+
+                                    modelData.scroll(
+                                        delta > 0
+                                            ? 1
+                                            : -1,
+                                        horizontal
+                                    )
+                                }
+
+                                onEntered: {
+                                    overflowTooltipTimer.restart()
+                                }
+
+                                onExited: {
+                                    overflowTooltipTimer.stop()
+                                    overflowTooltip.visible =
+                                        false
+                                }
+
+                                onCanceled: {
+                                    overflowTooltipTimer.stop()
+                                    overflowTooltip.visible =
+                                        false
+                                }
+                            }
                         }
-
-onEntered: {
-    overflowTooltipTimer.restart()
-}
-
-onExited: {
-    overflowTooltipTimer.stop()
-    overflowTooltip.visible = false
-}
-
-onCanceled: {
-    overflowTooltipTimer.stop()
-    overflowTooltip.visible = false
-}
                     }
                 }
             }
         }
     }
-}}
 
     // ------------------------------------------------------------
     // Custom tray menu
     // ------------------------------------------------------------
 
     TrayContextMenu {
-        id: trayMenu
+        id:
+            trayMenu
 
         screen:
             root.window
