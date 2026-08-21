@@ -19,10 +19,7 @@ PanelWindow {
         right: true
     }
 
-    implicitHeight:
-        root.screen
-            ? root.screen.height
-            : 800
+    implicitHeight: root.screen ? root.screen.height : 800
 
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
@@ -40,13 +37,10 @@ PanelWindow {
         id: slidePanel
 
         anchors.fill: parent
-
         edge: "top"
 
         open: Popups.caffeineOpen
-
-        onCloseRequested:
-            Popups.caffeineOpen = false
+        onCloseRequested: Popups.caffeineOpen = false
 
         Rectangle {
             id: card
@@ -59,7 +53,6 @@ PanelWindow {
 
             width: 370
             height: cardColumn.implicitHeight + 28
-
             radius: Theme.popupRadius
 
             color: Colors.surfaceContainer
@@ -80,8 +73,6 @@ PanelWindow {
                 }
 
                 spacing: 14
-
-                // ── Header ──────────────────────────────────────────────────
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -107,8 +98,7 @@ PanelWindow {
                                         return "Keeping the system awake indefinitely"
 
                                     return CaffeineService.remainingSeconds > 0
-                                        ? CaffeineService.remainingSeconds +
-                                          " seconds remaining"
+                                        ? CaffeineService.remainingSeconds + " seconds remaining"
                                         : "Finishing…"
                                 }
 
@@ -128,8 +118,7 @@ PanelWindow {
 
                         radius: 15
 
-                        color:
-                            closeHover.hovered
+                        color: closeHover.hovered
                                 ? Colors.surfaceContainerHighest
                                 : "transparent"
 
@@ -150,12 +139,8 @@ PanelWindow {
 
                         MouseArea {
                             anchors.fill: parent
-
-                            cursorShape:
-                                Qt.PointingHandCursor
-
-                            onClicked:
-                                Popups.caffeineOpen = false
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Popups.caffeineOpen = false
                         }
                     }
                 }
@@ -168,8 +153,6 @@ PanelWindow {
                     color: Colors.outlineVariant
                     opacity: 0.5
                 }
-
-                // ── Presets ────────────────────────────────────────────────
 
                 Text {
                     text: "Duration"
@@ -203,18 +186,12 @@ PanelWindow {
                             required property var modelData
 
                             Layout.fillWidth: true
-
                             height: 34
-
                             radius: 9
 
-                            readonly property bool selected:
-                                CaffeineService.caffeineActive &&
-                                CaffeineService.presetIndex ===
-                                    modelData.index
+                            readonly property bool selected: CaffeineService.caffeineActive && CaffeineService.presetIndex === modelData.index
 
-                            color:
-                                selected
+                            color: selected
                                     ? Qt.rgba(
                                         Colors.primary.r,
                                         Colors.primary.g,
@@ -225,13 +202,11 @@ PanelWindow {
                                         ? Colors.surfaceContainerHighest
                                         : Colors.surfaceContainerHigh
 
-                            border.color:
-                                selected
+                            border.color: selected
                                     ? Colors.primary
                                     : Colors.outlineVariant
 
-                            border.width:
-                                selected ? 1.5 : 1
+                            border.width: selected ? 1.5 : 1
 
                             Behavior on color {
                                 ColorAnimation {
@@ -247,11 +222,9 @@ PanelWindow {
 
                             Text {
                                 anchors.centerIn: parent
-
                                 text: modelData.label
 
-                                color:
-                                    selected
+                                color: selected
                                         ? Colors.primary
                                         : Colors.on_Surface
 
@@ -266,27 +239,16 @@ PanelWindow {
 
                             MouseArea {
                                 anchors.fill: parent
-
-                                cursorShape:
-                                    Qt.PointingHandCursor
-
-                                onClicked:
-                                    CaffeineService.selectPreset(
-                                        modelData.index
-                                    )
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: CaffeineService.selectPreset(modelData.index)
                             }
                         }
                     }
                 }
 
-                // ── External inhibitor notice ──────────────────────────────
-
                 Text {
-                    visible:
-                        CaffeineService.externalInhibitorActive
-
-                    text:
-                        "󰒖  Another application is holding an inhibitor"
+                    visible: CaffeineService.externalInhibitorActive
+                    text: "Another application is holding an inhibitor"
 
                     color: Colors.tertiary
 
@@ -294,21 +256,15 @@ PanelWindow {
                     font.family: Fonts.fontM
 
                     Layout.fillWidth: true
-
-                    wrapMode:
-                        Text.WordWrap
+                    wrapMode: Text.WordWrap
                 }
 
                 Rectangle {
                     Layout.fillWidth: true
-
                     height: 1
-
                     color: Colors.outlineVariant
                     opacity: 0.5
                 }
-
-                // ── Brightness ─────────────────────────────────────────────
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -323,17 +279,11 @@ PanelWindow {
                         font.family: Fonts.fontM
                     }
 
-                    Item {
-                        Layout.fillWidth: true
-                    }
+                    Item { Layout.fillWidth: true }
 
                     Text {
-                        visible:
-                            BrightnessService.available
-
-                        text:
-                            BrightnessService.brightness +
-                            "%"
+                        visible: BrightnessService.available
+                        text: BrightnessService.brightness + "%"
 
                         color: Colors.on_Surface
 
@@ -343,70 +293,45 @@ PanelWindow {
                     }
                 }
 
-                // ── Custom brightness slider ───────────────────────────────
-
                 Item {
                     id: brightnessSlider
 
                     Layout.fillWidth: true
-
                     height: 28
+                    visible: BrightnessService.available
 
-                    visible:
-                        BrightnessService.available
-
-                    property int dragValue:
-                        BrightnessService.brightness
-
-                    readonly property int visualValue:
-                        dragArea.pressed
-                            ? dragValue
-                            : BrightnessService.brightness
+                    property int dragValue: BrightnessService.brightness
+                    readonly property int visualValue: dragArea.pressed ? dragValue : BrightnessService.brightness
 
                     Rectangle {
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        anchors.verticalCenter:
-                            parent.verticalCenter
+                        anchors.verticalCenter: parent.verticalCenter
 
                         height: 6
-
                         radius: 3
 
-                        color:
-                            Colors.surfaceContainerHighest
+                        color: Colors.surfaceContainerHighest
                     }
 
                     Rectangle {
                         anchors.left: parent.left
-                        anchors.verticalCenter:
-                            parent.verticalCenter
+                        anchors.verticalCenter: parent.verticalCenter
 
-                        width:
-                            parent.width *
-                            brightnessSlider.visualValue /
-                            100
-
+                        width: parent.width * brightnessSlider.visualValue / 100
                         height: 6
-
                         radius: 3
 
                         color: Colors.primary
                     }
 
                     Rectangle {
-                        x:
-                            parent.width *
-                            brightnessSlider.visualValue /
-                            100 -
-                            width / 2
+                        x: parent.width * brightnessSlider.visualValue / 100 - width / 2
 
-                        anchors.verticalCenter:
-                            parent.verticalCenter
+                        anchors.verticalCenter: parent.verticalCenter
 
                         width: 16
                         height: 16
-
                         radius: 8
 
                         color: Colors.primary
@@ -414,8 +339,7 @@ PanelWindow {
                         Behavior on x {
                             NumberAnimation {
                                 duration: 100
-                                easing.type:
-                                    Easing.OutCubic
+                                easing.type: Easing.OutCubic
                             }
                         }
                     }
@@ -424,51 +348,29 @@ PanelWindow {
                         id: dragArea
 
                         anchors.fill: parent
-
                         hoverEnabled: true
-
-                        cursorShape:
-                            Qt.PointingHandCursor
+                        cursorShape: Qt.PointingHandCursor
 
                         function valueFromX(x) {
-                            return Math.max(
-                                1,
-                                Math.min(
-                                    100,
-                                    Math.round(
-                                        (x / width) * 100
-                                    )
-                                )
-                            )
+                            return Math.max(1, Math.min(100, Math.round((x / width) * 100)))
                         }
 
                         onPressed: (mouse) => {
-                            brightnessSlider.dragValue =
-                                valueFromX(mouse.x)
+                            brightnessSlider.dragValue = valueFromX(mouse.x)
                         }
 
                         onPositionChanged: (mouse) => {
-                            if (!pressed)
-                                return
-
-                            brightnessSlider.dragValue =
-                                valueFromX(mouse.x)
+                            if (!pressed) return
+                            brightnessSlider.dragValue = valueFromX(mouse.x)
                         }
 
-                        onReleased: {
-                            BrightnessService.setBrightness(
-                                brightnessSlider.dragValue
-                            )
-                        }
+                        onReleased: { BrightnessService.setBrightness(brightnessSlider.dragValue) }
                     }
                 }
 
                 Text {
-                    visible:
-                        !BrightnessService.available
-
-                    text:
-                        "Brightness control is unavailable"
+                    visible: !BrightnessService.available
+                    text: "Brightness control is unavailable"
 
                     color: Colors.outline
 

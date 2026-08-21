@@ -13,358 +13,187 @@ import qs.src.popups.network
 PanelWindow {
     id: root
 
-    color:
-        "transparent"
+    color: "transparent"
 
-    exclusionMode:
-        ExclusionMode.Ignore
+    exclusionMode: ExclusionMode.Ignore
 
     anchors {
-        top:
-            true
-
-        right:
-            true
+        top: true
+        right: true
     }
 
-    implicitWidth:
-        400
+    implicitWidth: 400
+    implicitHeight: root.screen ? root.screen.height : 800
 
-    implicitHeight:
-        root.screen
-            ? root.screen.height
-            : 800
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
-    WlrLayershell.layer:
-        WlrLayer.Overlay
+    visible: slide.windowVisible
 
-    WlrLayershell.keyboardFocus:
-        WlrKeyboardFocus.OnDemand
-
-    visible:
-        slide.windowVisible
-
-    // ── State ────────────────────────────────────────────────────────────────
-
-    property var selectedNetwork:
-        null
+    property var selectedNetwork: null
 
     onVisibleChanged: {
         if (!visible)
             root.selectedNetwork = null;
     }
 
-    // If the selected network becomes connected,
-    // close the connection editor.
     Connections {
-        target:
-            root.selectedNetwork
-
+        target: root.selectedNetwork
         function onConnectedChanged() {
             if (root.selectedNetwork?.connected)
                 root.selectedNetwork = null;
         }
     }
 
-    // ── Scanner lifecycle ────────────────────────────────────────────────────
-
     Binding {
-        target:
-            NetworkService
-
-        property:
-            "scannerActive"
-
-        value:
-            Popups.networkOpen
+        target: NetworkService
+        property: "scannerActive"
+        value: Popups.networkOpen
     }
-
-    // ── Popup mask ───────────────────────────────────────────────────────────
 
     mask:
         Region {
-            x:
-                root.implicitWidth -
-                connectivityCard.width -
-                Theme.barMargin
-
-            y:
-                Theme.barHeight + 8
-
-            width:
-                connectivityCard.width
-
-            height:
-                connectivityCard.height
+            x: root.implicitWidth - connectivityCard.width - Theme.barMargin
+            y: Theme.barHeight + 8
+            width: connectivityCard.width
+            height: connectivityCard.height
         }
 
-    // ── Slide wrapper ────────────────────────────────────────────────────────
-
     PopupSlide {
-        id:
-            slide
+        id: slide
 
-        anchors.fill:
-            parent
-
-        edge:
-            "top"
-
-        open:
-            Popups.networkOpen
-
-        onCloseRequested:
-            Popups.networkOpen = false
-
-        // ── Main card ────────────────────────────────────────────────────────
+        anchors.fill: parent
+        edge: "top"
+        open: Popups.networkOpen
+        onCloseRequested: Popups.networkOpen = false
 
         Rectangle {
-            id:
-                connectivityCard
+            id: connectivityCard
 
             anchors {
-                top:
-                    parent.top
-
-                right:
-                    parent.right
-
-                topMargin:
-                    Theme.barHeight + 8
-
-                rightMargin:
-                    Theme.barMargin
+                top: parent.top
+                right: parent.right
+                topMargin: Theme.barHeight + 8
+                rightMargin: Theme.barMargin
             }
 
-            width:
-                380
+            width: 380
+            height: mainColumn.implicitHeight + 24
+            radius: Theme.popupRadius
 
-            height:
-                mainColumn.implicitHeight + 24
+            color: Colors.surfaceContainer
 
-            radius:
-                Theme.popupRadius
+            border.width: Theme.popupBorder
+            border.color: Colors.outlineVariant
 
-            color:
-                Colors.surfaceContainer
-
-            border.width:
-                Theme.popupBorder
-
-            border.color:
-                Colors.outlineVariant
-
-            clip:
-                true
+            clip: true
 
             ColumnLayout {
-                id:
-                    mainColumn
+                id: mainColumn
 
                 anchors {
-                    top:
-                        parent.top
-
-                    left:
-                        parent.left
-
-                    right:
-                        parent.right
-
-                    topMargin:
-                        14
-
-                    leftMargin:
-                        14
-
-                    rightMargin:
-                        14
-
-                    bottomMargin:
-                        14
+                    top: parent.top
+                    left: parent.left
+                    right: parent.right
+                    topMargin: 14
+                    leftMargin: 14
+                    rightMargin: 14
+                    bottomMargin: 14
                 }
 
-                spacing:
-                    10
-
-                // ── Header ──────────────────────────────────────────────────
+                spacing: 10
 
                 RowLayout {
-                    Layout.fillWidth:
-                        true
+                    Layout.fillWidth: true
 
                     Text {
-                        text:
-                            "Connectivity"
+                        text: "Connectivity"
 
-                        font.family:
-                            Fonts.font
+                        font.family: Fonts.font
+                        font.pixelSize: 16
+                        font.bold: true
 
-                        font.pixelSize:
-                            16
+                        color: Colors.on_Surface
 
-                        font.bold:
-                            true
-
-                        color:
-                            Colors.on_Surface
-
-                        Layout.fillWidth:
-                            true
+                        Layout.fillWidth: true
                     }
 
                     Rectangle {
-                        width:
-                            28
+                        width: 28
+                        height: 28
+                        radius: 14
 
-                        height:
-                            28
-
-                        radius:
-                            14
-
-                        color:
-                            closeHover.hovered
-                                ? Colors.surfaceContainerHighest
-                                : "transparent"
+                        color: closeHover.hovered ? Colors.surfaceContainerHighest : "transparent"
 
                         HoverHandler {
-                            id:
-                                closeHover
+                            id: closeHover
                         }
 
                         Text {
-                            anchors.centerIn:
-                                parent
+                            anchors.centerIn: parent
+                            text: "󰅖"
 
-                            text:
-                                "󰅖"
+                            font.family: Fonts.fontM
+                            font.pixelSize: 15
 
-                            font.family:
-                                Fonts.fontM
-
-                            font.pixelSize:
-                                15
-
-                            color:
-                                Colors.outline
+                            color: Colors.outline
                         }
 
                         MouseArea {
-                            anchors.fill:
-                                parent
-
-                            cursorShape:
-                                Qt.PointingHandCursor
-
-                            onClicked:
-                                Popups.networkOpen = false
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Popups.networkOpen = false
                         }
                     }
                 }
 
-                // ── Status cards ─────────────────────────────────────────────
-
                 ConnectivityStatusCards {
-                    Layout.fillWidth:
-                        true
+                    Layout.fillWidth: true
                 }
 
-                // ── Detail tabs ──────────────────────────────────────────────
-
                 TabBar {
-                    Layout.fillWidth:
-                        true
+                    Layout.fillWidth: true
+                    orientation: "horizontal"
 
-                    orientation:
-                        "horizontal"
-
-                    currentPage:
-                        [
-                            "wifi",
-                            "bluetooth",
-                            "hotspot"
-                        ][Popups.networkTab]
+                    currentPage: [ "wifi", "bluetooth", "hotspot" ][Popups.networkTab]
 
                     model: [
                         {
-                            key:
-                                "wifi",
-
-                            icon:
-                                "󰤨",
-
-                            label:
-                                "Wi-Fi"
+                            key: "wifi",
+                            icon: "󰤨",
+                            label: "Wi-Fi"
                         },
-
                         {
-                            key:
-                                "bluetooth",
-
-                            icon:
-                                "󰂯",
-
-                            label:
-                                "Bluetooth"
+                            key: "bluetooth",
+                            icon: "󰂯",
+                            label: "Bluetooth"
                         },
-
                         {
-                            key:
-                                "hotspot",
-
-                            icon:
-                                "󰀂",
-
-                            label:
-                                "Hotspot"
+                            key: "hotspot",
+                            icon: "󰀂",
+                            label: "Hotspot"
                         }
                     ]
 
-                    onPageChanged:
-                        (key) => {
-                            const index =
-                                [
-                                    "wifi",
-                                    "bluetooth",
-                                    "hotspot"
-                                ].indexOf(key);
+                    onPageChanged: (key) => {
+                            const index = [ "wifi", "bluetooth", "hotspot" ].indexOf(key);
 
                             if (index >= 0)
-                                Popups.networkTab =
-                                    index;
+                                Popups.networkTab = index;
                         }
                 }
-
-                // ── Wi-Fi ────────────────────────────────────────────────────
 
                 WifiTab {
-                    visible:
-                        Popups.networkTab === 0
+                    visible: Popups.networkTab === 0
+                    selectedNetwork: root.selectedNetwork
 
-                    selectedNetwork:
-                        root.selectedNetwork
-
-                    onNetworkSelected:
-                        (network) => {
-                            root.selectedNetwork =
-                                network;
+                    onNetworkSelected: (network) => {
+                            root.selectedNetwork = network;
                         }
                 }
 
-                // ── Bluetooth ────────────────────────────────────────────────
-
-                BluetoothTab {
-                    visible:
-                        Popups.networkTab === 1
-                }
-
-                // ── Hotspot ──────────────────────────────────────────────────
-
-                HotspotTab {
-                    visible:
-                        Popups.networkTab === 2
-                }
+                BluetoothTab { visible: Popups.networkTab === 1 }
+                HotspotTab { visible: Popups.networkTab === 2 }
             }
         }
     }

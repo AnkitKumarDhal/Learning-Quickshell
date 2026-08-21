@@ -13,29 +13,21 @@ Singleton {
 
     Timer {
         id: refreshTimer
-
         interval: 1000
         repeat: true
         running: true
-
         onTriggered: root.refresh()
     }
 
     Process {
         id: readProcess
-
-        stdout: StdioCollector {
-            onStreamFinished: root._parse(this.text)
-        }
-
+        stdout: StdioCollector { onStreamFinished: root._parse(this.text) }
         stderr: StdioCollector {}
     }
 
     Process {
         id: setProcess
-
         onStarted: root.setting = true
-
         onExited: {
             root.setting = false
             root.refresh()
@@ -43,9 +35,7 @@ Singleton {
     }
 
     function refresh() {
-        if (readProcess.running)
-            return
-
+        if (readProcess.running) return
         readProcess.exec({
             command: [
                 "brightnessctl",
@@ -74,26 +64,21 @@ Singleton {
             return
         }
 
-        const value =
-            Number(String(fields[3]).replace("%", ""))
+        const value = Number(String(fields[3]).replace("%", ""))
 
         if (!Number.isFinite(value)) {
             root.available = false
             return
         }
 
-        root.brightness =
-            Math.max(0, Math.min(100, Math.round(value)))
-
+        root.brightness = Math.max(0, Math.min(100, Math.round(value)))
         root.available = true
     }
 
     function setBrightness(percent) {
-        if (!root.available || setProcess.running)
-            return
+        if (!root.available || setProcess.running) return
 
-        const value =
-            Math.max(1, Math.min(100, Math.round(Number(percent))))
+        const value = Math.max(1, Math.min(100, Math.round(Number(percent))))
 
         setProcess.exec({
             command: [

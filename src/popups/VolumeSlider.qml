@@ -1,9 +1,6 @@
 import QtQuick
 import qs.src.theme
 
-// Horizontal volume slider
-// Emits onMoved(value) when user drags or clicks
-
 Item {
     id: root
 

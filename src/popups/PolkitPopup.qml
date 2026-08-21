@@ -12,7 +12,6 @@ PanelWindow {
     id: root
 
     required property var screen
-
     screen: root.screen
 
     readonly property bool focusedScreen: {
@@ -23,7 +22,6 @@ PanelWindow {
     property string responseText: ""
 
     visible: slidePanel.windowVisible && root.focusedScreen
-
     implicitHeight: popupRect.height + 32
 
     anchors {
@@ -47,9 +45,7 @@ PanelWindow {
         id: slidePanel
 
         anchors.fill: parent
-
         edge: "top"
-
         open: PolkitService.active && root.focusedScreen
 
         Rectangle {
@@ -94,9 +90,7 @@ PanelWindow {
 
                 Rectangle {
                     Layout.fillWidth: true
-
                     Layout.preferredHeight: 1
-
                     color: Colors.outlineVariant
                 }
 
@@ -297,16 +291,13 @@ PanelWindow {
             if (!slidePanel.windowVisible) {
                 responseField.clear()
                 root.responseText = ""
-
                 PolkitService.clearPresentation()
             }
         }
     }
 
     function submit() {
-        if (!PolkitService.responseRequired)
-            return
-
+        if (!PolkitService.responseRequired) return
         PolkitService.submit(responseField.text)
     }
 }

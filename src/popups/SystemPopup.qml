@@ -13,8 +13,6 @@ import qs.src.popups.system
 PanelWindow {
     id: root
 
-    //property var screen
-
     color:         "transparent"
     exclusionMode: ExclusionMode.Ignore
 

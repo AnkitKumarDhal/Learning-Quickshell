@@ -7,19 +7,14 @@ Item {
     id: root
 
     required property var notification
-
-    readonly property bool stackHovered:
-        NotificationService.toastStackHovered
+    readonly property bool stackHovered: NotificationService.toastStackHovered
 
     implicitHeight: notificationCard.implicitHeight
     height: implicitHeight
 
     function startCountdown() {
-        if (root.stackHovered)
-            return
-
-        if (!root.notification)
-            return
+        if (root.stackHovered) return
+        if (!root.notification) return
 
         if (root.remainingMs <= 0) {
             NotificationService.expireToast(root.notification)
@@ -33,16 +28,10 @@ Item {
     }
 
     function pauseCountdown() {
-        if (!lifetimeTimer.running)
-            return
+        if (!lifetimeTimer.running) return
 
         const elapsed = Date.now() - root.countdownStartedAt
-
-        root.remainingMs = Math.max(
-            0,
-            root.remainingMs - elapsed
-        )
-
+        root.remainingMs = Math.max(0, root.remainingMs - elapsed)
         lifetimeTimer.stop()
     }
 
@@ -56,14 +45,12 @@ Item {
 
         onTriggered: {
             root.remainingMs = 0
-
             if (root.notification && root.notification.tracked)
                 NotificationService.expireToast(root.notification)
         }
     }
 
-    Component.onCompleted:
-        root.startCountdown()
+    Component.onCompleted: root.startCountdown()
 
     onStackHoveredChanged: {
         if (root.stackHovered)

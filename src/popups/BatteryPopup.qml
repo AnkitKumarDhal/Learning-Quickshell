@@ -9,7 +9,6 @@ import qs.src.services
 
 PanelWindow {
     id: root
-    //property var screen
 
     color:         "transparent"
     exclusionMode: ExclusionMode.Ignore
@@ -56,7 +55,6 @@ PanelWindow {
             border.width: Theme.popupBorder
             clip:         true
 
-            // ── Applying overlay ──────────────────────────────────────────────────
             Rectangle {
                 anchors.fill: parent
                 radius:       parent.radius
@@ -85,7 +83,6 @@ PanelWindow {
                 }
                 spacing: 14
 
-                // ── Status header ─────────────────────────────────────────────────
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 14
@@ -144,7 +141,6 @@ PanelWindow {
                     }
                 }
 
-                // ── Progress bar ──────────────────────────────────────────────────
                 Item {
                     Layout.fillWidth: true
                     height: 6
@@ -165,7 +161,6 @@ PanelWindow {
                     }
                 }
 
-                // ── Divider ───────────────────────────────────────────────────────
                 Rectangle {
                     Layout.fillWidth: true
                     height:  1
@@ -173,7 +168,6 @@ PanelWindow {
                     opacity: 0.5
                 }
 
-                // ── Reusable setting row ────────────────────────────────────────────
                 component SettingRow: ColumnLayout {
                     id: settingRow
                     property string label:        ""

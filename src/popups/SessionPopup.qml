@@ -11,11 +11,9 @@ PanelWindow {
     id: root
 
     required property var screen
-
     screen: root.screen
 
     color: "transparent"
-
     exclusionMode: ExclusionMode.Ignore
 
     anchors {
@@ -27,7 +25,6 @@ PanelWindow {
 
     WlrLayershell.layer: WlrLayer.Overlay
 
-    // Only the focused monitor should show the session menu.
     readonly property bool isFocusedScreen: {
         const monitor = root.screen
             ? Hyprland.monitorFor(root.screen)
@@ -36,12 +33,8 @@ PanelWindow {
         return monitor ? monitor.focused : false
     }
 
-    // ── Visual dimensions ────────────────────────────────────────────────────
-
     readonly property int cardSize: 470
     readonly property real buttonRadius: 150
-
-    // ── Actions ───────────────────────────────────────────────────────────────
 
     readonly property var actions: [
         {
@@ -84,18 +77,11 @@ PanelWindow {
 
     property int selectedIndex: 0
 
-    // ── Delayed visibility ────────────────────────────────────────────────────
-
     property bool _shouldShow: false
     property bool _visualOpen: false
 
-    visible:
-        root._shouldShow &&
-        root.isFocusedScreen
-
-    WlrLayershell.keyboardFocus:
-        root._shouldShow &&
-        root.isFocusedScreen
+    visible: root._shouldShow && root.isFocusedScreen
+    WlrLayershell.keyboardFocus: root._shouldShow && root.isFocusedScreen
             ? WlrKeyboardFocus.Exclusive
             : WlrKeyboardFocus.None
 
@@ -166,13 +152,10 @@ PanelWindow {
         }
     }
 
-    // ── Keyboard input ────────────────────────────────────────────────────────
-
     Item {
         id: keyFocus
 
         anchors.fill: parent
-
         focus: root._shouldShow
 
         Keys.onEscapePressed: (event) => {
@@ -228,9 +211,7 @@ PanelWindow {
 
     function moveSelection(delta) {
         const count = root.actions.length
-
-        root.selectedIndex =
-            (root.selectedIndex + delta + count) % count
+        root.selectedIndex = (root.selectedIndex + delta + count) % count
     }
 
     function activateSelected() {
@@ -238,30 +219,20 @@ PanelWindow {
     }
 
     function activate(index) {
-        if (index < 0 || index >= root.actions.length)
-            return
+        if (index < 0 || index >= root.actions.length) return
 
         const action = root.actions[index]
-
-        if (!action || !action.key)
-            return
+        if (!action || !action.key) return
 
         SessionService.perform(action.key)
-
         Popups.sessionOpen = false
     }
-
-    // ── Fullscreen dim backdrop ───────────────────────────────────────────────
 
     Rectangle {
         anchors.fill: parent
 
         color: Qt.rgba(0, 0, 0, 0.60)
-
-        opacity:
-            root._visualOpen
-                ? 1
-                : 0
+        opacity: root._visualOpen ? 1 : 0
 
         Behavior on opacity {
             NumberAnimation {
@@ -272,14 +243,9 @@ PanelWindow {
 
         MouseArea {
             anchors.fill: parent
-
-            onClicked: {
-                Popups.sessionOpen = false
-            }
+            onClicked: Popups.sessionOpen = false
         }
     }
-
-    // ── Center card ──────────────────────────────────────────────────────────
 
     Rectangle {
         id: card
@@ -288,26 +254,16 @@ PanelWindow {
         height: root.cardSize
 
         anchors.centerIn: parent
-
         z: 10
-
         radius: 34
 
         color: Colors.surfaceContainer
 
         border.width: Theme.popupBorder
-
         border.color: Colors.outlineVariant
 
-        opacity:
-            root._visualOpen
-                ? 1
-                : 0
-
-        scale:
-            root._visualOpen
-                ? 1
-                : 0.90
+        opacity: root._visualOpen ? 1 : 0
+        scale: root._visualOpen ? 1 : 0.90
 
         Behavior on opacity {
             NumberAnimation {
@@ -323,13 +279,10 @@ PanelWindow {
             }
         }
 
-        // ── Center title ──────────────────────────────────────────────────────
-
         Column {
             anchors.centerIn: parent
 
             spacing: 4
-
             z: 5
 
             Text {
@@ -356,8 +309,6 @@ PanelWindow {
             }
         }
 
-        // ── Radial action buttons ────────────────────────────────────────────
-
         Repeater {
             model: root.actions
 
@@ -372,44 +323,17 @@ PanelWindow {
 
                 z: 20
 
-                readonly property real angleRadians:
-                    modelData.angle * Math.PI / 180
+                readonly property real angleRadians: modelData.angle * Math.PI / 180
+                readonly property real targetCenterX: card.width / 2 + Math.cos(angleRadians) * root.buttonRadius
+                readonly property real targetCenterY: card.height / 2 + Math.sin(angleRadians) * root.buttonRadius
+                readonly property real closedCenterX: card.width / 2
+                readonly property real closedCenterY: card.height / 2
 
-                readonly property real targetCenterX:
-                    card.width / 2 +
-                    Math.cos(angleRadians) * root.buttonRadius
+                x: root._visualOpen ? targetCenterX - width / 2 : closedCenterX - width / 2
+                y: root._visualOpen ? targetCenterY - height / 2 : closedCenterY - height / 2
 
-                readonly property real targetCenterY:
-                    card.height / 2 +
-                    Math.sin(angleRadians) * root.buttonRadius
-
-                readonly property real closedCenterX:
-                    card.width / 2
-
-                readonly property real closedCenterY:
-                    card.height / 2
-
-                x:
-                    root._visualOpen
-                        ? targetCenterX - width / 2
-                        : closedCenterX - width / 2
-
-                y:
-                    root._visualOpen
-                        ? targetCenterY - height / 2
-                        : closedCenterY - height / 2
-
-                opacity:
-                    root._visualOpen
-                        ? 1
-                        : 0
-
-                scale:
-                    root._visualOpen
-                        ? root.selectedIndex === index
-                            ? 1.07
-                            : 1
-                        : 0.72
+                opacity: root._visualOpen ? 1 : 0
+                scale: root._visualOpen ? root.selectedIndex === index ? 1.07 : 1 : 0.72
 
                 Behavior on x {
                     SequentialAnimation {
@@ -457,8 +381,6 @@ PanelWindow {
                     }
                 }
 
-                // ── Circular icon button ─────────────────────────────────────
-
                 Rectangle {
                     id: button
 
@@ -470,26 +392,17 @@ PanelWindow {
 
                     radius: width / 2
 
-                    readonly property bool selected:
-                        root.selectedIndex === actionItem.index
+                    readonly property bool selected: root.selectedIndex === actionItem.index
+                    readonly property bool destructive: actionItem.modelData.key === "poweroff"
 
-                    readonly property bool destructive:
-                        actionItem.modelData.key === "poweroff"
-
-                    color:
-                        selected
+                    color: selected
                             ? destructive
                                 ? Colors.error
                                 : Colors.primary
                             : Colors.surfaceContainerHigh
 
-                    border.width:
-                        selected
-                            ? 2
-                            : 1
-
-                    border.color:
-                        selected
+                    border.width: selected ? 2 : 1
+                    border.color: selected
                             ? destructive
                                 ? Colors.error
                                 : Colors.primary
@@ -509,16 +422,13 @@ PanelWindow {
 
                     Column {
                         anchors.centerIn: parent
-
                         spacing: 2
 
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
-
                             text: actionItem.modelData.icon
 
-                            color:
-                                button.selected
+                            color: button.selected
                                     ? button.destructive
                                         ? Colors.on_Error
                                         : Colors.on_Primary
@@ -540,21 +450,11 @@ PanelWindow {
 
                         hoverEnabled: true
 
-                        onEntered: {
-                            root.selectedIndex = actionItem.index
-                        }
-
-                        onPressed: {
-                            root.selectedIndex = actionItem.index
-                        }
-
-                        onClicked: {
-                            root.activate(actionItem.index)
-                        }
+                        onEntered: root.selectedIndex = actionItem.index
+                        onPressed: root.selectedIndex = actionItem.index
+                        onClicked: root.activate(actionItem.index)
                     }
                 }
-
-                // ── Action label ─────────────────────────────────────────────
 
                 Text {
                     anchors {
@@ -565,8 +465,7 @@ PanelWindow {
 
                     text: actionItem.modelData.label
 
-                    color:
-                        root.selectedIndex === actionItem.index
+                    color: root.selectedIndex === actionItem.index
                             ? actionItem.modelData.key === "poweroff"
                                 ? Colors.error
                                 : Colors.on_Surface

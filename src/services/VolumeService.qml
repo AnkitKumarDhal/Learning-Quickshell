@@ -14,14 +14,9 @@ Singleton {
     property real volume: audio?.volume ?? 0.0
     property bool muted:  audio?.muted  ?? false
 
-    function toggleMute() {
-        if (audio) audio.muted = !audio.muted
-    }
+    function toggleMute() { if (audio) audio.muted = !audio.muted }
 
-    function changeVolume(step) {
-        if (audio)
-            audio.volume = Math.max(0.0, Math.min(1.0, audio.volume + step))
-    }
+    function changeVolume(step) { if (audio) audio.volume = Math.max(0.0, Math.min(1.0, audio.volume + step)) }
 
     // ── Input ─────────────────────────────────────────────────────────────────
     PwObjectTracker { objects: [Pipewire.defaultAudioSource] }
@@ -31,12 +26,7 @@ Singleton {
     property real inputVolume: inputAudio?.volume ?? 0.0
     property bool inputMuted:  inputAudio?.muted  ?? false
 
-    function toggleInputMute() {
-        if (inputAudio) inputAudio.muted = !inputAudio.muted
-    }
+    function toggleInputMute() { if (inputAudio) inputAudio.muted = !inputAudio.muted }
 
-    function changeInputVolume(step) {
-        if (inputAudio)
-            inputAudio.volume = Math.max(0.0, Math.min(1.0, inputAudio.volume + step))
-    }
+    function changeInputVolume(step) { if (inputAudio) inputAudio.volume = Math.max(0.0, Math.min(1.0, inputAudio.volume + step)) }
 }

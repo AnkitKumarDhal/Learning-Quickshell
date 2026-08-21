@@ -2,9 +2,6 @@ import QtQuick
 import QtQuick.Layouts
 import qs.src.theme
 
-// Single device row for the Devices tab
-// Shows device name, default indicator chip, and sets default on click
-
 Item {
     id: root
 

@@ -7,24 +7,23 @@ import qs.src.state
 Singleton {
     id: root
 
-    // ── CPU ───────────────────────────────────────────────────────────────────
+    // CPU
     property real cpuUsage: 0.0
     property var  _cpuPrev: ({})
 
-    // ── Memory ────────────────────────────────────────────────────────────────
+    // Memory
     property real memUsage: 0.0   // 0.0 - 1.0
     property real memUsedGb:  0.0
     property real memTotalGb: 0.0
 
-    // ── GPU ───────────────────────────────────────────────────────────────────
+    // GPU
     property real gpuUsage: 0.0
     property bool hasGpu:   false
 
-    // ── Disk ──────────────────────────────────────────────────────────────────
-    // Array of { mount, used, total }
+    // Disk
     property var diskPartitions: []
 
-    // ── Network ───────────────────────────────────────────────────────────────
+    // Network
     property string activeInterface: ""
     property real   netUpRate:    0.0
     property real   netDownRate:  0.0
@@ -34,10 +33,10 @@ Singleton {
 
     readonly property int maxNetHistory: 60
 
-    // ── Temperature ───────────────────────────────────────────────────────────
+    // Temperature
     property int temperature: 0
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // Helpers
     function formatBytes(bps) {
         if (bps >= 1e9) return (bps / 1e9).toFixed(1) + " GB/s"
         if (bps >= 1e6) return (bps / 1e6).toFixed(1) + " MB/s"
@@ -45,10 +44,7 @@ Singleton {
         return bps.toFixed(0) + " B/s"
     }
 
-    // ── CPU polling ───────────────────────────────────────────────────────────
-    // Reads the aggregate "cpu " line from /proc/stat and computes idle/total
-    // delta between successive polls. Regex intentionally matches only the
-    // aggregate line (cpu <stats>), NOT per-core lines (cpu0, cpu1, ...).
+    // CPU polling
     Process {
         id: cpuProc
         command: ["cat", "/proc/stat"]
@@ -72,7 +68,7 @@ Singleton {
         }
     }
 
-    // ── Memory polling ────────────────────────────────────────────────────────
+    // Memory Polling
     Process {
         id: memProc
         command: ["cat", "/proc/meminfo"]
@@ -94,8 +90,7 @@ Singleton {
         }
     }
 
-    // ── GPU polling ───────────────────────────────────────────────────────────
-    // Checks for AMD gpu_busy_percent. If file doesn't exist, hasGpu = false.
+    // GPU Polling
     Process {
         id: gpuCheckProc
         command: ["sh", "-c",
@@ -129,8 +124,7 @@ Singleton {
         }
     }
 
-    // ── Disk polling ──────────────────────────────────────────────────────────
-    // df -B1 excludes tmpfs/devtmpfs/overlay/squashfs
+    // Disk polling
     Process {
         id: diskProc
         command: ["sh", "-c",
@@ -148,8 +142,6 @@ Singleton {
                 const used  = parseInt(parts[1])
                 const total = parseInt(parts[2])
                 if (isNaN(used) || isNaN(total) || total === 0) return
-
-                // Only show root and physical mounts (skip snap, boot etc.)
                 const skip = ["/boot", "/boot/efi", "/snap", "/sys/firmware/efi/efivars", "/.snapshots", "/var/cache", "/home", "/var/log"]
                 if (skip.some(s => mount.startsWith(s))) return
 
@@ -163,7 +155,7 @@ Singleton {
         }
     }
 
-    // ── Network polling ───────────────────────────────────────────────────────
+    // Network Polling
     Process {
         id: netProc
         command: ["cat", "/proc/net/dev"]
@@ -186,14 +178,12 @@ Singleton {
                     const downRate = Math.max(0, rx - prev.rx)
                     const upRate   = Math.max(0, tx - prev.tx)
 
-                    // Use the interface with the highest traffic as active
                     if (downRate + upRate > (root._netPrev._bestRate || 0)) {
                         root._netPrev._bestRate   = downRate + upRate
                         root.activeInterface      = iface
                         root.netDownRate          = downRate
                         root.netUpRate            = upRate
 
-                        // Append to history, cap at maxNetHistory
                         let dHist = root.netDownHistory.slice()
                         let uHist = root.netUpHistory.slice()
                         dHist.push(downRate)
@@ -210,14 +200,13 @@ Singleton {
         }
 
         onExited: {
-            // Hysteresis: only reset if active interface dropped near-zero
             if (root.netDownRate < 512 && root.netUpRate < 512) {
                 root._netPrev._bestRate = 0
             }
         }
     }
 
-    // ── Temperature polling ───────────────────────────────────────────────────
+    // Temperature Polling
     Process {
         id: tempProc
         command: ["sh", "-c",
@@ -232,9 +221,7 @@ Singleton {
         }
     }
 
-    // ── Main poll timer — 1s interval ─────────────────────────────────────────
-    // Only poll CPU, memory, and network continuously (needed for top bar display)
-    // Temperature, GPU, and disk only poll when popup is open to save resources
+    // Mail poll timer - 1s timer
     Timer {
         id: mainTimer
         interval:        1000
@@ -247,7 +234,6 @@ Singleton {
             memProc.running  = true
             netProc.running  = true
 
-            // Only poll temperature/GPU when popup is visible
             if (Popups.systemOpen) {
                 tempProc.running = true
                 if (root.hasGpu) gpuReadProc.running = true
@@ -255,7 +241,6 @@ Singleton {
         }
     }
 
-    // Disk polling only when popup is open
     Connections {
         target: Popups
         function onSystemOpenChanged() {
@@ -263,7 +248,6 @@ Singleton {
         }
     }
 
-    // Reduce polling frequency when popup is closed (poll every 2s instead of 1s)
     property int _pollInterval: Popups.systemOpen ? 1000 : 2000
     Behavior on _pollInterval { NumberAnimation { duration: 300 } }
 
@@ -274,7 +258,6 @@ Singleton {
         repeat: true
 
         onTriggered: {
-            // Keep stats fresh even when popup is closed, but at reduced rate
             if (!Popups.systemOpen) {
                 cpuProc.running = true
                 memProc.running = true

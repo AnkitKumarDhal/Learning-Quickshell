@@ -84,7 +84,7 @@ Singleton {
         if (bind.mouse) return true
         if (key.startsWith("mouse:")) return true
         if (key === "mouse_down" || key === "mouse_up") return true
-        //
+
         // Lid-switch binds are hardware events, not keyboard shortcuts.
         if (key.startsWith("switch:")) return true
         // Hide binds without descriptions.
@@ -129,16 +129,9 @@ Singleton {
 
         let key = bind.key || ""
 
-        // Hyprland's runtime JSON does not preserve the literal
-        // "code:201" text for your Copilot-key bind. Your description
-        // identifies that specific key, so recover a useful UI label.
-        if (
-            key === "" &&
-            (bind.description || "").includes("Copilot Key")
-        ) {
+        if (key === "" && (bind.description || "").includes("Copilot Key")) {
             key = "Copilot"
         }
-
         if (key) parts.push(_prettifyKey(key))
 
         return parts
@@ -253,8 +246,6 @@ Singleton {
             return "System"
         }
 
-        // Remaining binds belong to the Launchers section in your
-        // keybinds.lua structure, including utility/custom-script binds.
         return "Launchers"
     }
 

@@ -25,8 +25,7 @@ PanelWindow {
     visible: true
 
     readonly property int cardSpacing: 8
-    readonly property int availableStackHeight:
-        Math.max(0, root.height - 24)
+    readonly property int availableStackHeight: Math.max(0, root.height - 24)
     readonly property int stackHeight: Math.min(toastList.contentHeight, root.availableStackHeight)
     readonly property int visibleStackHeight: root.stackHeight
 
@@ -52,46 +51,34 @@ PanelWindow {
             id: toastList
 
             anchors.fill: parent
-
             orientation: ListView.Vertical
             verticalLayoutDirection: ListView.BottomToTop
 
             spacing: root.cardSpacing
-
             interactive: false
-
             model: NotificationService.activeToastsModel
 
             delegate: NotificationToastItem {
                 width: toastList.width
-
                 required property var toastNotification
-
                 notification: toastNotification
             }
 
-            // New notification slides in from the right.
             add: Transition {
                 ParallelAnimation {
                     NumberAnimation {
                         property: "x"
-
                         from: toastList.width + 36
                         to: 0
-
                         duration: 350
-
                         easing.type: Easing.OutCubic
                     }
 
                     NumberAnimation {
                         property: "opacity"
-
                         from: 0
                         to: 1
-
                         duration: 280
-
                         easing.type: Easing.OutCubic
                     }
                 }
@@ -101,9 +88,7 @@ PanelWindow {
             addDisplaced: Transition {
                 NumberAnimation {
                     properties: "y"
-
                     duration: 320
-
                     easing.type: Easing.OutCubic
                 }
             }
@@ -113,21 +98,15 @@ PanelWindow {
                 ParallelAnimation {
                     NumberAnimation {
                         property: "x"
-
                         to: toastList.width + 24
-
                         duration: 300
-
                         easing.type: Easing.InCubic
                     }
 
                     NumberAnimation {
                         property: "opacity"
-
                         to: 0
-
                         duration: 220
-
                         easing.type: Easing.InCubic
                     }
                 }
@@ -137,9 +116,7 @@ PanelWindow {
             removeDisplaced: Transition {
                 NumberAnimation {
                     properties: "y"
-
                     duration: 300
-
                     easing.type: Easing.OutCubic
                 }
             }
@@ -157,8 +134,7 @@ PanelWindow {
             }
 
             HoverHandler {
-                onHoveredChanged:
-                    NotificationService.setToastHovered(hovered)
+                onHoveredChanged: NotificationService.setToastHovered(hovered)
             }
         }
     }

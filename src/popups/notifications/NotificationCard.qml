@@ -23,7 +23,6 @@ Rectangle {
 
         anchors {
             fill: parent
-
             topMargin: 14
             leftMargin: 16
             rightMargin: 16
@@ -36,12 +35,7 @@ Rectangle {
             id: notificationContent
 
             Layout.fillWidth: true
-
-            implicitHeight: Math.max(
-                36,
-                contentColumn.implicitHeight
-            )
-
+            implicitHeight: Math.max(36, contentColumn.implicitHeight)
             spacing: 10
 
             Rectangle {
@@ -115,9 +109,7 @@ Rectangle {
 
                     Text {
                         text: root.notification
-                            ? NotificationService.formatTimestamp(
-                                root.notification
-                            )
+                            ? NotificationService.formatTimestamp(root.notification)
                             : ""
 
                         color: Colors.outline
@@ -147,9 +139,7 @@ Rectangle {
                 }
 
                 Text {
-                    visible: !!root.notification &&
-                             root.notification.body !== ""
-
+                    visible: !!root.notification && root.notification.body !== ""
                     text: root.notification
                         ? root.notification.body
                         : ""
@@ -203,8 +193,7 @@ Rectangle {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
 
-                    onClicked:
-                        NotificationService.dismiss(root.notification)
+                    onClicked: NotificationService.dismiss(root.notification)
                 }
             }
         }

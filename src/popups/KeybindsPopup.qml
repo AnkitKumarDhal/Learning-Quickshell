@@ -13,9 +13,7 @@ PanelWindow {
     id: root
 
     required property var screen
-
     screen: root.screen
-
     readonly property bool isFocusedScreen: {
         const monitor = root.screen
             ? Hyprland.monitorFor(root.screen)
@@ -24,14 +22,8 @@ PanelWindow {
         return monitor ? monitor.focused : false
     }
 
-    visible:
-        slidePanel.windowVisible &&
-        root.isFocusedScreen
-
-    implicitWidth:
-        root.screen
-            ? root.screen.width * 0.40
-            : 0
+    visible: slidePanel.windowVisible && root.isFocusedScreen
+    implicitWidth: root.screen ? root.screen.width * 0.40 : 0
 
     anchors {
         top: true
@@ -53,14 +45,8 @@ PanelWindow {
     color: "transparent"
 
     exclusionMode: ExclusionMode.Ignore
-
     WlrLayershell.layer: WlrLayer.Overlay
-
-    WlrLayershell.keyboardFocus:
-        slidePanel.windowVisible &&
-        root.isFocusedScreen
-            ? WlrKeyboardFocus.Exclusive
-            : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: slidePanel.windowVisible && root.isFocusedScreen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     Item {
         id: popupArea
@@ -71,11 +57,7 @@ PanelWindow {
             id: slidePanel
 
             width: parent.width
-
-            height:
-                root.screen
-                    ? root.screen.height * 0.70
-                    : 0
+            height: root.screen ? root.screen.height * 0.70 : 0
 
             anchors {
                 right: parent.right
@@ -83,13 +65,8 @@ PanelWindow {
             }
 
             edge: "right"
-
-            open:
-                Popups.keybindsOpen &&
-                root.isFocusedScreen
-
-            onCloseRequested:
-                Popups.keybindsOpen = false
+            open: Popups.keybindsOpen && root.isFocusedScreen
+            onCloseRequested: Popups.keybindsOpen = false
 
             focus: windowVisible
 
@@ -109,7 +86,6 @@ PanelWindow {
                 anchors.fill: parent
 
                 color: Colors.surfaceContainer
-
                 radius: Theme.popupRadius
 
                 border.width: 1
@@ -123,8 +99,6 @@ PanelWindow {
 
                     spacing: 14
 
-                    // ── Header ────────────────────────────────────────────
-
                     Text {
                         Layout.fillWidth: true
 
@@ -136,26 +110,19 @@ PanelWindow {
                         font.pixelSize: 17
                         font.bold: true
 
-                        horizontalAlignment:
-                            Text.AlignHCenter
+                        horizontalAlignment: Text.AlignHCenter
                     }
 
                     Rectangle {
                         Layout.fillWidth: true
-
                         Layout.preferredHeight: 1
-
                         color: Colors.outlineVariant
                     }
-
-                    // ── Loading ──────────────────────────────────────────
 
                     Text {
                         Layout.fillWidth: true
 
-                        visible:
-                            KeybindsService.loading
-
+                        visible: KeybindsService.loading
                         text: "Loading keybinds..."
 
                         color: Colors.on_SurfaceVariant
@@ -163,35 +130,23 @@ PanelWindow {
                         font.family: Fonts.font
                         font.pixelSize: 12
 
-                        horizontalAlignment:
-                            Text.AlignHCenter
+                        horizontalAlignment: Text.AlignHCenter
                     }
-
-                    // ── Error ────────────────────────────────────────────
 
                     Text {
                         Layout.fillWidth: true
 
-                        visible:
-                            !KeybindsService.loading &&
-                            KeybindsService.error.length > 0
-
-                        text:
-                            KeybindsService.error
+                        visible: !KeybindsService.loading && KeybindsService.error.length > 0
+                        text: KeybindsService.error
 
                         color: Colors.error
 
                         font.family: Fonts.font
                         font.pixelSize: 12
 
-                        wrapMode:
-                            Text.WordWrap
-
-                        horizontalAlignment:
-                            Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        horizontalAlignment: Text.AlignHCenter
                     }
-
-                    // ── Categorized keybinds ──────────────────────────────
 
                     Flickable {
                         id: keybindsFlickable
@@ -199,122 +154,85 @@ PanelWindow {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
 
-                        visible:
-                            !KeybindsService.loading &&
-                            KeybindsService.error.length === 0
+                        visible: !KeybindsService.loading && KeybindsService.error.length === 0
 
                         clip: true
 
                         contentWidth: width
                         contentHeight: sectionColumn.implicitHeight
 
-                        boundsBehavior:
-                            Flickable.StopAtBounds
+                        boundsBehavior: Flickable.StopAtBounds
 
                         ScrollBar.vertical: ScrollBar {
-                            policy:
-                                ScrollBar.AsNeeded
+                            policy: ScrollBar.AsNeeded
                         }
 
                         ColumnLayout {
                             id: sectionColumn
 
-                            width:
-                                keybindsFlickable.width
-
+                            width: keybindsFlickable.width
                             spacing: 18
 
                             Repeater {
-                                model:
-                                    KeybindsService.sections
+                                model: KeybindsService.sections
 
                                 delegate: ColumnLayout {
                                     required property var modelData
 
                                     Layout.fillWidth: true
-
                                     spacing: 8
-
-                                    // ── Category title ─────────────────
 
                                     RowLayout {
                                         Layout.fillWidth: true
-
                                         spacing: 8
 
                                         Text {
-                                            text:
-                                                modelData.title.toUpperCase()
+                                            text: modelData.title.toUpperCase()
+                                            color: Colors.primary
 
-                                            color:
-                                                Colors.primary
-
-                                            font.family:
-                                                Fonts.font
-
+                                            font.family: Fonts.font
                                             font.pixelSize: 14
                                             font.bold: true
                                         }
 
                                         Rectangle {
                                             Layout.fillWidth: true
-
                                             Layout.preferredHeight: 1
-
-                                            color:
-                                                Colors.outlineVariant
+                                            color: Colors.outlineVariant
                                         }
                                     }
-
-                                    // ── Two-column bind grid ─────────────
 
                                     GridView {
                                         id: bindGrid
 
                                         Layout.fillWidth: true
+                                        Layout.preferredHeight: Math.ceil(modelData.binds.length / 2) * 84
 
-                                        Layout.preferredHeight:
-                                            Math.ceil(
-                                                modelData.binds.length / 2
-                                            ) * 84
-
-                                        cellWidth:
-                                            width / 2
-
+                                        cellWidth: width / 2
                                         cellHeight: 84
 
                                         interactive: false
                                         clip: false
 
-                                        model:
-                                            modelData.binds
+                                        model: modelData.binds
 
                                         delegate: Rectangle {
                                             required property var modelData
 
-                                            width:
-                                                bindGrid.cellWidth - 8
-
-                                            height:
-                                                bindGrid.cellHeight - 8
-
+                                            width: bindGrid.cellWidth - 8
+                                            height: bindGrid.cellHeight - 8
                                             radius: 9
 
-                                            color:
-                                                Colors.surfaceContainerHigh
+                                            color: Colors.surfaceContainerHigh
 
                                             border.width: 1
-
-                                            border.color:
-                                                Colors.outlineVariant
+                                            border.color: Colors.outlineVariant
 
                                             RowLayout {
                                                 anchors {
                                                     fill: parent
-
                                                     leftMargin: 10
                                                     rightMargin: 10
-
                                                     topMargin: 9
                                                     bottomMargin: 9
                                                 }
@@ -325,17 +243,12 @@ PanelWindow {
                                                     id: keyFlow
 
                                                     Layout.fillWidth: false
-
-                                                    Layout.preferredWidth:
-                                                        parent.width * 0.50
-
-                                                    Layout.maximumWidth:
-                                                        parent.width * 0.50
+                                                    Layout.preferredWidth: parent.width * 0.50
+                                                    Layout.maximumWidth: parent.width * 0.50
 
                                                     spacing: 4
 
-                                                    property var keyParts:
-                                                        modelData.keyParts
+                                                    property var keyParts: modelData.keyParts
 
                                                     Repeater {
                                                         model: keyFlow.keyParts
@@ -347,11 +260,8 @@ PanelWindow {
                                                             spacing: 4
 
                                                             Rectangle {
-                                                                width:
-                                                                    keyText.implicitWidth + 16
-
+                                                                width: keyText.implicitWidth + 16
                                                                 height: 25
-
                                                                 radius: 5
 
                                                                 color: Colors.surface
@@ -363,7 +273,6 @@ PanelWindow {
                                                                     id: keyText
 
                                                                     anchors.centerIn: parent
-
                                                                     text: modelData
 
                                                                     color: Colors.primary
@@ -372,18 +281,13 @@ PanelWindow {
                                                                     font.pixelSize: 12
                                                                     font.bold: true
 
-                                                                    horizontalAlignment:
-                                                                        Text.AlignHCenter
-
-                                                                    verticalAlignment:
-                                                                        Text.AlignVCenter
+                                                                    horizontalAlignment: Text.AlignHCenter
+                                                                    verticalAlignment: Text.AlignVCenter
                                                                 }
                                                             }
 
                                                             Text {
-                                                                visible:
-                                                                    index < keyFlow.keyParts.length - 1
-
+                                                                visible: index < keyFlow.keyParts.length - 1
                                                                 text: "+"
 
                                                                 color: Colors.on_SurfaceVariant
@@ -392,8 +296,7 @@ PanelWindow {
                                                                 font.pixelSize: 11
                                                                 font.bold: true
 
-                                                                anchors.verticalCenter:
-                                                                    parent.verticalCenter
+                                                                anchors.verticalCenter: parent.verticalCenter
                                                             }
                                                         }
                                                     }
@@ -401,28 +304,18 @@ PanelWindow {
 
                                                 Text {
                                                     Layout.fillWidth: true
+                                                    text: modelData.description
 
-                                                    text:
-                                                        modelData.description
+                                                    color: Colors.on_Surface
 
-                                                    color:
-                                                        Colors.on_Surface
-
-                                                    font.family:
-                                                        Fonts.font
-
+                                                    font.family: Fonts.font
                                                     font.pixelSize: 14
 
                                                     maximumLineCount: 2
+                                                    wrapMode: Text.Wrap
+                                                    elide: Text.ElideRight
 
-                                                    wrapMode:
-                                                        Text.Wrap
-
-                                                    elide:
-                                                        Text.ElideRight
-
-                                                    verticalAlignment:
-                                                        Text.AlignVCenter
+                                                    verticalAlignment: Text.AlignVCenter
                                                 }
                                             }
                                         }

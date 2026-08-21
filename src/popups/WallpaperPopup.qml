@@ -11,8 +11,6 @@ import qs.src.state
 PanelWindow {
     id: root
 
-    //property var screen
-
     color:         "transparent"
     exclusionMode: ExclusionMode.Ignore
 
@@ -22,13 +20,9 @@ PanelWindow {
     implicitHeight: 520
 
     WlrLayershell.layer:         WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: Popups.wallpaperOpen
-                                     ? WlrKeyboardFocus.Exclusive
-                                     : WlrKeyboardFocus.None
-
+    WlrLayershell.keyboardFocus: Popups.wallpaperOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     visible: slide.windowVisible
 
-    // ── On open ───────────────────────────────────────────────────────────────
     Connections {
         target: Popups
         function onWallpaperOpenChanged() {
@@ -46,7 +40,7 @@ PanelWindow {
         }
     }
 
-    // ── State ─────────────────────────────────────────────────────────────────
+    // state
     property string wallpaperDir: "~/wallpapers"
     property var    wallpapers:   []
     property string currentWall:  ""
@@ -86,19 +80,16 @@ PanelWindow {
 
         for (const line of lines) {
             const firstSep = line.indexOf("\t")
-            if (firstSep < 0)
-                continue
+            if (firstSep < 0) continue
 
             const secondSep = line.indexOf("\t", firstSep + 1)
-            if (secondSep < 0)
-                continue
+            if (secondSep < 0) continue
 
             const mtime = line.substring(0, firstSep)
             const size = line.substring(firstSep + 1, secondSep)
             const path = line.substring(secondSep + 1)
 
-            if (!path)
-                continue
+            if (!path) continue
 
             items.push({
                 sourcePath: path,
@@ -116,8 +107,7 @@ PanelWindow {
 
         for (const line of cacheLines) {
             const name = line.trim()
-            if (name)
-                cached.add(name)
+            if (name) cached.add(name)
         }
 
         const expected = new Set()
@@ -128,9 +118,7 @@ PanelWindow {
             expected.add(name)
 
             const ready = cached.has(name)
-
-            if (!ready)
-                missing.push(item)
+            if (!ready) missing.push(item)
 
             return {
                 sourcePath: item.sourcePath,
@@ -145,8 +133,7 @@ PanelWindow {
         const orphanPaths = []
 
         for (const name of cached) {
-            if (!expected.has(name))
-                orphanPaths.push(root.thumbnailDir + "/" + name)
+            if (!expected.has(name)) orphanPaths.push(root.thumbnailDir + "/" + name)
         }
 
         if (orphanPaths.length > 0) {
@@ -165,7 +152,6 @@ PanelWindow {
         wallProc.running = true
     }
 
-    // ── Scan process ──────────────────────────────────────────────────────────
     Process {
         id: scanProc
         command: ["sh", "-c",
@@ -214,15 +200,12 @@ PanelWindow {
         id: cacheList
 
         running: false
-
         property var _lines: []
 
         stdout: SplitParser {
             onRead: (line) => {
                 const p = line.trim()
-
-                if (p)
-                    cacheList._lines.push(p)
+                if (p) cacheList._lines.push(p)
             }
         }
 
@@ -235,32 +218,24 @@ PanelWindow {
 
     Process {
         id: cleanupProc
-
         running: false
-
         onExited: root._startNextThumbnail()
     }
 
     Process {
         id: thumbProc
-
         running: false
-
         property var _item: null
-
         onExited: (exitCode, exitStatus) => {
             root._thumbnailFinished(exitCode === 0)
         }
     }
 
     function _startNextThumbnail() {
-        if (thumbProc.running || root._thumbnailQueue.length === 0)
-            return
+        if (thumbProc.running || root._thumbnailQueue.length === 0) return
 
         const next = root._thumbnailQueue.shift()
-
         thumbProc._item = next
-
         thumbProc.command = [
             "magick",
             next.sourcePath,
@@ -302,7 +277,6 @@ PanelWindow {
         }
     }
 
-    // ── Apply process (sources and calls the fish wall function) ──────────────
     Process {
         id: wallProc
         command: ["fish", "-c",
@@ -311,7 +285,6 @@ PanelWindow {
         onExited: root.applying = false
     }
 
-    // ── Slide ─────────────────────────────────────────────────────────────────
     PopupSlide {
         id:           slide
         anchors.fill: parent
@@ -344,7 +317,6 @@ PanelWindow {
                 }
                 spacing: 12
 
-                // ── Header ────────────────────────────────────────────────────
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 10
@@ -381,7 +353,6 @@ PanelWindow {
                     }
                 }
 
-                // ── Directory row ─────────────────────────────────────────────
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
@@ -466,7 +437,6 @@ PanelWindow {
                     opacity:          0.5
                 }
 
-                // ── Wallpaper grid ────────────────────────────────────────────
                 GridView {
                     id:               wallGrid
                     Layout.fillWidth: true
@@ -493,7 +463,6 @@ PanelWindow {
                     }
 
                     model: root.wallpapers
-
                     Keys.onEscapePressed: Popups.wallpaperOpen = false
 
                     delegate: Item {

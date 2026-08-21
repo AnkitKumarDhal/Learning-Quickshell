@@ -11,7 +11,6 @@ import qs.src.popups.media
 PanelWindow {
     id: win
 
-    //property var screen
     WlrLayershell.screen:        screen
     WlrLayershell.layer:         WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -30,7 +29,6 @@ PanelWindow {
         height: mediaCard.height
     }
 
-    // ── Player resolution ─────────────────────────────────────────────────────
     property var _players:    Mpris.players.values
     property var _lastActive: null
 
@@ -59,7 +57,6 @@ PanelWindow {
     property bool isPlaying: player?.playbackState === MprisPlaybackState.Playing ?? false
     property bool hasArt:    player !== null && player.trackArtUrl !== ""
 
-    // ── Position tracking (seconds, float) ───────────────────────────────────
     property real _position: 0.0
     property bool _seeking:  false
 
@@ -86,7 +83,6 @@ PanelWindow {
         }
     }
 
-    // ── Slide ─────────────────────────────────────────────────────────────────
     PopupSlide {
         id:           slide
         anchors.fill: parent
@@ -94,7 +90,6 @@ PanelWindow {
         edge:         "top"
         onCloseRequested: Popups.mediaOpen = false
 
-        // ── Card ──────────────────────────────────────────────────────────────────
         Rectangle {
             id: mediaCard
             width:  340

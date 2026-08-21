@@ -38,8 +38,7 @@ Singleton {
     function syncFromFlow() {
         const current = agent.flow
 
-        if (!current)
-            return
+        if (!current) return
 
         root.message = current.message
         root.supplementaryMessage = current.supplementaryMessage
@@ -61,14 +60,8 @@ Singleton {
     Connections {
         target: agent
 
-        function onAuthenticationRequestStarted() {
-            root.syncFromFlow()
-        }
-
-        function onFlowChanged() {
-            if (agent.flow)
-                root.syncFromFlow()
-        }
+        function onAuthenticationRequestStarted() { root.syncFromFlow() }
+        function onFlowChanged() { if (agent.flow) root.syncFromFlow() }
     }
 
     // ── Authentication conversation ──────────────────────────────────────────
@@ -76,48 +69,25 @@ Singleton {
     Connections {
         target: agent.flow
 
-        function onIsResponseRequiredChanged() {
-            root.syncFromFlow()
-        }
-
-        function onInputPromptChanged() {
-            root.syncFromFlow()
-        }
-
-        function onResponseVisibleChanged() {
-            root.syncFromFlow()
-        }
-
-        function onSupplementaryMessageChanged() {
-            root.syncFromFlow()
-        }
-
-        function onSupplementaryIsErrorChanged() {
-            root.syncFromFlow()
-        }
-
-        function onAuthenticationFailed() {
-            root.syncFromFlow()
-        }
+        function onIsResponseRequiredChanged() { root.syncFromFlow() }
+        function onInputPromptChanged() { root.syncFromFlow() }
+        function onResponseVisibleChanged() { root.syncFromFlow() }
+        function onSupplementaryMessageChanged() { root.syncFromFlow() }
+        function onSupplementaryIsErrorChanged() { root.syncFromFlow() }
+        function onAuthenticationFailed() { root.syncFromFlow() }
     }
 
     // ── User actions ─────────────────────────────────────────────────────────
 
     function submit(value) {
         const current = agent.flow
-
-        if (!current || !current.isResponseRequired)
-            return
-
+        if (!current || !current.isResponseRequired) return
         current.submit(value)
     }
 
     function cancel() {
         const current = agent.flow
-
-        if (!current)
-            return
-
+        if (!current) return
         current.cancelAuthenticationRequest()
     }
 

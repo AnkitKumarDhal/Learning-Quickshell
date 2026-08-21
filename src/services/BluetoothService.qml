@@ -8,74 +8,31 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    // ── Adapter state ────────────────────────────────────────────────────────
+    readonly property var adapter: Bluetooth.defaultAdapter
 
-    readonly property var adapter:
-        Bluetooth.defaultAdapter
-
-    readonly property bool available:
-        root.adapter !== null
-
-    readonly property bool enabled:
-        root.adapter?.enabled ?? false
-
-    readonly property bool discovering:
-        root.adapter?.discovering ?? false
-
-    readonly property bool scanning:
-        root.adapter?.discovering ?? scanProcess.running
-
-    // ── Device model ─────────────────────────────────────────────────────────
-    //
-    // Each entry looks like:
-    //
-    // {
-    //     address: "AA:BB:CC:DD:EE:FF",
-    //     name: "Device",
-    //     alias: "Device",
-    //     icon: "audio-headphones",
-    //     paired: true,
-    //     connected: true,
-    //     trusted: false,
-    //     batteryAvailable: true,
-    //     battery: 0.82
-    // }
+    readonly property bool available: root.adapter !== null
+    readonly property bool enabled: root.adapter?.enabled ?? false
+    readonly property bool discovering: root.adapter?.discovering ?? false
+    readonly property bool scanning: root.adapter?.discovering ?? scanProcess.running
 
     property var devices: []
 
-    readonly property var connectedDevices:
-        root.devices.filter(device => device.connected)
-
-    readonly property var pairedDevices:
-        root.devices.filter(device => device.paired && !device.connected)
-
-    readonly property var availableDevices:
-        root.devices.filter(device => !device.paired && !device.connected)
-
-    readonly property int connectedDeviceCount:
-        root.connectedDevices.length
-
-    // ── Refresh timer ────────────────────────────────────────────────────────
+    readonly property var connectedDevices: root.devices.filter(device => device.connected)
+    readonly property var pairedDevices: root.devices.filter(device => device.paired && !device.connected)
+    readonly property var availableDevices: root.devices.filter(device => !device.paired && !device.connected)
+    readonly property int connectedDeviceCount: root.connectedDevices.length
 
     Timer {
         id: refreshTimer
-
         interval: 5000
         repeat: true
         running: root.enabled && !scanProcess.running
-
         onTriggered: root.refresh()
     }
 
-    // ── Inventory refresh ────────────────────────────────────────────────────
-
     Process {
         id: inventoryProcess
-
-        stdout: StdioCollector {
-            onStreamFinished: root._applyInventory(this.text)
-        }
-
+        stdout: StdioCollector { onStreamFinished: root._applyInventory(this.text) }
         stderr: StdioCollector {}
     }
 
@@ -114,8 +71,7 @@ Singleton {
             /^Device\s+([0-9A-Fa-f:]{17})\s+(.+)$/
         );
 
-        if (!match)
-            return false;
+        if (!match) return false;
 
         const address = match[1].toUpperCase();
         const name = match[2].trim();
@@ -153,19 +109,15 @@ Singleton {
         for (const rawLine of lines) {
             const line = rawLine.trim();
 
-            if (!line)
-                continue;
-
+            if (!line) continue;
             if (line === "__PAIRED__") {
                 section = "paired";
                 continue;
             }
-
             if (line === "__CONNECTED__") {
                 section = "connected";
                 continue;
             }
-
             if (line.startsWith("__INFO__ ")) {
                 infoAddress = line.substring("__INFO__ ".length).trim().toUpperCase();
                 section = "info";
@@ -186,119 +138,76 @@ Singleton {
 
                 continue;
             }
-
             if (section === "all") {
                 root._parseDeviceLine(line, records);
                 continue;
             }
-
             if (section === "paired") {
                 root._parseDeviceLine(line, paired);
                 continue;
             }
-
             if (section === "connected") {
                 root._parseDeviceLine(line, connected);
                 continue;
             }
-
             if (section === "info" && infoAddress !== "") {
                 const current = records[infoAddress];
 
                 if (line.startsWith("Name:")) {
-                    current.name =
-                        line.substring("Name:".length).trim();
+                    current.name = line.substring("Name:".length).trim();
                     current.alias = current.name;
                 } else if (line.startsWith("Alias:")) {
-                    current.alias =
-                        line.substring("Alias:".length).trim();
+                    current.alias = line.substring("Alias:".length).trim();
                 } else if (line.startsWith("Icon:")) {
-                    current.icon =
-                        line.substring("Icon:".length).trim();
+                    current.icon = line.substring("Icon:".length).trim();
                 } else if (line.startsWith("Paired:")) {
-                    current.paired =
-                        line.substring("Paired:".length).trim() === "yes";
+                    current.paired = line.substring("Paired:".length).trim() === "yes";
                 } else if (line.startsWith("Connected:")) {
-                    current.connected =
-                        line.substring("Connected:".length).trim() === "yes";
+                    current.connected = line.substring("Connected:".length).trim() === "yes";
                 } else if (line.startsWith("Trusted:")) {
-                    current.trusted =
-                        line.substring("Trusted:".length).trim() === "yes";
+                    current.trusted = line.substring("Trusted:".length).trim() === "yes";
                 } else if (line.startsWith("Battery Percentage:")) {
-                    const batteryMatch =
-                        line.match(/\((\d+)\)/);
-
+                    const batteryMatch = line.match(/\((\d+)\)/);
                     if (batteryMatch) {
                         current.batteryAvailable = true;
-                        current.battery =
-                            Math.max(
-                                0,
-                                Math.min(
-                                    1,
-                                    Number(batteryMatch[1]) / 100
-                                )
-                            );
+                        current.battery = Math.max(0, Math.min(1, Number(batteryMatch[1]) / 100));
                     }
                 }
             }
         }
 
         for (const address in paired) {
-            if (!records[address])
-                records[address] = paired[address];
-
+            if (!records[address]) records[address] = paired[address];
             records[address].paired = true;
         }
 
         for (const address in connected) {
-            if (!records[address])
-                records[address] = connected[address];
-
+            if (!records[address]) records[address] = connected[address];
             records[address].connected = true;
         }
 
         const result = Object.values(records);
 
         result.sort((a, b) => {
-            if (a.connected !== b.connected)
-                return a.connected ? -1 : 1;
-
-            if (a.paired !== b.paired)
-                return a.paired ? -1 : 1;
-
-            return a.name.localeCompare(
-                b.name,
-                undefined,
-                { sensitivity: "base" }
-            );
+            if (a.connected !== b.connected) return a.connected ? -1 : 1;
+            if (a.paired !== b.paired) return a.paired ? -1 : 1;
+            return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
         });
 
         root.devices = result;
     }
 
-    // ── Scanning ─────────────────────────────────────────────────────────────
-
     Process {
         id: scanProcess
 
-        stdout: StdioCollector {
-            onStreamFinished: root.refresh()
-        }
-
+        stdout: StdioCollector { onStreamFinished: root.refresh() }
         stderr: StdioCollector {}
-
-        onExited: {
-            if (!running)
-                root.refresh();
-        }
+        onExited: if (!running) root.refresh();
     }
 
     function scan() {
-        if (!root.available || !root.enabled)
-            return;
-
-        if (scanProcess.running)
-            return;
+        if (!root.available || !root.enabled) return;
+        if (scanProcess.running) return;
 
         scanProcess.exec({
             command: [
@@ -312,13 +221,9 @@ Singleton {
     }
 
     function stopScan() {
-        if (!scanProcess.running)
-            return;
-
+        if (!scanProcess.running) return;
         scanProcess.running = false;
     }
-
-    // ── Device actions ───────────────────────────────────────────────────────
 
     property string busyAddress: ""
     property string busyAction: ""
@@ -344,11 +249,8 @@ Singleton {
     }
 
     function _runAction(action, address, timeout = 20) {
-        if (!address || !root.enabled)
-            return;
-
-        if (actionProcess.running)
-            return;
+        if (!address || !root.enabled) return;
+        if (actionProcess.running) return;
 
         root.busyAddress = address;
         root.busyAction = action;
@@ -380,12 +282,8 @@ Singleton {
         root._runAction("remove", address, 20);
     }
 
-    // ── Power ────────────────────────────────────────────────────────────────
-
     function setEnabled(value) {
-        if (!root.adapter)
-            return;
-
+        if (!root.adapter) return;
         root.adapter.enabled = value;
 
         if (!value) {

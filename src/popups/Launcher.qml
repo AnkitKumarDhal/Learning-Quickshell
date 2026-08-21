@@ -9,7 +9,6 @@ import qs.src.popups.launcher
 
 PanelWindow {
     id: root
-    //property var screen
 
     color:         "transparent"
     exclusionMode: ExclusionMode.Ignore
@@ -19,7 +18,6 @@ PanelWindow {
     WlrLayershell.layer:         WlrLayer.Overlay
     WlrLayershell.keyboardFocus: Popups.launcherOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    // ── Delayed visibility (lets close animation finish) ──────────────────
     property bool _shouldShow: false
     visible: _shouldShow
 
@@ -29,8 +27,6 @@ PanelWindow {
             if (Popups.launcherOpen) {
                 closeDelay.stop()
                 root._shouldShow = true
-                // Use a Timer to defer focus until the event loop has fully processed
-                // the window visibility and WlrLayershell keyboard grab setup
                 launcherFocusTimer.start()
             } else {
                 closeDelay.start()
@@ -58,7 +54,6 @@ PanelWindow {
         }
     }
 
-    // ── State ─────────────────────────────────────────────────────────────
     property int selectedIndex: 0
     property var allApps: DesktopEntries.applications.values
     property var filteredApps: []
@@ -73,7 +68,6 @@ PanelWindow {
         }
     }
 
-    // Debounced search to avoid filtering on every keystroke
     property string _pendingQuery: ""
 
     function filterApps() {
@@ -83,7 +77,6 @@ PanelWindow {
         if (q === "") {
             root.filteredApps = root.allApps.slice(0, 48)
         } else {
-            // Optimized filtering with early exit and cached lowercase values
             const matches = []
             const startsWith = []
 
@@ -91,19 +84,16 @@ PanelWindow {
                 const app = root.allApps[i]
                 const name = (app.name || "").toLowerCase()
 
-                // Check if name starts with query (highest priority)
                 if (name.startsWith(q)) {
                     startsWith.push(app)
                     continue
                 }
 
-                // Check if name or comment contains query
                 if (name.includes(q) || (app.comment || "").toLowerCase().includes(q)) {
                     matches.push(app)
                 }
             }
 
-            // Sort: startsWith first, then contains, alphabetically
             startsWith.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
             matches.sort((a, b) => (a.name || "").localeCompare(b.name || ""))
 
@@ -112,14 +102,12 @@ PanelWindow {
         root.selectedIndex = 0
     }
 
-    // Debounce timer for search
     Timer {
         id: filterDebounce
         interval: 150
         onTriggered: root.filterApps()
     }
 
-    // Modified text change handler to use debounce
     function onSearchTextChanged() {
         filterDebounce.restart()
     }
@@ -132,7 +120,6 @@ PanelWindow {
         Popups.launcherOpen = false
     }
 
-    // ── Dim overlay ───────────────────────────────────────────────────────
     Rectangle {
         anchors.fill: parent
         color:        Qt.rgba(0, 0, 0, 0.55)
@@ -145,7 +132,6 @@ PanelWindow {
         }
     }
 
-    // ── Center card ───────────────────────────────────────────────────────
     Rectangle {
         id: card
 
@@ -168,7 +154,6 @@ PanelWindow {
         opacity: Popups.launcherOpen ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: Theme.animDuration; easing.type: Easing.OutCubic } }
 
-        // ── Search bar ────────────────────────────────────────────────────
         LauncherSearchBar {
             id:          searchBar
             anchors { top: parent.top; left: parent.left; right: parent.right }
@@ -196,7 +181,6 @@ PanelWindow {
             }
         }
 
-        // Divider
         Rectangle {
             id:      divider
             anchors { top: searchBar.bottom; left: parent.left; right: parent.right }
@@ -205,7 +189,6 @@ PanelWindow {
             opacity: 0.5
         }
 
-        // ── Results list ──────────────────────────────────────────────────
         LauncherResultsList {
             id:           resultsList
             anchors { top: divider.bottom; left: parent.left; right: parent.right }

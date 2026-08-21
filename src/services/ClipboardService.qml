@@ -11,7 +11,6 @@ Singleton {
     property var filteredHistory: []
     property string searchQuery: ""
 
-    // Debounced clipboard search to avoid filtering on every keystroke
     property string _pendingQuery: ""
 
     Timer {
