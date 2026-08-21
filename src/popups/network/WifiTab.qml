@@ -25,11 +25,8 @@ ColumnLayout {
             root.selectedNetwork.security === WifiSecurityType.Sae
         )
 
-    Layout.fillWidth:
-        true
-
-    spacing:
-        8
+    Layout.fillWidth: true
+    spacing: 8
 
     onSelectedNetworkChanged: {
         root.showPassword = false
@@ -40,514 +37,292 @@ ColumnLayout {
         }
     }
 
-    // A remembered network is normally connected using its
-    // saved NetworkManager credentials. Only fall back to the
-    // password editor when those saved credentials are missing.
     Connections {
-        target:
-            root.pendingKnownNetwork
+        target: root.pendingKnownNetwork
 
         function onConnectionFailed(reason) {
-            if (
-                reason === ConnectionFailReason.NoSecrets &&
-                root.pendingKnownNetwork !== null
-            ) {
-                root.selectedNetwork =
-                    root.pendingKnownNetwork;
-
-                root.pendingKnownNetwork =
-                    null;
+            if ( reason === ConnectionFailReason.NoSecrets && root.pendingKnownNetwork !== null) {
+                root.selectedNetwork = root.pendingKnownNetwork;
+                root.pendingKnownNetwork = null;
             }
         }
     }
 
-    // ── Wi-Fi models ─────────────────────────────────────────────────────────
-
     ScriptModel {
-        id:
-            wifiConnectedModel
-
-        objectProp:
-            "name"
-
+        id: wifiConnectedModel
+        objectProp: "name"
         values: {
-            if (!NetworkService.wifiDevice)
-                return [];
+            if (!NetworkService.wifiDevice) return [];
 
-            return [
-                ...NetworkService.wifiDevice.networks.values
-            ]
-            .filter(
-                network =>
-                    network.connected
-            )
-            .sort(
-                (a, b) =>
-                    b.signalStrength -
-                    a.signalStrength
-            );
+            return [ ...NetworkService.wifiDevice.networks.values ]
+            .filter(network => network.connected)
+            .sort((a, b) => b.signalStrength - a.signalStrength);
         }
     }
 
     ScriptModel {
-        id:
-            wifiAvailableModel
-
-        objectProp:
-            "name"
-
+        id: wifiAvailableModel
+        objectProp: "name"
         values: {
-            if (!NetworkService.wifiDevice)
-                return [];
+            if (!NetworkService.wifiDevice) return [];
 
-            return [
-                ...NetworkService.wifiDevice.networks.values
-            ]
-            .filter(
-                network =>
-                    !network.connected &&
-                    network !== root.selectedNetwork
-            )
-            .sort(
-                (a, b) =>
-                    b.signalStrength -
-                    a.signalStrength
-            );
+            return [...NetworkService.wifiDevice.networks.values]
+            .filter(network => !network.connected && network !== root.selectedNetwork)
+            .sort((a, b) => b.signalStrength - a.signalStrength);
         }
     }
-
-    // ── Header / Scan ────────────────────────────────────────────────────────
 
     RowLayout {
-        Layout.fillWidth:
-            true
+        Layout.fillWidth: true
 
         Text {
-            text:
-                NetworkService.wifiScanning
+            text: NetworkService.wifiScanning
                     ? "Wi-Fi networks · Scanning"
                     : "Wi-Fi networks"
 
-            font.family:
-                Fonts.font
+            font.family: Fonts.font
+            font.pixelSize: 14
+            font.bold: true
 
-            font.pixelSize:
-                14
+            color: Colors.on_SurfaceVariant
 
-            font.bold:
-                true
-
-            color:
-                Colors.on_SurfaceVariant
-
-            Layout.fillWidth:
-                true
+            Layout.fillWidth: true
         }
 
         Rectangle {
-            width:
-                wifiScanLabel.implicitWidth + 20
+            width: wifiScanLabel.implicitWidth + 20
+            height: 28
+            radius: 14
 
-            height:
-                28
-
-            radius:
-                14
-
-            color:
-                wifiScanHover.hovered
+            color: wifiScanHover.hovered
                     ? Colors.primary
                     : Colors.surfaceContainerHighest
 
             Behavior on color {
                 ColorAnimation {
-                    duration:
-                        Theme.hoverFadeDuration
+                    duration: Theme.hoverFadeDuration
                 }
             }
 
             Text {
-                id:
-                    wifiScanLabel
+                id: wifiScanLabel
+                anchors.centerIn: parent
 
-                anchors.centerIn:
-                    parent
+                text: "Scan"
 
-                text:
-                    "Scan"
+                font.family: Fonts.font
+                font.pixelSize: 10
+                font.bold: true
 
-                font.family:
-                    Fonts.font
-
-                font.pixelSize:
-                    10
-
-                font.bold:
-                    true
-
-                color:
-                    wifiScanHover.hovered
+                color: wifiScanHover.hovered
                         ? Colors.on_Primary
                         : Colors.on_Surface
             }
 
             HoverHandler {
-                id:
-                    wifiScanHover
+                id: wifiScanHover
             }
 
             MouseArea {
-                anchors.fill:
-                    parent
-
-                enabled:
-                    NetworkService.wifiEnabled
-
-                cursorShape:
-                    Qt.PointingHandCursor
-
-                onClicked:
-                    NetworkService.scanWifi()
+                anchors.fill: parent
+                enabled: NetworkService.wifiEnabled
+                cursorShape: Qt.PointingHandCursor
+                onClicked: NetworkService.scanWifi()
             }
         }
     }
 
-    // ── Wi-Fi contents ───────────────────────────────────────────────────────
-
     Flickable {
-        Layout.fillWidth:
-            true
+        Layout.fillWidth: true
+        Layout.preferredHeight: Math.min(wifiContent.implicitHeight, 320)
+        contentHeight: wifiContent.implicitHeight
 
-        Layout.preferredHeight:
-            Math.min(
-                wifiContent.implicitHeight,
-                320
-            )
-
-        contentHeight:
-            wifiContent.implicitHeight
-
-        clip:
-            true
-
-        boundsBehavior:
-            Flickable.StopAtBounds
-
-        visible:
-            NetworkService.wifiEnabled
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        visible: NetworkService.wifiEnabled
 
         ColumnLayout {
-            id:
-                wifiContent
+            id: wifiContent
 
-            width:
-                parent.width
-
-            spacing:
-                6
-
-            // ── Connected ───────────────────────────────────────────────────
+            width: parent.width
+            spacing: 6
 
             Text {
-                visible:
-                    wifiConnectedModel.values.length > 0
+                visible: wifiConnectedModel.values.length > 0
+                text: "Connected"
 
-                text:
-                    "Connected"
+                font.family: Fonts.font
+                font.pixelSize: 10
+                font.bold: true
 
-                font.family:
-                    Fonts.font
+                color: Colors.on_SurfaceVariant
 
-                font.pixelSize:
-                    10
-
-                font.bold:
-                    true
-
-                color:
-                    Colors.on_SurfaceVariant
-
-                topPadding:
-                    2
-
-                bottomPadding:
-                    2
+                topPadding: 2
+                bottomPadding: 2
             }
 
             Repeater {
-                model:
-                    wifiConnectedModel
+                model: wifiConnectedModel
 
                 delegate:
                     NetworkRow {
                         required property var modelData
 
-                        Layout.fillWidth:
-                            true
-
-                        network:
-                            modelData
-
-                        onNetworkSelected:
-                            (network) => {
-                                root.networkSelected(
-                                    network
-                                );
+                        Layout.fillWidth: true
+                        network: modelData
+                        onNetworkSelected: (network) => {
+                                root.networkSelected(network);
                             }
                     }
             }
 
-            // ── Connect ──────────────────────────────────────────────────────
-
             Text {
-                visible:
-                    root.selectedNetwork !== null
+                visible: root.selectedNetwork !== null
+                text: "Connect"
 
-                text:
-                    "Connect"
+                font.family: Fonts.font
+                font.pixelSize: 10
+                font.bold: true
 
-                font.family:
-                    Fonts.font
+                color: Colors.on_SurfaceVariant
 
-                font.pixelSize:
-                    10
-
-                font.bold:
-                    true
-
-                color:
-                    Colors.on_SurfaceVariant
-
-                topPadding:
-                    6
-
-                bottomPadding:
-                    2
+                topPadding: 6
+                bottomPadding: 2
             }
 
             Rectangle {
-                visible:
-                    root.selectedNetwork !== null
+                visible: root.selectedNetwork !== null
 
-                Layout.fillWidth:
-                    true
+                Layout.fillWidth: true
+                implicitHeight: selectedEditorColumn.implicitHeight + 20
 
-                implicitHeight:
-                    selectedEditorColumn.implicitHeight + 20
+                radius: 12
+                color: Colors.primaryContainer
 
-                radius:
-                    12
-
-                color:
-                    Colors.primaryContainer
-
-                border.width:
-                    1
-
-                border.color:
-                    Colors.primary
+                border.width: 1
+                border.color: Colors.primary
 
                 ColumnLayout {
-                    id:
-                        selectedEditorColumn
+                    id: selectedEditorColumn
 
                     anchors {
-                        fill:
-                            parent
-
-                        margins:
-                            10
+                        fill: parent
+                        margins: 10
                     }
 
-                    spacing:
-                        8
+                    spacing: 8
 
                     RowLayout {
-                        Layout.fillWidth:
-                            true
+                        Layout.fillWidth: true
+                        spacing: 8
 
-                        spacing:
-                            8
-
-                        // Fixed icon area keeps the SSID perfectly aligned.
                         Item {
-                            Layout.preferredWidth:
-                                24
-
-                            Layout.preferredHeight:
-                                28
+                            Layout.preferredWidth: 24
+                            Layout.preferredHeight: 28
 
                             Text {
-                                anchors.centerIn:
-                                    parent
+                                anchors.centerIn: parent
+                                text: "󰤨"
 
-                                text:
-                                    "󰤨"
+                                font.family: Fonts.fontM
+                                font.pixelSize: 18
 
-                                font.family:
-                                    Fonts.fontM
-
-                                font.pixelSize:
-                                    18
-
-                                color:
-                                    Colors.on_PrimaryContainer
+                                color: Colors.on_PrimaryContainer
                             }
                         }
 
                         ColumnLayout {
-                            Layout.fillWidth:
-                                true
+                            Layout.fillWidth: true
 
-                            spacing:
-                                1
+                            spacing: 1
 
                             Text {
-                                text:
-                                    root.selectedNetwork?.name ??
-                                    ""
+                                text: root.selectedNetwork?.name ?? ""
 
-                                Layout.fillWidth:
-                                    true
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
 
-                                elide:
-                                    Text.ElideRight
+                                font.family: Fonts.font
+                                font.pixelSize: 12
+                                font.bold: true
 
-                                font.family:
-                                    Fonts.font
-
-                                font.pixelSize:
-                                    12
-
-                                font.bold:
-                                    true
-
-                                color:
-                                    Colors.on_PrimaryContainer
+                                color: Colors.on_PrimaryContainer
                             }
 
                             Text {
-                                text:
-                                    root.selectedNetworkSupportsPsk
+                                text: root.selectedNetworkSupportsPsk
                                         ? "Enter Wi-Fi password"
                                         : "Additional authentication may be required"
 
-                                font.family:
-                                    Fonts.font
+                                font.family: Fonts.font
+                                font.pixelSize: 9
 
-                                font.pixelSize:
-                                    9
-
-                                color:
-                                    Colors.surfaceContainerHighest
+                                color: Colors.surfaceContainerHighest
                             }
                         }
 
-                        // Explicit spacer guarantees that the close button stays
-                        // at the far right of the editor.
                         Item {
-                            Layout.fillWidth:
-                                true
+                            Layout.fillWidth: true
                         }
 
                         Rectangle {
-                            width:
-                                28
+                            width: 28
+                            height: 28
+                            radius: 14
 
-                            height:
-                                28
-
-                            radius:
-                                14
-
-                            color:
-                                closeConnectHover.hovered
+                            color: closeConnectHover.hovered
                                     ? Colors.surfaceContainerHighest
                                     : "transparent"
 
                             Behavior on color {
                                 ColorAnimation {
-                                    duration:
-                                        Theme.hoverFadeDuration
+                                    duration: Theme.hoverFadeDuration
                                 }
                             }
 
                             HoverHandler {
-                                id:
-                                    closeConnectHover
+                                id: closeConnectHover
                             }
 
                             Text {
-                                anchors.centerIn:
-                                    parent
+                                anchors.centerIn: parent
+                                text: "󰅖"
 
-                                text:
-                                    "󰅖"
+                                font.family: Fonts.fontM
+                                font.pixelSize: 14
 
-                                font.family:
-                                    Fonts.fontM
-
-                                font.pixelSize:
-                                    14
-
-                                color:
-                                    Colors.on_PrimaryContainer
+                                color: Colors.on_PrimaryContainer
                             }
 
                             MouseArea {
-                                anchors.fill:
-                                    parent
-
-                                cursorShape:
-                                    Qt.PointingHandCursor
-
-                                onClicked:
-                                    root.networkSelected(null)
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.networkSelected(null)
                             }
                         }
                     }
 
-                    // ── PSK editor ────────────────────────────────────────────
-
                     RowLayout {
-                        visible:
-                            root.selectedNetworkSupportsPsk
+                        visible: root.selectedNetworkSupportsPsk
 
-                        Layout.fillWidth:
-                            true
-
-                        spacing:
-                            8
+                        Layout.fillWidth: true
+                        spacing: 8
 
                         TextField {
-                            id:
-                                passwordField
+                            id: passwordField
 
-                            Layout.fillWidth:
-                                true
-
-                            height:
-                                34
-
+                            Layout.fillWidth: true
+                            height: 34
                             rightPadding: 42
+                            placeholderText: "Password"
 
-                            placeholderText:
-                                "Password"
+                            echoMode: showPassword ? TextInput.Normal : TextInput.Password
 
-                            echoMode:
-                                showPassword ? TextInput.Normal : TextInput.Password
+                            font.family: Fonts.font
+                            font.pixelSize: 11
 
-                            font.family:
-                                Fonts.font
-
-                            font.pixelSize:
-                                11
-
-                            color:
-                                Colors.on_Surface
-
-                            placeholderTextColor:
-                                Colors.outline
+                            color: Colors.on_Surface
+                            placeholderTextColor: Colors.outline
 
                             background: Rectangle {
                                 radius: 8
@@ -557,347 +332,202 @@ ColumnLayout {
                             }
 
                             Rectangle {
-                                id:
-                                    passwordVisibilityButton
+                                id: passwordVisibilityButton
 
                                 anchors {
-                                    top:
-                                        parent.top
-
-                                    right:
-                                        parent.right
-
-                                    bottom:
-                                        parent.bottom
+                                    top: parent.top
+                                    right: parent.right
+                                    bottom: parent.bottom
                                 }
 
-                                width:
-                                    42
+                                width: 42
+                                color: "transparent"
 
-                                color:
-                                    "transparent"
-
-                                z:
-                                    10
+                                z: 10
 
                                 HoverHandler {
-                                    id:
-                                        passwordVisibilityHover
-
-                                    cursorShape:
-                                        Qt.PointingHandCursor
+                                    id: passwordVisibilityHover
+                                    cursorShape: Qt.PointingHandCursor
                                 }
 
                                 Text {
-                                    anchors.centerIn:
-                                        parent
+                                    anchors.centerIn: parent
+                                    text: root.showPassword ? "󰈉" : "󰈈"
 
-                                    text:
-                                        root.showPassword
-                                            ? "󰈉"
-                                            : "󰈈"
+                                    font.family: Fonts.fontM
+                                    font.pixelSize: 15
 
-                                    font.family:
-                                        Fonts.fontM
-
-                                    font.pixelSize:
-                                        15
-
-                                    color:
-                                        passwordVisibilityHover.hovered
+                                    color: passwordVisibilityHover.hovered
                                             ? Colors.primary
                                             : Colors.outline
 
                                     Behavior on color {
                                         ColorAnimation {
-                                            duration:
-                                                Theme.hoverFadeDuration
+                                            duration: Theme.hoverFadeDuration
                                         }
                                     }
                                 }
 
                                 MouseArea {
-                                    anchors.fill:
-                                        parent
+                                    anchors.fill: parent
+                                    z: 1
 
-                                    z:
-                                        1
+                                    acceptedButtons: Qt.LeftButton
+                                    cursorShape: Qt.PointingHandCursor
 
-                                    acceptedButtons:
-                                        Qt.LeftButton
-
-                                    cursorShape:
-                                        Qt.PointingHandCursor
-
-                                    onPressed:
-                                        mouse.accepted = true
-
-                                    onReleased:
-                                        mouse.accepted = true
-
+                                    onPressed: mouse.accepted = true
+                                    onReleased: mouse.accepted = true
                                     onClicked: {
                                         mouse.accepted = true;
-
-                                        root.showPassword =
-                                            !root.showPassword;
-
+                                        root.showPassword = !root.showPassword;
                                         passwordField.forceActiveFocus();
                                     }
                                 }
                             }
 
                             Keys.onReturnPressed: {
-                                if (
-                                    root.selectedNetworkSupportsPsk &&
-                                    text.length > 0
-                                ) {
-                                    root.selectedNetwork.connectWithPsk(
-                                        text
-                                    );
-
+                                if (root.selectedNetworkSupportsPsk && text.length > 0) {
+                                    root.selectedNetwork.connectWithPsk(text);
                                     text = "";
                                 }
                             }
 
-                            Component.onCompleted:
-                                forceActiveFocus()
+                            Component.onCompleted: forceActiveFocus()
                         }
 
                         Rectangle {
-                            width:
-                                34
+                            width: 34
+                            height: 34
+                            radius: 8
 
-                            height:
-                                34
-
-                            radius:
-                                8
-
-                            color:
-                                confirmHover.hovered
+                            color: confirmHover.hovered
                                     ? Colors.primary
                                     : Colors.on_Surface
 
                             Behavior on color {
                                 ColorAnimation {
-                                    duration:
-                                        Theme.hoverFadeDuration
+                                    duration: Theme.hoverFadeDuration
                                 }
                             }
 
                             HoverHandler {
-                                id:
-                                    confirmHover
+                                id: confirmHover
                             }
 
                             Text {
-                                anchors.centerIn:
-                                    parent
+                                anchors.centerIn: parent
+                                text: "󰌑"
 
-                                text:
-                                    "󰌑"
+                                font.family: Fonts.fontM
+                                font.pixelSize: 14
 
-                                font.family:
-                                    Fonts.fontM
-
-                                font.pixelSize:
-                                    14
-
-                                color:
-                                    Colors.on_Primary
+                                color: Colors.on_Primary
                             }
 
                             MouseArea {
-                                anchors.fill:
-                                    parent
-
-                                cursorShape:
-                                    Qt.PointingHandCursor
-
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    if (
-                                        root.selectedNetworkSupportsPsk &&
-                                        passwordField.text.length > 0
-                                    ) {
-                                        root.selectedNetwork.connectWithPsk(
-                                            passwordField.text
-                                        );
-
-                                        passwordField.text =
-                                            "";
+                                    if (root.selectedNetworkSupportsPsk && passwordField.text.length > 0) {
+                                        root.selectedNetwork.connectWithPsk(passwordField.text);
+                                        passwordField.text = "";
                                     }
                                 }
                             }
                         }
                     }
 
-                    // ── Non-PSK network ──────────────────────────────────────
-
                     Rectangle {
-                        visible:
-                            root.selectedNetwork !== null &&
-                            !root.selectedNetworkSupportsPsk &&
-                            root.selectedNetwork.security !== WifiSecurityType.Open
+                        visible: root.selectedNetwork !== null && !root.selectedNetworkSupportsPsk && root.selectedNetwork.security !== WifiSecurityType.Open
 
-                        Layout.fillWidth:
-                            true
+                        Layout.fillWidth: true
+                        implicitHeight: 34
+                        radius: 8
 
-                        implicitHeight:
-                            34
-
-                        radius:
-                            8
-
-                        color:
-                            Colors.surfaceContainer
+                        color: Colors.surfaceContainer
 
                         Text {
-                            anchors.centerIn:
-                                parent
+                            anchors.centerIn: parent
+                            text: "This network does not use PSK authentication."
 
-                            text:
-                                "This network does not use PSK authentication."
+                            font.family: Fonts.font
+                            font.pixelSize: 9
 
-                            font.family:
-                                Fonts.font
-
-                            font.pixelSize:
-                                9
-
-                            color:
-                                Colors.on_SurfaceVariant
+                            color: Colors.on_SurfaceVariant
                         }
                     }
                 }
             }
 
-            // ── Available ───────────────────────────────────────────────────
-
             Text {
-                visible:
-                    wifiAvailableModel.values.length > 0
+                visible: wifiAvailableModel.values.length > 0
+                text: "Available"
 
-                text:
-                    "Available"
+                font.family: Fonts.font
+                font.pixelSize: 10
+                font.bold: true
 
-                font.family:
-                    Fonts.font
+                color: Colors.on_SurfaceVariant
 
-                font.pixelSize:
-                    10
-
-                font.bold:
-                    true
-
-                color:
-                    Colors.on_SurfaceVariant
-
-                topPadding:
-                    6
-
-                bottomPadding:
-                    2
+                topPadding: 6
+                bottomPadding: 2
             }
 
             Repeater {
-                model:
-                    wifiAvailableModel
+                model: wifiAvailableModel
 
                 delegate:
                     NetworkRow {
                         required property var modelData
+                        Layout.fillWidth: true
+                        network: modelData
 
-                        Layout.fillWidth:
-                            true
-
-                        network:
-                            modelData
-
-                        onNetworkSelected:
-                            (network) => {
-                                // Open networks connect immediately.
-                                if (
-                                    network.security ===
-                                    WifiSecurityType.Open
-                                ) {
+                        onNetworkSelected: (network) => {
+                                if (network.security === WifiSecurityType.Open) {
                                     network.connect();
                                     return;
                                 }
 
-                                // Known networks already have saved
-                                // NetworkManager connection settings.
                                 if (network.known) {
-                                    root.pendingKnownNetwork =
-                                        network;
-
+                                    root.pendingKnownNetwork = network;
                                     network.connect();
                                     return;
                                 }
 
-                                // Unknown secured network:
-                                // show the password editor.
-                                root.networkSelected(
-                                    network
-                                );
+                                root.networkSelected(network);
                             }
                     }
             }
 
             Text {
-                visible:
-                    wifiConnectedModel.values.length === 0 &&
-                    root.selectedNetwork === null &&
-                    wifiAvailableModel.values.length === 0
+                visible: wifiConnectedModel.values.length === 0 && root.selectedNetwork === null && wifiAvailableModel.values.length === 0
+                Layout.alignment: Qt.AlignHCenter
 
-                Layout.alignment:
-                    Qt.AlignHCenter
+                text: NetworkService.wifiScanning ? "Scanning…" : "No Wi-Fi networks found"
 
-                text:
-                    NetworkService.wifiScanning
-                        ? "Scanning…"
-                        : "No Wi-Fi networks found"
+                font.family: Fonts.font
+                font.pixelSize: 10
 
-                font.family:
-                    Fonts.font
+                color: Colors.outline
 
-                font.pixelSize:
-                    10
-
-                color:
-                    Colors.outline
-
-                topPadding:
-                    10
-
-                bottomPadding:
-                    10
+                topPadding: 10
+                bottomPadding: 10
             }
         }
     }
 
     Text {
-        visible:
-            !NetworkService.wifiEnabled
+        visible: !NetworkService.wifiEnabled
 
-        Layout.alignment:
-            Qt.AlignHCenter
+        Layout.alignment: Qt.AlignHCenter
+        text: "Wi-Fi is disabled"
 
-        text:
-            "Wi-Fi is disabled"
+        font.family: Fonts.font
+        font.pixelSize: 10
 
-        font.family:
-            Fonts.font
+        color: Colors.outline
 
-        font.pixelSize:
-            10
-
-        color:
-            Colors.outline
-
-        topPadding:
-            8
-
-        bottomPadding:
-            8
+        topPadding: 8
+        bottomPadding: 8
     }
 }

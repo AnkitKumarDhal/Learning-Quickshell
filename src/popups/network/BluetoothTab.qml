@@ -14,21 +14,16 @@ ColumnLayout {
 
     ScriptModel {
         id: btConnectedModel
-
         objectProp: "address"
         values: NetworkService.bluetooth.connectedDevices
     }
-
     ScriptModel {
         id: btPairedModel
-
         objectProp: "address"
         values: NetworkService.bluetooth.pairedDevices
     }
-
     ScriptModel {
         id: btAvailableModel
-
         objectProp: "address"
         values: NetworkService.bluetooth.availableDevices
     }
@@ -221,9 +216,7 @@ ColumnLayout {
 
                                 MouseArea {
                                     anchors.fill: parent
-
                                     cursorShape: Qt.PointingHandCursor
-
                                     onClicked: NetworkService.bluetooth.disconnect(modelData.address)
                                 }
                             }
@@ -256,7 +249,6 @@ ColumnLayout {
                         radius: 10
 
                         color: pairedHover.hovered ? Colors.surfaceContainerHighest : "transparent"
-
                         Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                         HoverHandler {
@@ -266,7 +258,6 @@ ColumnLayout {
                         RowLayout {
                             anchors {
                                 fill: parent
-
                                 leftMargin: 12
                                 rightMargin: 10
                             }
@@ -275,10 +266,8 @@ ColumnLayout {
 
                             Text {
                                 text: "󰂯"
-
                                 font.family: Fonts.fontM
                                 font.pixelSize: 16
-
                                 color: Colors.on_SurfaceVariant
                             }
 
@@ -300,7 +289,6 @@ ColumnLayout {
                                 radius: 12
 
                                 color: pairedConnectHover.hovered ? Colors.primary : Colors.primaryContainer
-
                                 Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                                 HoverHandler {
@@ -322,9 +310,7 @@ ColumnLayout {
 
                                 MouseArea {
                                     anchors.fill: parent
-
                                     cursorShape: Qt.PointingHandCursor
-
                                     onClicked: NetworkService.bluetooth.connect(modelData.address)
                                 }
                             }
@@ -335,7 +321,6 @@ ColumnLayout {
                                 radius: 13
 
                                 color: removeHover.hovered ? Colors.errorContainer : "transparent"
-
                                 Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                                 HoverHandler {
@@ -354,9 +339,7 @@ ColumnLayout {
 
                                 MouseArea {
                                     anchors.fill: parent
-
                                     cursorShape: Qt.PointingHandCursor
-
                                     onClicked: NetworkService.bluetooth.remove(modelData.address)
                                 }
                             }
