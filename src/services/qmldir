@@ -7,3 +7,5 @@ singleton PolkitService       1.0 PolkitService.qml
 singleton KeybindsService     1.0 KeybindsService.qml
 singleton BluetoothService    1.0 BluetoothService.qml
 singleton SessionService      1.0 SessionService.qml
+singleton BrightnessService   1.0 BrightnessService.qml
+singleton CaffeineService     1.0 CaffeineService.qml
