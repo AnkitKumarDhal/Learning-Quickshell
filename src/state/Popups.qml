@@ -21,6 +21,7 @@ Singleton {
     property bool batteryOpen:       false
     property bool keybindsOpen:      false
     property bool sessionOpen:       false
+    property bool caffeineOpen:      false
     property int  networkTab:        0
 
     // ── Mutual Exclusion ──────────────────────────────────────────────────────
@@ -40,6 +41,7 @@ Singleton {
     onBatteryOpenChanged:       if (batteryOpen)       _closeOthers("battery")
     onKeybindsOpenChanged:      if (keybindsOpen)      _closeOthers("keybinds")
     onSessionOpenChanged:       if (sessionOpen)       _closeOthers("session")
+    onCaffeineOpenChanged:      if (caffeineOpen)      _closeOthers("caffeine")
 
     function _closeOthers(keep) {
         if (keep !== "emoji")         emojiOpen         = false
@@ -55,6 +57,7 @@ Singleton {
         if (keep !== "battery")       batteryOpen       = false
         if (keep !== "keybinds")      keybindsOpen      = false
         if (keep !== "session")       sessionOpen       = false
+        if (keep !== "caffeine")      caffeineOpen      = false
     }
 
     // ── Aggregate State ───────────────────────────────────────────────────────
@@ -71,6 +74,7 @@ Singleton {
         batteryOpen       ||
         networkOpen       ||
         sessionOpen       ||
+        caffeineOpen      ||
         keybindsOpen
 
     // ── Methods ───────────────────────────────────────────────────────────────
@@ -88,5 +92,6 @@ Singleton {
         batteryOpen       = false
         keybindsOpen      = false
         sessionOpen       = false
+        caffeineOpen      = false
     }
 }

@@ -1,47 +1,130 @@
 import QtQuick
-import Quickshell
-import Quickshell.Io
+import QtQuick.Layouts
 import qs.src.components
 import qs.src.theme
 import qs.src.state
+import qs.src.services
 
 PillBase {
     id: root
 
     hoverExpand: true
 
-    property bool inhibiting: false
+    border.color:
+        Popups.caffeineOpen
+            ? Colors.primary
+            : "transparent"
 
-    Process {
-        id: inhibitProc
-        command: ["systemd-inhibit",
-                  "--what=idle",
-                  "--who=Quickshell",
-                  "--why=User requested",
-                  "--mode=block",
-                  "sleep", "infinity"]
-        running: false
+    border.width:
+        Popups.caffeineOpen ? 1 : 0
 
-        onExited: root.inhibiting = false
+    Behavior on border.width {
+        NumberAnimation {
+            duration: 150
+        }
     }
+
+    readonly property string caffeineText: {
+        if (!CaffeineService.caffeineActive)
+            return "󰾪 Off"
+
+        if (CaffeineService.infinite)
+            return "󰛨 ∞"
+
+        return "󰛨 " +
+               formatRemaining(
+                   CaffeineService.remainingSeconds
+               )
+    }
+
+    readonly property color caffeineColor:
+        CaffeineService.caffeineActive
+            ? Colors.tertiary
+            : Colors.outline
+
+    function formatRemaining(totalSeconds) {
+        const seconds =
+            Math.max(
+                0,
+                Number(totalSeconds)
+            )
+
+        const minutes =
+            Math.floor(seconds / 60)
+
+        const remaining =
+            seconds % 60
+
+        return String(minutes).padStart(2, "0") +
+               ":" +
+               String(remaining).padStart(2, "0")
+    }
+
+    // ── Caffeine ──────────────────────────────────────────────────────────────
 
     Text {
-        text:  root.inhibiting ? "󰛨" : "󰾪"
-        color: root.inhibiting ? Colors.tertiary : Colors.primary
-        font.pixelSize: 12
-        font.family:    Fonts.font
-        verticalAlignment: Text.AlignVCenter
+        text: root.caffeineText
 
-        Behavior on color { ColorAnimation { duration: 150 } }
-    }
+        color: root.caffeineColor
 
-    onClicked: {
-        if (root.inhibiting) {
-            inhibitProc.running  = false
-        } else {
-            inhibitProc.running  = true
+        font.pixelSize: 11
+        font.bold:
+            CaffeineService.caffeineActive
+        font.family: Fonts.fontM
+
+        verticalAlignment:
+            Text.AlignVCenter
+
+        Behavior on color {
+            ColorAnimation {
+                duration: 150
+            }
         }
-        root.inhibiting          = !root.inhibiting
-        Popups.idleInhibitorOpen = !Popups.idleInhibitorOpen
     }
+
+    // ── Divider ───────────────────────────────────────────────────────────────
+
+    Rectangle {
+        Layout.preferredWidth: 1
+        Layout.preferredHeight: 13
+
+        radius: 1
+
+        color: Colors.outlineVariant
+        opacity: 0.8
+    }
+
+    // ── Brightness ────────────────────────────────────────────────────────────
+
+    Text {
+        visible:
+            BrightnessService.available
+
+        text:
+            "󰃠 " +
+            BrightnessService.brightness +
+            "%"
+
+        color: Colors.primary
+
+        font.pixelSize: 11
+        font.bold: true
+        font.family: Fonts.fontM
+
+        verticalAlignment:
+            Text.AlignVCenter
+    }
+
+    // ── Interaction ───────────────────────────────────────────────────────────
+
+    // Left click → open/close Caffeine popup.
+    onClicked: {
+        Popups.caffeineOpen =
+            !Popups.caffeineOpen
+    }
+
+    // Right click →
+    // OFF → 2 → 5 → 10 → 15 → 30 → ∞ → OFF
+    onRightClicked:
+        CaffeineService.cyclePreset()
 }

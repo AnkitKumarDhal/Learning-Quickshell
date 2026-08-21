@@ -117,6 +117,15 @@ ShellRoot {
                     }
                 }
 
+                PopupLoader {
+                    open: Popups.caffeineOpen
+                    popup: Component {
+                        CaffeinePopup {
+                            screen: modelData
+                        }
+                    }
+                }
+
                 PolkitPopup { screen: modelData }
                 KeybindsPopup { screen: modelData }
             }
