@@ -8,320 +8,151 @@ Item {
 
     required property var player
     required property bool hasArt
+    readonly property string artUrl: root.player?.trackArtUrl || ""
+    property string previousArt: ""
 
-    property int transitionKey: 0
-
-    property string displayedArt: ""
-    property string incomingArt: ""
-
-    property bool showingFront: true
     property bool initialized: false
 
-    Layout.preferredWidth: 196
-    Layout.preferredHeight: 196
+    Layout.preferredWidth: 178
+    Layout.preferredHeight: 178
 
-    Component.onCompleted: {
-        initializeArtwork()
-        initialized = true
+    Component.onCompleted: initialized = true
+
+    onArtUrlChanged: {
+        if (!root.initialized) return
+
+        previousArt = currentImage.source
+        previousImage.source = previousArt
+        previousImage.opacity = previousArt !== "" ? 1 : 0
+
+        currentImage.opacity = 0
+        currentImage.x = root.width * 0.08
+
+        artworkReadyTimer.restart()
     }
 
-    onPlayerChanged: {
-        initializeArtwork()
-    }
+    Timer {
+        id: artworkReadyTimer
 
-    onTransitionKeyChanged: {
-        if (
-            !root.initialized ||
-            !root.player
-        )
-            return
+        interval: 16
+        repeat: true
 
-        updateArtwork()
-    }
-
-    function initializeArtwork() {
-        const nextArt =
-            root.player?.trackArtUrl || ""
-
-        artworkTransition.stop()
-
-        displayedArt = nextArt
-        incomingArt = ""
-
-        showingFront = true
-
-        frontImage.source = nextArt
-        frontImage.opacity =
-            nextArt !== ""
-            ? 1
-            : 0
-
-        frontImage.x = 0
-
-        backImage.opacity = 0
-        backImage.x =
-            root.width * 0.08
-    }
-
-    function updateArtwork() {
-        const nextArt =
-            root.player?.trackArtUrl || ""
-
-        if (
-            nextArt ===
-            root.displayedArt
-        )
-            return
-
-        root.incomingArt = nextArt
-
-        const incoming =
-            root.showingFront
-            ? backImage
-            : frontImage
-
-        const outgoing =
-            root.showingFront
-            ? frontImage
-            : backImage
-
-        /*
-         * The incoming layer always receives the newest
-         * artwork before the animation starts.
-         */
-        incoming.source =
-            nextArt
-
-        incoming.x =
-            root.width * 0.08
-
-        incoming.opacity = 0
-
-        /*
-         * Reset the outgoing layer to its current visual
-         * starting state in case a previous transition was
-         * interrupted.
-         */
-        outgoing.x = 0
-        outgoing.opacity = 1
-
-        artworkTransition.restart()
+        onTriggered: {
+            if (currentImage.status === Image.Ready) {
+                stop()
+                artworkTransition.restart()
+            }
+        }
     }
 
     ParallelAnimation {
         id: artworkTransition
 
         NumberAnimation {
-            target:
-                root.showingFront
-                ? frontImage
-                : backImage
-
+            target: previousImage
             property: "x"
-
-            to:
-                -root.width * 0.08
-
+            to: -root.width * 0.08
             duration: 300
-
-            easing.type:
-                Easing.InOutCubic
+            easing.type: Easing.InOutCubic
         }
 
         NumberAnimation {
-            target:
-                root.showingFront
-                ? frontImage
-                : backImage
-
+            target: previousImage
             property: "opacity"
-
             to: 0
-
             duration: 240
-
-            easing.type:
-                Easing.InOutCubic
+            easing.type: Easing.InOutCubic
         }
 
         NumberAnimation {
-            target:
-                root.showingFront
-                ? backImage
-                : frontImage
-
+            target: currentImage
             property: "x"
-
             to: 0
-
             duration: 350
-
-            easing.type:
-                Easing.OutCubic
+            easing.type: Easing.OutCubic
         }
 
         NumberAnimation {
-            target:
-                root.showingFront
-                ? backImage
-                : frontImage
-
+            target: currentImage
             property: "opacity"
-
             to: 1
-
             duration: 320
-
-            easing.type:
-                Easing.OutCubic
+            easing.type: Easing.OutCubic
         }
 
         onFinished: {
-            root.showingFront =
-                !root.showingFront
+            previousArt = ""
+            previousImage.source = ""
+            previousImage.opacity = 0
+            previousImage.x = 0
 
-            root.displayedArt =
-                root.incomingArt
-
-            root.incomingArt = ""
-
-            /*
-             * Do NOT clear the previous image source.
-             *
-             * Both layers retain their last artwork. On the next
-             * transition, the hidden layer is simply replaced with
-             * the new artwork.
-             */
-            if (root.showingFront) {
-                frontImage.x = 0
-                frontImage.opacity =
-                    root.hasArt
-                    ? 1
-                    : 0
-
-                backImage.x =
-                    root.width * 0.08
-
-                backImage.opacity = 0
-            } else {
-                backImage.x = 0
-                backImage.opacity =
-                    root.hasArt
-                    ? 1
-                    : 0
-
-                frontImage.x =
-                    root.width * 0.08
-
-                frontImage.opacity = 0
-            }
+            currentImage.x = 0
+            currentImage.opacity = root.hasArt ? 1 : 0
         }
     }
 
     Rectangle {
-        id: frontMask
-
+        id: currentMask
         anchors.fill: parent
-
         radius: 12
-
         visible: false
     }
 
     Rectangle {
-        id: backMask
-
+        id: previousMask
         anchors.fill: parent
-
         radius: 12
-
         visible: false
     }
 
     Image {
-        id: frontImage
+        id: currentImage
 
         anchors.fill: parent
-
-        fillMode:
-            Image.PreserveAspectCrop
+        source: root.artUrl
+        fillMode: Image.PreserveAspectCrop
 
         asynchronous: true
         smooth: true
-
         layer.enabled: true
+        layer.effect: OpacityMask { maskSource: currentMask }
+        opacity: root.hasArt ? 1 : 0
 
-        layer.effect: OpacityMask {
-            maskSource:
-                frontMask
-        }
-
-        opacity:
-            root.hasArt &&
-            root.showingFront
-            ? 1
-            : 0
-
-        x:
-            root.showingFront
-            ? 0
-            : width * 0.08
+        x: 0
+        z: 2
     }
 
     Image {
-        id: backImage
+        id: previousImage
 
         anchors.fill: parent
-
-        fillMode:
-            Image.PreserveAspectCrop
+        source: ""
+        fillMode: Image.PreserveAspectCrop
 
         asynchronous: true
         smooth: true
-
         layer.enabled: true
+        layer.effect: OpacityMask { maskSource: previousMask }
+        opacity: 0
 
-        layer.effect: OpacityMask {
-            maskSource:
-                backMask
-        }
-
-        opacity:
-            root.hasArt &&
-            !root.showingFront
-            ? 1
-            : 0
-
-        x:
-            root.showingFront
-            ? width * 0.08
-            : 0
+        x: 0
+        z: 1
     }
 
     Rectangle {
         anchors.fill: parent
-
         radius: 12
+        visible: !root.hasArt
 
-        visible:
-            !root.hasArt
-
-        color:
-            Colors.surfaceContainerHigh
+        color: Colors.surfaceContainerHigh
+        z: 0
 
         Text {
-            anchors.centerIn:
-                parent
-
+            anchors.centerIn: parent
             text: "󰎆"
-
-            font.family:
-                Fonts.fontM
-
+            font.family: Fonts.fontM
             font.pointSize: 42
-
-            color:
-                Colors.on_SurfaceVariant
+            color: Colors.on_SurfaceVariant
         }
     }
 }

@@ -27,61 +27,31 @@ Item {
     }
 
     onPlayerChanged: {
-        if (!root.player)
-            return
-
+        if (!root.player) return
         loadCurrentMetadata()
-
         incomingMetadata.opacity = 0
-        incomingMetadata.x =
-            width * 0.06
-
+        incomingMetadata.x = width * 0.06
         currentMetadata.opacity = 1
         currentMetadata.x = 0
     }
 
     onTransitionKeyChanged: {
-        if (
-            !root.initialized ||
-            !root.player
-        )
-            return
-
+        if (!root.initialized || !root.player) return
         animateToCurrentMetadata()
     }
 
     function loadCurrentMetadata() {
-        currentTitle =
-            root.player?.trackTitle ||
-            "Nothing Playing"
-
-        currentArtist =
-            root.player?.trackArtist ||
-            "Unknown Artist"
-
-        currentAlbum =
-            root.player?.trackAlbum ||
-            "Unknown Album"
+        currentTitle = root.player?.trackTitle || "Nothing Playing"
+        currentArtist = root.player?.trackArtist || "Unknown Artist"
+        currentAlbum = root.player?.trackAlbum || "Unknown Album"
     }
 
     function animateToCurrentMetadata() {
-        incomingTitle =
-            root.player?.trackTitle ||
-            "Nothing Playing"
-
-        incomingArtist =
-            root.player?.trackArtist ||
-            "Unknown Artist"
-
-        incomingAlbum =
-            root.player?.trackAlbum ||
-            "Unknown Album"
-
-        incomingMetadata.x =
-            width * 0.06
-
+        incomingTitle = root.player?.trackTitle || "Nothing Playing"
+        incomingArtist = root.player?.trackArtist || "Unknown Artist"
+        incomingAlbum = root.player?.trackAlbum || "Unknown Album"
+        incomingMetadata.x = width * 0.06
         incomingMetadata.opacity = 0
-
         metadataTransition.restart()
     }
 
@@ -89,78 +59,44 @@ Item {
         id: metadataTransition
 
         NumberAnimation {
-            target:
-                currentMetadata
-
+            target: currentMetadata
             property: "x"
-
-            to:
-                -root.width * 0.06
-
+            to: -root.width * 0.06
             duration: 280
-
-            easing.type:
-                Easing.InOutCubic
+            easing.type: Easing.InOutCubic
         }
 
         NumberAnimation {
-            target:
-                currentMetadata
-
+            target: currentMetadata
             property: "opacity"
-
             to: 0
-
             duration: 220
-
-            easing.type:
-                Easing.InOutCubic
+            easing.type: Easing.InOutCubic
         }
 
         NumberAnimation {
-            target:
-                incomingMetadata
-
+            target: incomingMetadata
             property: "x"
-
             to: 0
-
             duration: 330
-
-            easing.type:
-                Easing.OutCubic
+            easing.type: Easing.OutCubic
         }
 
         NumberAnimation {
-            target:
-                incomingMetadata
-
+            target: incomingMetadata
             property: "opacity"
-
             to: 1
-
             duration: 300
-
-            easing.type:
-                Easing.OutCubic
+            easing.type: Easing.OutCubic
         }
 
         onFinished: {
-            currentTitle =
-                incomingTitle
-
-            currentArtist =
-                incomingArtist
-
-            currentAlbum =
-                incomingAlbum
-
+            currentTitle = incomingTitle
+            currentArtist = incomingArtist
+            currentAlbum = incomingAlbum
             currentMetadata.x = 0
             currentMetadata.opacity = 1
-
-            incomingMetadata.x =
-                width * 0.06
-
+            incomingMetadata.x = width * 0.06
             incomingMetadata.opacity = 0
         }
     }
@@ -168,71 +104,47 @@ Item {
     ColumnLayout {
         id: currentMetadata
 
-        anchors.fill:
-            parent
-
+        anchors.fill: parent
         spacing: 1
 
         Text {
             Layout.fillWidth: true
+            text: root.currentTitle
 
-            text:
-                root.currentTitle
+            color: Colors.on_Surface
 
-            color:
-                Colors.on_Surface
-
-            font.family:
-                Fonts.font
-
+            font.family: Fonts.font
             font.pointSize: 13
             font.bold: true
 
-            elide:
-                Text.ElideRight
-
+            elide: Text.ElideRight
             maximumLineCount: 1
         }
 
         Text {
             Layout.fillWidth: true
+            text: root.currentArtist
 
-            text:
-                root.currentArtist
+            color: Colors.on_SurfaceVariant
 
-            color:
-                Colors.on_SurfaceVariant
-
-            font.family:
-                Fonts.font
-
+            font.family: Fonts.font
             font.pointSize: 10
 
-            elide:
-                Text.ElideRight
-
+            elide: Text.ElideRight
             maximumLineCount: 1
         }
 
         Text {
             Layout.fillWidth: true
+            text: root.currentAlbum
 
-            text:
-                root.currentAlbum
+            color: Colors.on_SurfaceVariant
 
-            color:
-                Colors.on_SurfaceVariant
-
-            font.family:
-                Fonts.font
-
+            font.family: Fonts.font
             font.pointSize: 8.5
 
-            elide:
-                Text.ElideRight
-
+            elide: Text.ElideRight
             maximumLineCount: 1
-
             opacity: 0.72
         }
     }
@@ -240,76 +152,49 @@ Item {
     ColumnLayout {
         id: incomingMetadata
 
-        anchors.fill:
-            parent
-
+        anchors.fill: parent
         spacing: 2
-
-        x:
-            width * 0.06
-
+        x: width * 0.06
         opacity: 0
 
         Text {
             Layout.fillWidth: true
+            text: root.incomingTitle
 
-            text:
-                root.incomingTitle
+            color: Colors.on_Surface
 
-            color:
-                Colors.on_Surface
-
-            font.family:
-                Fonts.font
-
+            font.family: Fonts.font
             font.pointSize: 13
             font.bold: true
 
-            elide:
-                Text.ElideRight
-
+            elide: Text.ElideRight
             maximumLineCount: 1
         }
 
         Text {
             Layout.fillWidth: true
+            text: root.incomingArtist
 
-            text:
-                root.incomingArtist
+            color: Colors.on_SurfaceVariant
 
-            color:
-                Colors.on_SurfaceVariant
-
-            font.family:
-                Fonts.font
-
+            font.family: Fonts.font
             font.pointSize: 10
 
-            elide:
-                Text.ElideRight
-
+            elide: Text.ElideRight
             maximumLineCount: 1
         }
 
         Text {
             Layout.fillWidth: true
+            text: root.incomingAlbum
 
-            text:
-                root.incomingAlbum
+            color: Colors.on_SurfaceVariant
 
-            color:
-                Colors.on_SurfaceVariant
-
-            font.family:
-                Fonts.font
-
+            font.family: Fonts.font
             font.pointSize: 8.5
 
-            elide:
-                Text.ElideRight
-
+            elide: Text.ElideRight
             maximumLineCount: 1
-
             opacity: 0.72
         }
     }
