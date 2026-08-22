@@ -1,4 +1,4 @@
 module qs.src.popups.system
-DiskBar         1.0    DiskBar.qml
-NetworkGraph    1.0    NetworkGraph.qml
-Speedometer     1.0    Speedometer.qml
+DiskBar     1.0    DiskBar.qml
+MetricCard  1.0    MetricCard.qml
+NetworkGraph 1.0   NetworkGraph.qml

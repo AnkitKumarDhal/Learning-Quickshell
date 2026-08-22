@@ -1,2 +1,8 @@
-singleton SystemStats 1.0 SystemStats.qml
+singleton CpuStats       1.0 CpuStats.qml
+singleton DiskStats      1.0 DiskStats.qml
+singleton GpuStats       1.0 GpuStats.qml
+singleton MemoryStats    1.0 MemoryStats.qml
+singleton NetworkStats   1.0 NetworkStats.qml
+singleton SystemStats    1.0 SystemStats.qml
+singleton ThermalStats   1.0 ThermalStats.qml
 # system submodule is imported as qs.src.services.system

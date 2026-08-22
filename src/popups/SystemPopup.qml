@@ -2,12 +2,10 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
-import Quickshell.Io
 import qs.src.components
 import qs.src.theme
 import qs.src.state
 import qs.src.services.system
-import qs.src.services
 import qs.src.popups.system
 
 PanelWindow {
@@ -38,10 +36,9 @@ PanelWindow {
         id: slidePanel
         anchors.fill: parent
         edge: "top"
-        open: Popups.systemOpen
+        open: Popups.systemOpen && Popups.systemScreen === root.screen
         onCloseRequested: Popups.systemOpen = false
 
-        // ── Popup card ────────────────────────────────────────────────────────────
         Rectangle {
             id: sysCard
             anchors {
@@ -66,19 +63,45 @@ PanelWindow {
                     right: parent.right
                     margins: 16
                 }
-                spacing: 16
+                spacing: 12
 
                 // ── Header ────────────────────────────────────────────────────────
-                Text {
-                    text:           "System"
-                    color:          Colors.on_Surface
-                    font.pixelSize: 14
-                    font.bold:      true
-                    font.family:    Fonts.font
-                    Layout.topMargin: 4
+                RowLayout {
+                    Layout.fillWidth: true
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+
+                        Text {
+                            text:           "System"
+                            color:          Colors.on_Surface
+                            font.pixelSize: 14
+                            font.bold:      true
+                            font.family:    Fonts.font
+                        }
+
+                        Text {
+                            text:           "Live system overview"
+                            color:          Colors.on_SurfaceVariant
+                            font.pixelSize: 9
+                            font.family:    Fonts.font
+                        }
+                    }
+
+                    Text {
+                        text:           SystemStats.activeInterface !== ""
+                                      ? SystemStats.activeInterface
+                                      : "Offline"
+                        color:          SystemStats.activeInterface !== ""
+                                      ? Colors.primary
+                                      : Colors.outline
+                        font.pixelSize: 10
+                        font.bold:      true
+                        font.family:    Fonts.font
+                    }
                 }
 
-                // Divider
                 Rectangle {
                     Layout.fillWidth: true
                     height:  1
@@ -86,39 +109,236 @@ PanelWindow {
                     opacity: 0.5
                 }
 
-                // ── Speedometers row ──────────────────────────────────────────────
+                // ── CPU / Memory / GPU overview ────────────────────────────────────
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
 
-                    Speedometer {
-                        label:   "CPU"
-                        value:   SystemStats.cpuUsage
-                        color:   Colors.primary
+                    MetricCard {
+                        label:    "CPU"
+                        value:    Math.round(SystemStats.cpuUsage * 100) + "%"
+                        detail:   SystemStats.cpuFrequencyGhz > 0
+                                  ? SystemStats.cpuFrequencyGhz.toFixed(1) + " GHz"
+                                  : SystemStats.cpuCores.length + " cores"
+                        progress: SystemStats.cpuUsage
+                        accent:   Colors.primary
                         Layout.fillWidth: true
                     }
 
-                    Speedometer {
-                        label:   "RAM"
-                        value:   SystemStats.memUsage
-                        color:   Colors.secondary
+                    MetricCard {
+                        label:    "RAM"
+                        value:    Math.round(SystemStats.memUsage * 100) + "%"
+                        detail:   SystemStats.memUsedGb.toFixed(1) + " / " + SystemStats.memTotalGb.toFixed(1) + " GB"
+                        progress: SystemStats.memUsage
+                        accent:   Colors.secondary
                         Layout.fillWidth: true
                     }
 
-                    // GPU — only shown on AMD
-                    Speedometer {
-                        visible: SystemStats.hasGpu
-                        label:   "GPU"
-                        value:   SystemStats.gpuUsage
-                        color:   Colors.tertiary
+                    MetricCard {
+                        visible:  SystemStats.hasGpu
+                        label:    "GPU"
+                        value:    Math.round(SystemStats.gpuUsage * 100) + "%"
+                        detail:   SystemStats.gpuName !== ""
+                                  ? SystemStats.gpuName
+                                  : "Graphics processor"
+                        progress: SystemStats.gpuUsage
+                        accent:   Colors.tertiary
                         Layout.fillWidth: true
                     }
                 }
 
-                // ── Disk bars ─────────────────────────────────────────────────────
+                // ── CPU cores ──────────────────────────────────────────────────────
+                ColumnLayout {
+                    visible: SystemStats.cpuCores.length > 1
+                    Layout.fillWidth: true
+                    spacing: 5
+
+                    RowLayout {
+                        Layout.fillWidth: true
+
+                        Text {
+                            text:           "CPU cores"
+                            color:          Colors.on_SurfaceVariant
+                            font.pixelSize: 10
+                            font.family:    Fonts.font
+                            Layout.fillWidth: true
+                        }
+
+                        Text {
+                            text:           SystemStats.cpuFrequencyGhz > 0
+                                          ? SystemStats.cpuFrequencyGhz.toFixed(1) + " GHz"
+                                          : ""
+                            color:          Colors.on_Surface
+                            font.pixelSize: 10
+                            font.bold:      true
+                            font.family:    Fonts.font
+                        }
+                    }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 4
+
+                        Repeater {
+                            model: SystemStats.cpuCores
+
+                            delegate: Rectangle {
+                                required property var modelData
+
+                                width:  34
+                                height: 18
+                                radius: 5
+                                color:  Colors.surfaceContainerHighest
+
+                                Rectangle {
+                                    anchors {
+                                        left:   parent.left
+                                        bottom: parent.bottom
+                                    }
+                                    width:  parent.width * modelData.usage
+                                    height: parent.height
+                                    radius: parent.radius
+                                    color:  modelData.usage >= 0.9
+                                                ? Colors.error
+                                                : modelData.usage >= 0.7
+                                                    ? Colors.tertiary
+                                                    : Colors.primary
+                                }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text:             Math.round(modelData.usage * 100) + "%"
+                                    color:            Colors.on_Surface
+                                    font.pixelSize:   8
+                                    font.bold:        true
+                                    font.family:      Fonts.font
+                                    z:                2
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ── Memory / GPU detail ────────────────────────────────────────────
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    Text {
+                        text:           "Available " + SystemStats.memAvailableGb.toFixed(1) + " GB"
+                        color:          Colors.on_SurfaceVariant
+                        font.pixelSize: 9
+                        font.family:    Fonts.font
+                        Layout.fillWidth: true
+                    }
+
+                    Text {
+                        text:           "Swap " + SystemStats.swapUsedGb.toFixed(1) + " / " + SystemStats.swapTotalGb.toFixed(1) + " GB"
+                        color:          SystemStats.swapUsage >= 0.9 ? Colors.error : Colors.on_SurfaceVariant
+                        font.pixelSize: 9
+                        font.family:    Fonts.font
+                    }
+
+                    Text {
+                        visible:        SystemStats.hasGpu && SystemStats.gpuVramTotalGb > 0
+                        text:           "VRAM " + SystemStats.gpuVramUsedGb.toFixed(1) + " / " + SystemStats.gpuVramTotalGb.toFixed(1) + " GB"
+                        color:          Colors.on_SurfaceVariant
+                        font.pixelSize: 9
+                        font.family:    Fonts.font
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height:  1
+                    color:   Colors.outlineVariant
+                    opacity: 0.5
+                }
+
+                // ── Network ────────────────────────────────────────────────────────
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+
+                    RowLayout {
+                        Layout.fillWidth: true
+
+                        Text {
+                            text:           "Network"
+                            color:          Colors.on_SurfaceVariant
+                            font.pixelSize: 10
+                            font.bold:      true
+                            font.family:    Fonts.font
+                            Layout.fillWidth: true
+                        }
+
+                        RowLayout {
+                            spacing: 8
+
+                            Text {
+                                text:           "↑ " + SystemStats.formatBytes(SystemStats.netUpRate)
+                                color:          Colors.tertiary
+                                font.pixelSize: 9
+                                font.bold:      true
+                                font.family:    Fonts.font
+                            }
+
+                            Text {
+                                text:           "↓ " + SystemStats.formatBytes(SystemStats.netDownRate)
+                                color:          Colors.primary
+                                font.pixelSize: 9
+                                font.bold:      true
+                                font.family:    Fonts.font
+                            }
+                        }
+                    }
+
+                    NetworkGraph {
+                        Layout.fillWidth: true
+                        height:           68
+                        upHistory:        SystemStats.netUpHistory
+                        downHistory:      SystemStats.netDownHistory
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+
+                        Text {
+                            text:           "↑ Upload"
+                            color:          Colors.tertiary
+                            font.pixelSize: 8
+                            font.family:    Fonts.font
+                            Layout.fillWidth: true
+                        }
+
+                        Text {
+                            text:           "↓ Download"
+                            color:          Colors.primary
+                            font.pixelSize: 8
+                            font.family:    Fonts.font
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height:  1
+                    color:   Colors.outlineVariant
+                    opacity: 0.5
+                }
+
+                // ── Storage ────────────────────────────────────────────────────────
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 8
+
+                    Text {
+                        text:           "Storage"
+                        color:          Colors.on_SurfaceVariant
+                        font.pixelSize: 10
+                        font.bold:      true
+                        font.family:    Fonts.font
+                    }
 
                     Repeater {
                         model: SystemStats.diskPartitions
@@ -128,91 +348,110 @@ PanelWindow {
                             Layout.fillWidth: true
 
                             mountPoint: modelData.mount
+                            fsType:     modelData.fsType
                             usedBytes:  modelData.used
                             totalBytes: modelData.total
                             freeBytes:  modelData.total - modelData.used
                             label:      modelData.mount === "/" ? "Root" : modelData.mount
                         }
                     }
-                }
-
-                // Divider
-                Rectangle {
-                    Layout.fillWidth: true
-                    height:  1
-                    color:   Colors.outlineVariant
-                    opacity: 0.5
-                }
-
-                // ── Network graph ─────────────────────────────────────────────────
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 6
-
-                    RowLayout {
-                        Layout.fillWidth: true
-
-                        Text {
-                            text:           "Network  " + SystemStats.activeInterface
-                            color:          Colors.on_SurfaceVariant
-                            font.pixelSize: 11
-                            font.family:    Fonts.font
-                            Layout.fillWidth: true
-                        }
-
-                        Text {
-                            text:           "↑ " + SystemStats.formatBytes(SystemStats.netUpRate)
-                                          + "  ↓ " + SystemStats.formatBytes(SystemStats.netDownRate)
-                            color:          Colors.on_Surface
-                            font.pixelSize: 11
-                            font.bold:      true
-                            font.family:    Fonts.font
-                        }
-                    }
-
-                    NetworkGraph {
-                        Layout.fillWidth: true
-                        height:           60
-                        upHistory:        SystemStats.netUpHistory
-                        downHistory:      SystemStats.netDownHistory
-                    }
-                }
-
-                // Divider
-                Rectangle {
-                    Layout.fillWidth: true
-                    height:  1
-                    color:   Colors.outlineVariant
-                    opacity: 0.5
-                }
-
-                // ── Temperature ───────────────────────────────────────────────────
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.bottomMargin: 4
 
                     Text {
-                        text:           "󰔏  Temperature"
+                        visible:        SystemStats.diskPartitions.length === 0
+                        text:           "No filesystem data available"
+                        color:          Colors.outline
+                        font.pixelSize: 9
+                        font.family:    Fonts.font
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height:  1
+                    color:   Colors.outlineVariant
+                    opacity: 0.5
+                }
+
+                // ── Temperatures ───────────────────────────────────────────────────
+                RowLayout {
+                    Layout.fillWidth: true
+
+                    Text {
+                        text:           "󰔏  Thermals"
                         color:          Colors.on_SurfaceVariant
-                        font.pixelSize: 11
+                        font.pixelSize: 10
+                        font.bold:      true
                         font.family:    Fonts.font
                         Layout.fillWidth: true
                     }
 
                     Text {
-                        text: SystemStats.temperature > 0
-                                  ? SystemStats.temperature + " °C"
-                                  : "N/A"
-                        color: SystemStats.temperature >= 80
-                                   ? Colors.error
-                                   : SystemStats.temperature >= 60
-                                       ? Colors.tertiary
-                                       : Colors.on_Surface
-                        font.pixelSize: 12
+                        visible:        SystemStats.temperature > 0
+                        text:           SystemStats.temperature + " °C"
+                        color:          SystemStats.temperature >= 80
+                                       ? Colors.error
+                                       : SystemStats.temperature >= 60
+                                           ? Colors.tertiary
+                                           : Colors.on_Surface
+                        font.pixelSize: 11
                         font.bold:      true
                         font.family:    Fonts.font
 
                         Behavior on color { ColorAnimation { duration: 300 } }
+                    }
+                }
+
+                RowLayout {
+                    visible: SystemStats.displayTemperatures.length > 0
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    Repeater {
+                        model: SystemStats.displayTemperatures
+
+                        delegate: Rectangle {
+                            required property var modelData
+
+                            Layout.fillWidth: true
+                            height: 32
+                            radius: 8
+                            color: Colors.surfaceContainerHighest
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 8
+                                anchors.rightMargin: 8
+
+                                Text {
+                                    text:           modelData.name
+                                    color:          Colors.on_SurfaceVariant
+                                    font.pixelSize: 8
+                                    font.family:    Fonts.font
+                                    elide:          Text.ElideRight
+                                    Layout.fillWidth: true
+                                }
+
+                                Text {
+                                    text:           modelData.value + " °C"
+                                    color:          modelData.value >= 80
+                                                   ? Colors.error
+                                                   : modelData.value >= 60
+                                                       ? Colors.tertiary
+                                                       : Colors.on_Surface
+                                    font.pixelSize: 9
+                                    font.bold:      true
+                                    font.family:    Fonts.font
+                                }
+                            }
+                        }
+                    }
+
+                    Text {
+                        visible:        SystemStats.displayTemperatures.length === 0
+                        text:           "No thermal sensors available"
+                        color:          Colors.outline
+                        font.pixelSize: 9
+                        font.family:    Fonts.font
                     }
                 }
             }
