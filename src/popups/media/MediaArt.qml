@@ -6,41 +6,173 @@ import qs.src.theme
 Item {
     id: root
 
-    required property var    player
-    required property bool   hasArt
+    required property var player
+    required property bool hasArt
 
-    Layout.fillWidth:       true
-    Layout.preferredHeight: width   // always square
+    property string currentArt: ""
+
+    property bool showingFront: true
+
+    Layout.fillWidth: true
+    Layout.fillHeight: true
+
+    Component.onCompleted: {
+        currentArt = root.hasArt
+                ? root.player.trackArtUrl
+                : ""
+    }
+
+    Connections {
+        target: root.player ?? null
+
+        function onTrackChanged() {
+            root.updateArtwork()
+        }
+
+        function onPostTrackChanged() {
+            root.updateArtwork()
+        }
+    }
+
+    function updateArtwork() {
+        const nextArt =
+            root.player?.trackArtUrl ?? ""
+
+        if (nextArt === root.currentArt)
+            return
+
+        root.currentArt = nextArt
+        root.showingFront = !root.showingFront
+    }
 
     Rectangle {
-        id:           artMask
+        id: frontMask
+
         anchors.fill: parent
-        radius:       10
-        visible:      false
+
+        radius: 12
+
+        visible: false
+    }
+
+    Rectangle {
+        id: backMask
+
+        anchors.fill: parent
+
+        radius: 12
+
+        visible: false
     }
 
     Image {
-        anchors.fill:  parent
-        source:        root.hasArt ? root.player.trackArtUrl : ""
-        fillMode:      Image.PreserveAspectCrop
-        smooth:        true
-        visible:       root.hasArt
+        id: frontImage
+
+        anchors.fill: parent
+
+        source:
+            root.showingFront
+            ? root.currentArt
+            : ""
+
+        fillMode: Image.PreserveAspectCrop
+
+        smooth: true
+
         layer.enabled: true
-        layer.effect:  OpacityMask { maskSource: artMask }
+
+        layer.effect: OpacityMask {
+            maskSource: frontMask
+        }
+
+        opacity:
+            root.showingFront && root.hasArt
+            ? 1
+            : 0
+
+        x:
+            root.showingFront
+            ? 0
+            : -18
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 300
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        Behavior on x {
+            NumberAnimation {
+                duration: 350
+                easing.type: Easing.OutCubic
+            }
+        }
+    }
+
+    Image {
+        id: backImage
+
+        anchors.fill: parent
+
+        source:
+            root.showingFront
+            ? ""
+            : root.currentArt
+
+        fillMode: Image.PreserveAspectCrop
+
+        smooth: true
+
+        layer.enabled: true
+
+        layer.effect: OpacityMask {
+            maskSource: backMask
+        }
+
+        opacity:
+            !root.showingFront && root.hasArt
+            ? 1
+            : 0
+
+        x:
+            root.showingFront
+            ? 18
+            : 0
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 300
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        Behavior on x {
+            NumberAnimation {
+                duration: 350
+                easing.type: Easing.OutCubic
+            }
+        }
     }
 
     Rectangle {
         anchors.fill: parent
-        visible:      !root.hasArt
-        radius:       10
-        color:        Colors.surfaceContainerHigh
+
+        radius: 12
+
+        visible: !root.hasArt
+
+        color: Colors.surfaceContainerHigh
 
         Text {
             anchors.centerIn: parent
-            text:             "󰎆"
-            font.family:      Fonts.fontM
-            font.pointSize:   48
-            color:            Colors.on_SurfaceVariant
+
+            text: "󰎆"
+
+            font.family: Fonts.fontM
+            font.pointSize: 42
+
+            color: Colors.on_SurfaceVariant
         }
     }
 }

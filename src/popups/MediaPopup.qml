@@ -6,145 +6,277 @@ import Quickshell.Services.Mpris
 import qs.src.components
 import qs.src.theme
 import qs.src.state
+import qs.src.services
 import qs.src.popups.media
 
 PanelWindow {
     id: win
 
-    WlrLayershell.screen:        screen
-    WlrLayershell.layer:         WlrLayer.Overlay
+    WlrLayershell.screen: screen
+    WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-    anchors.top:   true
+    anchors.top: true
 
     implicitHeight: win.screen ? win.screen.height : 800
-    implicitWidth:  340
-    color:          "transparent"
-    exclusionMode:  ExclusionMode.Ignore
-    visible:        slide.windowVisible
+    implicitWidth: 600
+
+    color: "transparent"
+
+    exclusionMode: ExclusionMode.Ignore
+
+    visible: slide.windowVisible
+
     mask: Region {
-        x:      (win.implicitWidth - mediaCard.width) / 2
-        y:      Theme.barHeight + 8
-        width:  mediaCard.width
+        x: (win.implicitWidth - mediaCard.width) / 2
+        y: Theme.barHeight + 8
+        width: mediaCard.width
         height: mediaCard.height
     }
 
-    property var _players:    Mpris.players.values
-    property var _lastActive: null
+    property var player:
+        MediaService.activePlayer
 
-    property var _currentlyPlaying: {
-        for (let i = 0; i < _players.length; i++) {
-            if (_players[i].playbackState === MprisPlaybackState.Playing)
-                return _players[i]
-        }
-        return null
-    }
+    property bool isPlaying:
+        MediaService.isPlaying
 
-    on_CurrentlyPlayingChanged: {
-        if (_currentlyPlaying) _lastActive = _currentlyPlaying
-    }
+    property bool hasArt:
+        MediaService.hasArt
 
-    property var player: {
-        if (_players.length === 0) return null
-        if (_currentlyPlaying)     return _currentlyPlaying
-        if (_lastActive) {
-            for (let i = 0; i < _players.length; i++)
-                if (_players[i] === _lastActive) return _lastActive
-        }
-        return _players[0]
-    }
-
-    property bool isPlaying: player?.playbackState === MprisPlaybackState.Playing ?? false
-    property bool hasArt:    player !== null && player.trackArtUrl !== ""
-
-    property real _position: 0.0
-    property bool _seeking:  false
+    property real _position: 0
+    property bool _seeking: false
 
     Timer {
         interval: 1000
-        repeat:   true
-        running:  win.isPlaying && !win._seeking
+        repeat: true
+
+        running:
+            win.player !== null &&
+            win.isPlaying &&
+            !win._seeking &&
+            win.player.positionSupported
+
         onTriggered: {
-            if (win.player && win.player.positionSupported)
-                win.player.positionChanged()   // nudge the binding per docs
-            win._position = win.player?.position ?? 0
+            if (!win.player)
+                return
+
+            win.player.positionChanged()
+            win._position = win.player.position
         }
     }
 
     Connections {
         target: win.player ?? null
-        function onTrackTitleChanged() { win._position = 0 }
-    }
 
-    Component.onCompleted: {
-        if (Popups.mediaOpen){
-            target: win.player ?? null
-            function onTrackTitleChanged() { win._position = 0 }
+        function onTrackChanged() {
+            win._position = 0
+        }
+
+        function onPostTrackChanged() {
+            win._position = 0
+        }
+
+        function onPositionChanged() {
+            if (!win._seeking)
+                win._position = win.player?.position ?? 0
         }
     }
 
     PopupSlide {
-        id:           slide
+        id: slide
+
         anchors.fill: parent
-        open:         Popups.mediaOpen
-        edge:         "top"
-        onCloseRequested: Popups.mediaOpen = false
+
+        open: Popups.mediaOpen
+
+        edge: "top"
+
+        onCloseRequested: {
+            Popups.mediaOpen = false
+        }
 
         Rectangle {
             id: mediaCard
-            width:  340
-            anchors.top:              parent.top
+
+            width: 560
+
+            anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.topMargin:        Theme.barHeight + 8
+            anchors.topMargin: Theme.barHeight + 8
 
-            implicitHeight: cardLayout.implicitHeight + 24
-            radius:         Theme.popupRadius
-            color:          Colors.surfaceContainer
-            border.color:   Colors.outlineVariant
-            border.width:   Theme.popupBorder
+            implicitHeight: 270
 
-            ColumnLayout {
-                id: cardLayout
-                anchors {
-                    top:          parent.top
-                    left:         parent.left
-                    right:        parent.right
-                    topMargin:    12
-                    leftMargin:   16
-                    rightMargin:  16
-                    bottomMargin: 12
-                }
-                spacing: 12
+            radius: Theme.popupRadius
 
-                MediaArt {
-                    player: win.player
-                    hasArt: win.hasArt
-                }
+            color: Colors.surfaceContainer
 
-                MediaTrackInfo {
-                    player: win.player
-                }
+            border.color: Colors.outlineVariant
+            border.width: Theme.popupBorder
 
-                MediaProgress {
-                    player:   win.player
-                    position: win._position
-                    seeking:  win._seeking
+            clip: true
 
-                    onSeekStarted: (pos) => { win._seeking = true;  win._position = pos }
-                    onSeekMoved:   (pos) => { win._position = pos }
-                    onSeekReleased: (pos) => {
-                        if (win.player) win.player.position = pos
-                        win._seeking = false
+            // ─────────────────────────────────────────────────────────────
+            // Artwork glow layer
+            // ─────────────────────────────────────────────────────────────
+
+            Item {
+                anchors.fill: parent
+
+                opacity: win.hasArt ? 0.14 : 0
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 350
+                        easing.type: Easing.OutCubic
                     }
                 }
 
-                MediaControls {
-                    player:    win.player
-                    isPlaying: win.isPlaying
+                Image {
+                    id: backgroundArt
+
+                    anchors.fill: parent
+
+                    source:
+                        win.hasArt
+                        ? win.player.trackArtUrl
+                        : ""
+
+                    fillMode: Image.PreserveAspectCrop
+
+                    asynchronous: true
+
+                    smooth: true
                 }
 
-                MediaVolumeRow {
+                Rectangle {
+                    anchors.fill: parent
+
+                    color: Colors.surfaceContainer
+
+                    opacity: 0.82
+                }
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // Main content
+            // ─────────────────────────────────────────────────────────────
+
+            RowLayout {
+                anchors.fill: parent
+
+                anchors.margins: 16
+
+                spacing: 16
+
+                // Album artwork
+                MediaArt {
+                    id: art
+
                     player: win.player
+                    hasArt: win.hasArt
+
+                    Layout.preferredWidth: 192
+                    Layout.preferredHeight: 192
+                }
+
+                // Right side
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    spacing: 8
+
+                    // Player identity
+                    RowLayout {
+                        Layout.fillWidth: true
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        Rectangle {
+                            width: 7
+                            height: 7
+                            radius: 3.5
+
+                            color:
+                                win.isPlaying
+                                ? Colors.primary
+                                : Colors.on_SurfaceVariant
+
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 200
+                                }
+                            }
+                        }
+
+                        Text {
+                            text: MediaService.playerIdentity
+
+                            color: Colors.on_SurfaceVariant
+
+                            font.family: Fonts.font
+                            font.pointSize: 8.5
+                            font.bold: true
+
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    // Track information
+                    MediaTrackInfo {
+                        player: win.player
+
+                        Layout.fillWidth: true
+                    }
+
+                    // Progress
+                    MediaProgress {
+                        player: win.player
+
+                        position: win._position
+
+                        seeking: win._seeking
+
+                        Layout.fillWidth: true
+
+                        onSeekStarted: (pos) => {
+                            win._seeking = true
+                            win._position = pos
+                        }
+
+                        onSeekMoved: (pos) => {
+                            win._position = pos
+                        }
+
+                        onSeekReleased: (pos) => {
+                            if (win.player && win.player.canSeek)
+                                win.player.position = pos
+
+                            win._seeking = false
+                        }
+                    }
+
+                    // Main transport controls
+                    MediaControls {
+                        player: win.player
+
+                        isPlaying: win.isPlaying
+
+                        Layout.fillWidth: true
+                    }
+
+                    // Volume
+                    MediaVolumeRow {
+                        player: win.player
+
+                        Layout.fillWidth: true
+                    }
+
+                    Item {
+                        Layout.fillHeight: true
+                    }
                 }
             }
         }

@@ -3,142 +3,101 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Services.Mpris
 import Qt5Compat.GraphicalEffects
+
 import qs.src.components
 import qs.src.theme
 import qs.src.state
+import qs.src.services
 
 Row {
     id: root
 
-    spacing: 6
+    spacing: 0
+    visible: MediaService.hasPlayer
 
-    property var players:     Mpris.players.values
-    property var _lastActive: null
+    property var player: MediaService.activePlayer
+    property bool hasArt: player !== null && player.trackArtUrl !== ""
+    property bool isPlaying: player?.playbackState === MprisPlaybackState.Playing ?? false
 
-    property var _currentlyPlaying: {
-        if (players.length === 0) return null
-
-        let bestMatch = null
-
-        for (let i = 0; i < players.length; i++) {
-            let state = players[i].playbackState
-
-            if (state === MprisPlaybackState.Playing && bestMatch === null) {
-                bestMatch = players[i]
-            }
-        }
-        return bestMatch
-    }
-
-    on_CurrentlyPlayingChanged: {
-        if (_currentlyPlaying) {
-            _lastActive = _currentlyPlaying
-        }
-    }
-
-    property var activePlayer: {
-        if (players.length === 0) return null
-
-        if (_currentlyPlaying) return _currentlyPlaying
-
-        if (_lastActive) {
-            for (let i = 0; i < players.length; i++) {
-                if (players[i] === _lastActive) return _lastActive
-            }
-        }
-
-        return players[0]
-    }
-    property bool hasArt:       activePlayer && activePlayer.trackArtUrl !== ""
-    property bool isPlaying:    activePlayer?.playbackState === MprisPlaybackState.Playing ?? false
-
-    visible: activePlayer !== null
-
-    // Previous button
-    PillBase {
-        hoverExpand:   true
-        implicitWidth: Theme.pillHeight
-
-        Text {
-            text:             "󰒮"
-            color:            Colors.primary
-            font.pointSize:   12
-            font.family:      Fonts.font
-            Layout.alignment: Qt.AlignVCenter
-        }
-
-        onClicked: if (root.activePlayer) root.activePlayer.previous()
-    }
-
-    // Center pill — art + title
     PillBase {
         hoverExpand: false
+        implicitWidth: contentRow.implicitWidth + Theme.pillPadding
 
-        onClicked:      Popups.mediaOpen = !Popups.mediaOpen
-        onRightClicked: if (root.activePlayer) root.activePlayer.togglePlaying()
+        onClicked: Popups.mediaOpen = !Popups.mediaOpen
+        onRightClicked: {
+            if (root.player?.canTogglePlaying)
+                root.player.togglePlaying()
+        }
+        onScrolled: (wheel) => {
+            if (!root.player?.volumeSupported) return
+
+            const delta = wheel.angleDelta.y / 120
+            const step = 0.05
+
+            root.player.volume = Math.max(0, Math.min(1, root.player.volume + delta * step))
+        }
 
         Row {
+            id: contentRow
+
+            Layout.alignment: Qt.AlignVCenter
             spacing: 8
 
-            // Rotating disc
             Item {
+                width: 20
+                height: 20
                 visible: root.hasArt
-                width:   20
-                height:  20
 
                 Rectangle {
-                    id:           artMask
+                    id: artMask
                     anchors.fill: parent
-                    radius:       width / 2
-                    visible:      false
+                    radius: width / 2
+                    visible: false
                 }
 
                 Image {
                     anchors.fill: parent
-                    source:       root.activePlayer ? root.activePlayer.trackArtUrl : ""
-                    fillMode:     Image.PreserveAspectCrop
+                    source: root.hasArt ? root.player.trackArtUrl : ""
+                    fillMode: Image.PreserveAspectCrop
+                    smooth: true
+
                     layer.enabled: true
-                    layer.effect: OpacityMask { maskSource: artMask }
+                    layer.effect: OpacityMask {
+                        maskSource: artMask
+                    }
 
                     NumberAnimation on rotation {
-                        from:     0
-                        to:       360
+                        from: 0
+                        to: 360
                         duration: 5000
-                        loops:    Animation.Infinite
-                        running:  true
-                        paused:   !root.isPlaying
+                        loops: Animation.Infinite
+                        running: root.isPlaying
                     }
                 }
             }
 
             Text {
-                text:          root.activePlayer
-                                   ? (root.activePlayer.trackTitle || "Unknown Track")
-                                   : ""
-                color:         Colors.primary
-                font.pointSize: 11
-                font.bold:     true
-                font.italic:   root.isPlaying
-                font.family:   Fonts.font
-                elide:         Text.ElideRight
-                width:         Math.min(implicitWidth, 150)
+                id: trackTitle
+
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.player ? (root.player.trackTitle || "Unknown Track") : ""
+                color: Colors.primary
+
+                font.pointSize: 10.5
+                font.bold: true
+                font.family: Fonts.font
+
+                elide: Text.ElideRight
+                width: Math.min(implicitWidth, 160)
             }
         }
     }
 
-    // Next button
-    PillBase {
-        hoverExpand:   true
-        implicitWidth: Theme.pillHeight
+    Connections {
+        target: root.player ?? null
 
-        Text {
-            text:             "󰒭"
-            color:            Colors.primary
-            font.pointSize:   12
-            font.family:      Fonts.font
-            Layout.alignment: Qt.AlignVCenter
+        function onTrackChanged() {
+            // intentionally empty
         }
-
-        onClicked: if (root.activePlayer) root.activePlayer.next()
     }
 }
