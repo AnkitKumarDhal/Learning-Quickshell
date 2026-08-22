@@ -85,7 +85,7 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.barSpacing
 
-            SystemMonitor       {}
+            SystemMonitor       { screen: root.screen }
             Network             {}
             Volume              {}
             Battery             {}

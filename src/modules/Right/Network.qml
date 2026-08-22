@@ -72,7 +72,7 @@ PillBase {
         text: NetworkService.ssid
 
         font.family: Fonts.fontM
-        font.pixelSize: 11
+        font.pointSize: 11
         font.bold: true
 
         color: Colors.primary

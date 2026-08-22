@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import qs.src.components
 import qs.src.theme
 import qs.src.state
@@ -10,14 +9,15 @@ import qs.src.services.system
 PillBase {
     id: root
 
-    hoverExpand: true
+    required property var screen
+
+    hoverExpand: false
 
     property real cpuUsage: SystemStats.cpuUsage * 100
-    property real memUsed:  SystemStats.memUsedGb
-    property real memTotal: SystemStats.memTotalGb
+    property real memUsedGb: SystemStats.memUsedGb
 
     Row {
-        spacing: 8
+        spacing: 6
 
         Text {
             text:           " " + Math.round(root.cpuUsage) + "%"
@@ -29,15 +29,16 @@ PillBase {
         }
 
         Rectangle {
-            width:  1
-            height: 14
-            color:  Colors.outline
-            opacity: 0.5
+            width:          1
+            height:         14
+            radius:         0.5
+            color:          Colors.outlineVariant
+            opacity:        0.8
             anchors.verticalCenter: parent.verticalCenter
         }
 
         Text {
-            text:           " " + root.memUsed.toFixed(1) + "G"
+            text:           " " + root.memUsedGb.toFixed(1) + "GB"
             color:          Colors.primary
             font.pointSize: 11
             font.bold:      true
@@ -46,6 +47,13 @@ PillBase {
         }
     }
 
-    onClicked:      Popups.systemOpen = !Popups.systemOpen
-    onRightClicked: Popups.systemOpen = !Popups.systemOpen
+    onClicked: {
+        Popups.systemScreen = root.screen
+        Popups.systemOpen = !Popups.systemOpen
+    }
+
+    onRightClicked: {
+        Popups.systemScreen = root.screen
+        Popups.systemOpen = !Popups.systemOpen
+    }
 }

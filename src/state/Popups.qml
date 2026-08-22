@@ -8,6 +8,7 @@ Singleton {
     // ── Popup States ──────────────────────────────────────────────────────────
     property bool notificationsOpen: false
     property bool systemOpen:        false
+    property var  systemScreen:      null
     property bool archMenuOpen:      false
     property bool calendarOpen:      false
     property bool mediaOpen:         false

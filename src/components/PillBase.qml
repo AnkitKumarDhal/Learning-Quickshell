@@ -11,6 +11,7 @@ Rectangle {
     property bool hoverEnabled: true
     property bool mouseEnabled: true
     readonly property bool hovered: hov.containsMouse
+    property int horizontalPadding: Theme.pillPadding
     property alias hoverArea: hov
     property alias backgroundData: backgroundContent.data
 
@@ -18,7 +19,7 @@ Rectangle {
     signal rightClicked(var mouse)
     signal scrolled(var wheel)
 
-    implicitWidth:  innerLayout.implicitWidth + Theme.pillPadding + (hoverExpand && hov.containsMouse ? Theme.hoverWidthGain : 0)
+    implicitWidth:  innerLayout.implicitWidth + horizontalPadding + (hoverExpand && hov.containsMouse ? Theme.hoverWidthGain : 0)
     implicitHeight: Theme.pillHeight
     radius:         Theme.pillRadius
     color:          Colors.background

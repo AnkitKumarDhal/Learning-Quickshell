@@ -8,6 +8,8 @@ import qs.src.theme
 PillBase {
     id: root
 
+    horizontalPadding: 8
+
     property var window
     property bool collapsed: true
 
@@ -55,9 +57,9 @@ PillBase {
             Rectangle {
                 anchors.fill: parent
 
-                radius: 8
+                radius: 25
                 color: toggleMouse.containsMouse ? Colors.primaryContainer : "transparent"
-                opacity: toggleMouse.containsMouse ? 1 : 0
+                opacity: toggleMouse.containsMouse ? 0.3 : 0
 
                 Behavior on opacity {
                     NumberAnimation {
@@ -69,7 +71,7 @@ PillBase {
 
             Text {
                 anchors.centerIn: parent
-                text: root.collapsed ? "<" : ">"
+                text: root.collapsed ? "" : ""
 
                 color: Colors.primary
 

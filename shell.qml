@@ -28,7 +28,7 @@ ShellRoot {
                 // ── Popups ────────────────────────────────────────────────────
 
                 PopupLoader {
-                    open: Popups.systemOpen
+                    open: Popups.systemOpen && Popups.systemScreen === modelData
                     popup: Component {
                         SystemPopup {
                             screen: modelData
