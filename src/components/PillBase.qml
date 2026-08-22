@@ -11,6 +11,7 @@ Rectangle {
     property bool hoverEnabled: true
     property bool mouseEnabled: true
     readonly property bool hovered: hov.containsMouse
+    property alias hoverArea: hov
     property alias backgroundData: backgroundContent.data
 
     signal clicked(var mouse)

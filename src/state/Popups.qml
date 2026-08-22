@@ -42,6 +42,7 @@ Singleton {
     onKeybindsOpenChanged:      if (keybindsOpen)      _closeOthers("keybinds")
     onSessionOpenChanged:       if (sessionOpen)       _closeOthers("session")
     onCaffeineOpenChanged:      if (caffeineOpen)      _closeOthers("caffeine")
+    onCalendarOpenChanged:      if (calendarOpen)      _closeOthers("calendar")
 
     function _closeOthers(keep) {
         if (keep !== "emoji")         emojiOpen         = false
@@ -58,6 +59,7 @@ Singleton {
         if (keep !== "keybinds")      keybindsOpen      = false
         if (keep !== "session")       sessionOpen       = false
         if (keep !== "caffeine")      caffeineOpen      = false
+        if (keep !== "calendar")      calendarOpen      = false
     }
 
     // ── Aggregate State ───────────────────────────────────────────────────────
@@ -75,7 +77,8 @@ Singleton {
         networkOpen       ||
         sessionOpen       ||
         caffeineOpen      ||
-        keybindsOpen
+        keybindsOpen      ||
+        calendarOpen
 
     // ── Methods ───────────────────────────────────────────────────────────────
     function closeAll() {
@@ -93,5 +96,6 @@ Singleton {
         keybindsOpen      = false
         sessionOpen       = false
         caffeineOpen      = false
+        calendarOpen      = false
     }
 }

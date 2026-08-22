@@ -15,3 +15,4 @@ PolkitPopup          1.0    PolkitPopup.qml
 KeybindsPopup        1.0    KeybindsPopup.qml
 SessionPopup         1.0    SessionPopup.qml
 CaffeinePopup        1.0    CaffeinePopup.qml
+CalendarPopup        1.0    CalendarPopup.qml

@@ -161,9 +161,23 @@ PillBase {
 
                             visible: false
 
-                            anchor.item: pinnedHover
-                            anchor.edges: Edges.Bottom | Edges.Left
-                            anchor.gravity: Edges.Top | Edges.Left
+                            anchor {
+                                window: pinnedHover.QsWindow.window
+                                adjustment: PopupAdjustment.None
+
+                                gravity: Edges.Bottom | Edges.Right
+
+                                onAnchoring: {
+                                    const pos = pinnedHover.QsWindow.contentItem.mapFromItem(
+                                        pinnedHover,
+                                        pinnedHover.width / 2 - pinnedTooltip.width / 2,
+                                        pinnedHover.height + 8
+                                    )
+
+                                    anchor.rect.x = pos.x
+                                    anchor.rect.y = pos.y
+                                }
+                            }
 
                             implicitWidth: Math.min(280, Math.max(120, pinnedTooltipText.implicitWidth + 20))
                             implicitHeight: pinnedTooltipText.implicitHeight + 16
@@ -374,10 +388,23 @@ PillBase {
                                 id: overflowTooltip
                                 visible: false
 
-                                anchor.item: overflowHover
-                                anchor.edges: Edges.Bottom | Edges.Left
-                                anchor.gravity: Edges.Top | Edges.Left
+                                anchor {
+                                    window: overflowHover.QsWindow.window
+                                    adjustment: PopupAdjustment.None
 
+                                    gravity: Edges.Bottom | Edges.Right
+
+                                    onAnchoring: {
+                                        const pos = overflowHover.QsWindow.contentItem.mapFromItem(
+                                            overflowHover,
+                                            overflowHover.width / 2 - overflowTooltip.width / 2,
+                                            overflowHover.height + 8
+                                        )
+
+                                        anchor.rect.x = pos.x
+                                        anchor.rect.y = pos.y
+                                    }
+                                }
                                 implicitWidth: Math.min(280, Math.max(120, overflowTooltipText.implicitWidth + 20))
                                 implicitHeight: overflowTooltipText.implicitHeight + 16
 

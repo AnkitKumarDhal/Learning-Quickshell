@@ -126,6 +126,15 @@ ShellRoot {
                     }
                 }
 
+                PopupLoader {
+                    open: Popups.calendarOpen
+                    popup: Component {
+                        CalendarPopup {
+                            screen: modelData
+                        }
+                    }
+                }
+
                 PolkitPopup { screen: modelData }
                 KeybindsPopup { screen: modelData }
             }
