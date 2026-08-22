@@ -78,17 +78,12 @@ PanelWindow {
 
                     Text {
                         text:           "System"
-                        color:          Colors.on_Surface
-                        font.pixelSize: 14
-                        font.bold:      true
-                        font.family:    Fonts.font
-                    }
 
-                    Text {
-                        text:           "Live system overview"
-                        color:          Colors.on_SurfaceVariant
-                        font.pixelSize: 9
                         font.family:    Fonts.font
+                        font.pixelSize: 16
+                        font.bold:      true
+
+                        color:          Colors.on_Surface
                     }
                 }
 
@@ -105,7 +100,7 @@ PanelWindow {
                     spacing: 8
 
                     MetricCard {
-                        label:    "CPU"
+                        label:    ""
                         value:    Math.round(SystemStats.cpuUsage * 100) + "%"
                         detail:   SystemStats.cpuFrequencyGhz > 0
                                   ? SystemStats.cpuFrequencyGhz.toFixed(1) + " GHz"
@@ -116,7 +111,7 @@ PanelWindow {
                     }
 
                     MetricCard {
-                        label:    "RAM"
+                        label:    ""
                         value:    Math.round(SystemStats.memUsage * 100) + "%"
                         detail:   SystemStats.memUsedGb.toFixed(1) + " / " + SystemStats.memTotalGb.toFixed(1) + " GB"
                         progress: SystemStats.memUsage
@@ -126,11 +121,11 @@ PanelWindow {
 
                     MetricCard {
                         visible:  SystemStats.hasGpu
-                        label:    "GPU"
+                        label:    "󰢮"
                         value:    Math.round(SystemStats.gpuUsage * 100) + "%"
-                        detail:   SystemStats.gpuName !== ""
-                                  ? SystemStats.gpuName
-                                  : "Graphics processor"
+                        detail:   SystemStats.gpuVramTotalGb > 0
+                                  ? SystemStats.gpuVramUsedGb.toFixed(1) + " / " + SystemStats.gpuVramTotalGb.toFixed(1) + " GB VRAM"
+                                  : SystemStats.gpuName
                         progress: SystemStats.gpuUsage
                         accent:   Colors.tertiary
                         Layout.fillWidth: true
@@ -147,10 +142,14 @@ PanelWindow {
                         Layout.fillWidth: true
 
                         Text {
-                            text:           "CPU cores"
-                            color:          Colors.on_SurfaceVariant
-                            font.pixelSize: 10
+                            text:           " CPU cores"
+
                             font.family:    Fonts.font
+                            font.pointSize: 10
+                            font.bold:      true
+
+                            color:          Colors.on_SurfaceVariant
+
                             Layout.fillWidth: true
                         }
 
@@ -158,10 +157,12 @@ PanelWindow {
                             text:           SystemStats.cpuFrequencyGhz > 0
                                           ? SystemStats.cpuFrequencyGhz.toFixed(1) + " GHz"
                                           : ""
-                            color:          Colors.on_Surface
-                            font.pixelSize: 10
-                            font.bold:      true
+
                             font.family:    Fonts.font
+                            font.pixelSize: 11
+                            font.bold:      true
+
+                            color:          Colors.on_Surface
                         }
                     }
 
@@ -198,10 +199,13 @@ PanelWindow {
                                 Text {
                                     anchors.centerIn: parent
                                     text:             Math.round(modelData.usage * 100) + "%"
-                                    color:            Colors.on_Surface
-                                    font.pixelSize:   8
-                                    font.bold:        true
+
                                     font.family:      Fonts.font
+                                    font.pixelSize:   10
+                                    font.bold:        true
+
+                                    color:            Colors.on_Surface
+
                                     z:                2
                                 }
                             }
@@ -216,25 +220,26 @@ PanelWindow {
 
                     Text {
                         text:           "Available " + SystemStats.memAvailableGb.toFixed(1) + " GB"
-                        color:          Colors.on_SurfaceVariant
-                        font.pixelSize: 9
+
                         font.family:    Fonts.font
+                        font.pixelSize: 10
+                        font.bold:      true
+
+                        color:          Colors.on_SurfaceVariant
+
                         Layout.fillWidth: true
                     }
 
                     Text {
                         text:           "Swap " + SystemStats.swapUsedGb.toFixed(1) + " / " + SystemStats.swapTotalGb.toFixed(1) + " GB"
-                        color:          SystemStats.swapUsage >= 0.9 ? Colors.error : Colors.on_SurfaceVariant
-                        font.pixelSize: 9
-                        font.family:    Fonts.font
-                    }
 
-                    Text {
-                        visible:        SystemStats.hasGpu && SystemStats.gpuVramTotalGb > 0
-                        text:           "VRAM " + SystemStats.gpuVramUsedGb.toFixed(1) + " / " + SystemStats.gpuVramTotalGb.toFixed(1) + " GB"
-                        color:          Colors.on_SurfaceVariant
-                        font.pixelSize: 9
                         font.family:    Fonts.font
+                        font.pixelSize: 10
+                        font.bold:      true
+
+                        color:          SystemStats.swapUsage >= 0.9
+                                        ? Colors.error
+                                        : Colors.on_SurfaceVariant
                     }
                 }
 
@@ -254,11 +259,14 @@ PanelWindow {
                         Layout.fillWidth: true
 
                         Text {
-                            text:           "Network"
-                            color:          Colors.on_SurfaceVariant
-                            font.pixelSize: 10
-                            font.bold:      true
+                            text:           "󰤥 Network"
+
                             font.family:    Fonts.font
+                            font.pointSize: 10
+                            font.bold:      true
+
+                            color:          Colors.on_SurfaceVariant
+
                             Layout.fillWidth: true
                         }
 
@@ -266,12 +274,14 @@ PanelWindow {
                             text:           SystemStats.activeInterface !== ""
                                           ? SystemStats.activeInterface
                                           : "Offline"
+
+                            font.family:    Fonts.font
+                            font.pixelSize: 11
+                            font.bold:      true
+
                             color:          SystemStats.activeInterface !== ""
                                           ? Colors.primary
                                           : Colors.outline
-                            font.pixelSize: 9
-                            font.bold:      true
-                            font.family:    Fonts.font
                         }
                     }
 
@@ -284,18 +294,22 @@ PanelWindow {
 
                         Text {
                             text:           "↑ " + SystemStats.formatBytes(SystemStats.netUpRate)
-                            color:          Colors.tertiary
-                            font.pixelSize: 9
-                            font.bold:      true
+
                             font.family:    Fonts.font
+                            font.pixelSize: 11
+                            font.bold:      true
+
+                            color:          Colors.tertiary
                         }
 
                         Text {
                             text:           "↓ " + SystemStats.formatBytes(SystemStats.netDownRate)
-                            color:          Colors.primary
-                            font.pixelSize: 9
-                            font.bold:      true
+
                             font.family:    Fonts.font
+                            font.pixelSize: 11
+                            font.bold:      true
+
+                            color:          Colors.primary
                         }
                     }
 
@@ -311,17 +325,24 @@ PanelWindow {
 
                         Text {
                             text:           "↑ Upload"
-                            color:          Colors.tertiary
-                            font.pixelSize: 8
+
                             font.family:    Fonts.font
+                            font.pixelSize: 10
+                            font.bold:      true
+
+                            color:          Colors.tertiary
+
                             Layout.fillWidth: true
                         }
 
                         Text {
                             text:           "↓ Download"
-                            color:          Colors.primary
-                            font.pixelSize: 8
+
                             font.family:    Fonts.font
+                            font.pixelSize: 10
+                            font.bold:      true
+
+                            color:          Colors.primary
                         }
                     }
                 }
@@ -339,11 +360,13 @@ PanelWindow {
                     spacing: 8
 
                     Text {
-                        text:           "Storage"
-                        color:          Colors.on_SurfaceVariant
-                        font.pixelSize: 10
-                        font.bold:      true
+                        text:           " Storage"
+
                         font.family:    Fonts.font
+                        font.pointSize: 10
+                        font.bold:      true
+
+                        color:          Colors.on_SurfaceVariant
                     }
 
                     Repeater {
@@ -365,9 +388,12 @@ PanelWindow {
                     Text {
                         visible:        SystemStats.diskPartitions.length === 0
                         text:           "No disk usage data available"
-                        color:          Colors.outline
-                        font.pixelSize: 9
+
                         font.family:    Fonts.font
+                        font.pixelSize: 10
+                        font.bold:      true
+
+                        color:          Colors.outline
                     }
                 }
 
@@ -383,25 +409,30 @@ PanelWindow {
                     Layout.fillWidth: true
 
                     Text {
-                        text:           "󰔏  Thermals"
-                        color:          Colors.on_SurfaceVariant
-                        font.pixelSize: 10
-                        font.bold:      true
+                        text:           "󰔏 Thermals"
+
                         font.family:    Fonts.font
+                        font.pointSize: 10
+                        font.bold:      true
+
+                        color:          Colors.on_SurfaceVariant
+
                         Layout.fillWidth: true
                     }
 
                     Text {
                         visible:        SystemStats.temperature > 0
                         text:           SystemStats.temperature + " °C"
+
+                        font.family:    Fonts.font
+                        font.pixelSize: 11
+                        font.bold:      true
+
                         color:          SystemStats.temperature >= 80
                                        ? Colors.error
                                        : SystemStats.temperature >= 60
                                            ? Colors.tertiary
                                            : Colors.on_Surface
-                        font.pixelSize: 11
-                        font.bold:      true
-                        font.family:    Fonts.font
 
                         Behavior on color {
                             ColorAnimation {
@@ -434,23 +465,29 @@ PanelWindow {
 
                                 Text {
                                     text:           modelData.name
-                                    color:          Colors.on_SurfaceVariant
-                                    font.pixelSize: 8
+
                                     font.family:    Fonts.font
+                                    font.pixelSize: 10
+                                    font.bold:      true
+
+                                    color:          Colors.on_SurfaceVariant
+
                                     elide:          Text.ElideRight
                                     Layout.fillWidth: true
                                 }
 
                                 Text {
                                     text:           modelData.value + " °C"
+
+                                    font.family:    Fonts.font
+                                    font.pixelSize: 10
+                                    font.bold:      true
+
                                     color:          modelData.value >= 80
                                                    ? Colors.error
                                                    : modelData.value >= 60
                                                        ? Colors.tertiary
                                                        : Colors.on_Surface
-                                    font.pixelSize: 9
-                                    font.bold:      true
-                                    font.family:    Fonts.font
                                 }
                             }
                         }
@@ -459,9 +496,12 @@ PanelWindow {
                     Text {
                         visible:        SystemStats.displayTemperatures.length === 0
                         text:           "No thermal sensors available"
-                        color:          Colors.outline
-                        font.pixelSize: 9
+
                         font.family:    Fonts.font
+                        font.pixelSize: 10
+                        font.bold:      true
+
+                        color:          Colors.outline
                     }
                 }
             }

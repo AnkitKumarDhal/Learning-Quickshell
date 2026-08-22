@@ -54,7 +54,7 @@ PanelWindow {
             }
 
             width: 360
-            height: Math.min(notifList.implicitHeight + 48, root.implicitHeight - Theme.barHeight - 24)
+            height: Math.min(notifCol.implicitHeight + 48, root.implicitHeight - Theme.barHeight - 24)
 
             radius: Theme.popupRadius
             color: Colors.background
@@ -159,72 +159,71 @@ PanelWindow {
                 }
             }
 
-Item {
-    anchors {
-        top: panelHeader.bottom
-        left: parent.left
-        right: parent.right
-        bottom: parent.bottom
-    }
+            Flickable {
+                anchors {
+                    top: panelHeader.bottom
+                    left: parent.left
+                    right: parent.right
+                    bottom: parent.bottom
+                }
 
-    ListView {
-        id: notifList
+                contentHeight: notifCol.implicitHeight
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
 
-        anchors.fill: parent
+                Column {
+                    id: notifCol
 
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-        spacing: 4
-        topMargin: 8
-        bottomMargin: 8
-        leftMargin: 8
-        rightMargin: 8
+                    anchors {
+                        top: parent.top
+                        left: parent.left
+                        right: parent.right
+                    }
 
-        model: NotificationService.notificationsModel
-        verticalLayoutDirection: ListView.BottomToTop
+                    spacing: 4
+                    padding: 8
 
-        delegate: NotificationCard {
-            required property var modelData
+                    Item {
+                        visible: NotificationService.notificationCount === 0
 
-            width: notifList.width - notifList.leftMargin - notifList.rightMargin
-            notification: modelData
-            bodyMaximumLineCount: 3
-        }
-    }
+                        width: parent.width - 16
+                        height: 80
 
-    Item {
-        anchors {
-            top: parent.top
-            left: parent.left
-            right: parent.right
-            topMargin: 8
-        }
+                        ColumnLayout {
+                            anchors.centerIn: parent
+                            spacing: 6
 
-        visible: NotificationService.notificationCount === 0
-        height: 80
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: "󰂚"
+                                font.pixelSize: 28
+                                font.family: Fonts.font
+                                color: Colors.outline
+                            }
 
-        ColumnLayout {
-            anchors.centerIn: parent
-            spacing: 6
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: "No notifications"
+                                font.pixelSize: 12
+                                font.family: Fonts.font
+                                color: Colors.outline
+                                textFormat: Text.PlainText
+                            }
+                        }
+                    }
 
-            Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: "󰂚"
-                font.pixelSize: 28
-                font.family: Fonts.font
-                color: Colors.outline
+                    Repeater {
+                        model: NotificationService.notificationsModel
+                        delegate: NotificationCard {
+                            required property var modelData
+
+                            notification: modelData
+                            width: notifCol.width - 16
+                            bodyMaximumLineCount: 3
+                        }
+                    }
+                }
             }
-
-            Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: "No notifications"
-                font.pixelSize: 12
-                font.family: Fonts.font
-                color: Colors.outline
-                textFormat: Text.PlainText
-            }
         }
-    }
-}        }
     }
 }

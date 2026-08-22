@@ -14,7 +14,7 @@ PillBase {
     hoverExpand: false
 
     property real cpuUsage: SystemStats.cpuUsage * 100
-    property real memUsage: SystemStats.memUsage * 100
+    property real memUsedGb: SystemStats.memUsedGb
 
     Row {
         spacing: 6
@@ -22,9 +22,9 @@ PillBase {
         Text {
             text:           " " + Math.round(root.cpuUsage) + "%"
             color:          Colors.primary
-            font.pointSize: 10.5
+            font.pointSize: 11
             font.bold:      true
-            font.family:    Fonts.font
+            font.family:    Fonts.fontM
             verticalAlignment: Text.AlignVCenter
         }
 
@@ -38,11 +38,11 @@ PillBase {
         }
 
         Text {
-            text:           " " + Math.round(root.memUsage) + "%"
+            text:           " " + root.memUsedGb.toFixed(1) + "GB"
             color:          Colors.primary
-            font.pointSize: 10.5
+            font.pointSize: 11
             font.bold:      true
-            font.family:    Fonts.font
+            font.family:    Fonts.fontM
             verticalAlignment: Text.AlignVCenter
         }
     }

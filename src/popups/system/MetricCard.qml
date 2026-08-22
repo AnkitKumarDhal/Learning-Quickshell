@@ -30,29 +30,38 @@ Item {
                 Layout.fillWidth: true
 
                 Text {
-                    text: root.label
-                    color: Colors.on_SurfaceVariant
-                    font.pixelSize: 10
-                    font.bold: true
-                    font.family: Fonts.font
+                    text:           root.label
+
+                    font.family:    Fonts.fontM
+                    font.pointSize: 11
+                    font.bold:      true
+
+                    color:          Colors.on_SurfaceVariant
+
                     Layout.fillWidth: true
                 }
 
                 Text {
-                    text: root.value
-                    color: Colors.on_Surface
-                    font.pixelSize: 14
-                    font.bold: true
-                    font.family: Fonts.font
+                    text:           root.value
+
+                    font.family:    Fonts.font
+                    font.pixelSize: 16
+                    font.bold:      true
+
+                    color:          Colors.on_Surface
                 }
             }
 
             Text {
-                text: root.detail
-                color: Colors.on_SurfaceVariant
-                font.pixelSize: 9
-                font.family: Fonts.font
-                elide: Text.ElideRight
+                text:           root.detail
+
+                font.family:    Fonts.font
+                font.pixelSize: 10
+                font.bold:      true
+
+                color:          Colors.on_SurfaceVariant
+
+                elide:          Text.ElideRight
                 Layout.fillWidth: true
             }
 
@@ -76,7 +85,9 @@ Item {
                     }
 
                     Behavior on color {
-                        ColorAnimation { duration: 250 }
+                        ColorAnimation {
+                            duration: 250
+                        }
                     }
                 }
             }
