@@ -10,6 +10,7 @@ Rectangle {
     property bool hoverExpand:  true
     property bool hoverEnabled: true
     property bool mouseEnabled: true
+    readonly property bool hovered: hov.containsMouse
 
     signal clicked(var mouse)
     signal rightClicked(var mouse)

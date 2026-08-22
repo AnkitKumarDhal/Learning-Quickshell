@@ -5,7 +5,7 @@ import qs.src.theme
 ColumnLayout {
     id: root
 
-    required property var  player
+    required property var player
     required property real position
     required property bool seeking
 
@@ -14,94 +14,129 @@ ColumnLayout {
     signal seekReleased(real pos)
 
     Layout.fillWidth: true
-    spacing:          4
-
-    visible: root.player !== null && (root.player.positionSupported ?? false)
+    Layout.preferredHeight: 31
+    spacing: 2
+    visible: root.player !== null && root.player.positionSupported
 
     Item {
-        Layout.fillWidth:       true
-        Layout.preferredHeight: 16
+        id: slider
 
-        readonly property real trackLen: root.player?.length ?? 0
-        readonly property real fraction: trackLen > 0
-                                         ? Math.min(root.position / trackLen, 1.0)
-                                         : 0
+        Layout.fillWidth: true
+        Layout.preferredHeight: 17
+        property real trackLen: root.player?.length ?? 0
+        property real fraction: trackLen > 0 ? Math.max(0, Math.min(root.position / trackLen, 1)) : 0
+        property bool hovered: mouseArea.containsMouse
 
-        // Track bg
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
-            width:  parent.width
-            height: 4; radius: 2
-            color:  Colors.surfaceContainerHighest
-        }
+            width: parent.width
+            height: slider.hovered ? 5 : 4
+            radius: height / 2
+            color: Colors.surfaceContainerHighest
 
-        // Fill
-        Rectangle {
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left:           parent.left
-            width:  parent.width * parent.fraction
-            height: 4; radius: 2
-            color:  Colors.primary
-
-            Behavior on width {
-                enabled: !root.seeking
-                NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+            Behavior on height {
+                NumberAnimation {
+                    duration: 120
+                }
             }
         }
 
-        // Thumb
+        Rectangle {
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width * parent.fraction
+            height: slider.hovered ? 5 : 4
+            radius: height / 2
+            color: Colors.primary
+
+            Behavior on width {
+                enabled: !root.seeking
+                NumberAnimation {
+                    duration: 250
+                    easing.type: Easing.OutCubic
+                }
+            }
+            Behavior on height {
+                NumberAnimation {
+                    duration: 120
+                }
+            }
+        }
+
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
-            x:      parent.width * parent.fraction - width / 2
-            width:  12; height: 12; radius: 6
-            color:  Colors.primary
+            x: parent.width * parent.fraction - width / 2
+            width: slider.hovered ? 12 : 8
+            height: width
+            radius: width / 2
+            color: Colors.primary
 
             Behavior on x {
                 enabled: !root.seeking
-                NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+                NumberAnimation {
+                    duration: 250
+                    easing.type:
+                        Easing.OutCubic
+                }
+            }
+            Behavior on width {
+                NumberAnimation {
+                    duration: 120
+                }
             }
         }
 
         MouseArea {
+            id: mouseArea
+
             anchors.fill: parent
-            enabled:      root.player?.canSeek ?? false
-            cursorShape:  enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+            enabled: root.player?.canSeek ?? false
+            hoverEnabled: true
+            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+
+            function positionFromMouse(mouseX) {
+                return Math.max(0, Math.min(mouseX / width, 1)) * (root.player?.length ?? 0)
+            }
 
             onPressed: (mouse) => {
-                root.seekStarted((mouse.x / width) * (root.player?.length ?? 0))
+                root.seekStarted(positionFromMouse(mouse.x))
             }
             onPositionChanged: (mouse) => {
-                if (pressed) root.seekMoved(Math.max(0, Math.min(mouse.x / width, 1.0) * (root.player?.length ?? 0)))
+                if (!pressed) return
+                root.seekMoved(positionFromMouse(mouse.x))
             }
             onReleased: (mouse) => {
-                root.seekReleased(Math.max(0, Math.min(mouse.x / width, 1.0) * (root.player?.length ?? 0)))
+                root.seekReleased(positionFromMouse(mouse.x))
             }
         }
     }
 
     RowLayout {
         Layout.fillWidth: true
+        Layout.preferredHeight: 12
 
         Text {
-            text: {
-                const s = Math.floor(root.position)
-                return "%1:%2".arg(Math.floor(s / 60)).arg(String(s % 60).padStart(2, "0"))
-            }
-            color:          Colors.on_SurfaceVariant
-            font.family:    Fonts.font
-            font.pointSize: 9
+            text: root.formatTime(root.position)
+            color: Colors.on_SurfaceVariant
+            font.family: Fonts.font
+            font.pointSize: 8
         }
 
         Item { Layout.fillWidth: true }
 
         Text {
-            text: {
-                const s = Math.floor(root.player?.length ?? 0)
-                return "%1:%2".arg(Math.floor(s / 60)).arg(String(s % 60).padStart(2, "0"))
-            }
-            color:          Colors.on_SurfaceVariant
-            font.family:    Fonts.font
-            font.pointSize: 9
+            text: root.formatTime(root.player?.length ?? 0)
+            color: Colors.on_SurfaceVariant
+            font.family: Fonts.font
+            font.pointSize: 8
         }
+    }
+
+    function formatTime(seconds) {
+        const s = Math.max(0, Math.floor(seconds))
+        const minutes = Math.floor(s / 60)
+        const secs = String(s % 60).padStart(2, "0")
+
+        return "%1:%2".arg(minutes).arg(secs)
     }
 }

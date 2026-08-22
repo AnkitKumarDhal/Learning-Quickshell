@@ -1,133 +1,173 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Services.Mpris
 import qs.src.theme
 
 RowLayout {
     id: root
 
-    required property var  player
+    required property var player
     required property bool isPlaying
 
     Layout.fillWidth: true
-    spacing:          0
+    spacing: 2
 
-    component IconBtn: Item {
-        property string icon:      ""
-        property color  iconColor: Colors.on_Surface
-        property int    iconSize:  16
-        property int    btnSize:   36
-        property int    bgSize:    28
+    component IconButton: Item {
+        id: button
+
+        property string icon: ""
+        property color iconColor: Colors.on_SurfaceVariant
+        property int iconSize: 16
+        property bool enabledState: true
 
         signal clicked()
 
-        Layout.preferredWidth:  btnSize
-        Layout.preferredHeight: btnSize
+        Layout.preferredWidth: 32
+        Layout.preferredHeight: 32
+        opacity: enabledState ? 1 : 0.35
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 120
+            }
+        }
 
         Rectangle {
             anchors.centerIn: parent
-            width: bgSize; height: bgSize; radius: bgSize / 2
-            color: hov.containsMouse
-                   ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.15)
-                   : "transparent"
-            Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
+            width: mouse.containsMouse ? 30 : 26
+            height: width
+            radius: width / 2
+            color: mouse.containsMouse
+                ? Qt.rgba(
+                      Colors.primary.r,
+                      Colors.primary.g,
+                      Colors.primary.b,
+                      0.12
+                  )
+                : "transparent"
+
+            Behavior on width {
+                NumberAnimation {
+                    duration: 120
+                    easing.type: Easing.OutCubic
+                }
+            }
+            Behavior on height {
+                NumberAnimation {
+                    duration: 120
+                    easing.type: Easing.OutCubic
+                }
+            }
+            Behavior on color {
+                ColorAnimation {
+                    duration: Theme.hoverFadeDuration
+                }
+            }
         }
 
         Text {
             anchors.centerIn: parent
-            text:             parent.icon
-            font.family:      Fonts.fontM
-            font.pointSize:   parent.iconSize
-            color:            parent.iconColor
+            text: button.icon
+            font.family: Fonts.fontM
+            font.pointSize: button.iconSize
+            color: button.iconColor
         }
 
         MouseArea {
-            id:           hov
+            id: mouse
             anchors.fill: parent
             hoverEnabled: true
-            cursorShape:  Qt.PointingHandCursor
-            onClicked:    parent.clicked()
+            enabled: button.enabledState
+            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked: button.clicked()
         }
     }
 
-    // Shuffle
-    IconBtn {
-        icon:      "󰒞"
-        iconSize:  13
-        iconColor: (root.player?.shuffle ?? false) ? Colors.primary : Colors.on_SurfaceVariant
-        onClicked: if (root.player) root.player.shuffle = !root.player.shuffle
-    }
-
     Item { Layout.fillWidth: true }
 
-    // Prev
-    IconBtn {
-        icon:      "󰒮"
-        iconSize:  16
-        onClicked: if (root.player) root.player.previous()
+    // Previous
+    IconButton {
+        icon: "󰒮"
+        iconSize: 16
+        enabledState: root.player?.canGoPrevious ?? false
+        onClicked: {
+            if (root.player?.canGoPrevious) {
+                root.player.previous()
+            }
+        }
     }
-
-    Item { Layout.fillWidth: true }
 
     // Play / Pause
     Item {
-        Layout.preferredWidth:  52
-        Layout.preferredHeight: 52
+        Layout.preferredWidth: 44
+        Layout.preferredHeight: 44
+        property bool hovered: playMouse.containsMouse
 
         Rectangle {
             anchors.centerIn: parent
-            width: 44; height: 44; radius: 22
-            color: playHov.containsMouse
-                   ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.25)
-                   : Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.15)
-            Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
+            width: parent.hovered ? 42 : 38
+            height: width
+            radius: width / 2
+            color: parent.hovered
+                ? Qt.rgba(
+                      Colors.primary.r,
+                      Colors.primary.g,
+                      Colors.primary.b,
+                      0.28
+                  )
+                : Qt.rgba(
+                      Colors.primary.r,
+                      Colors.primary.g,
+                      Colors.primary.b,
+                      0.18
+                  )
+
+            Behavior on width {
+                NumberAnimation {
+                    duration: 130
+                    easing.type: Easing.OutCubic
+                }
+            }
+            Behavior on color {
+                ColorAnimation {
+                    duration: Theme.hoverFadeDuration
+                }
+            }
         }
 
         Text {
             anchors.centerIn: parent
-            text:             root.isPlaying ? "󰏤" : "󰐊"
-            font.family:      Fonts.fontM
-            font.pointSize:   20
-            color:            Colors.primary
+            text: root.isPlaying ? "󰏤" : "󰐊"
+            font.family: Fonts.fontM
+            font.pointSize: 18
+            color: Colors.primary
         }
 
         MouseArea {
-            id:           playHov
+            id: playMouse
+
             anchors.fill: parent
             hoverEnabled: true
-            cursorShape:  Qt.PointingHandCursor
-            onClicked:    if (root.player) root.player.togglePlaying()
+            enabled: root.player?.canTogglePlaying ?? false
+            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked: {
+                if (root.player?.canTogglePlaying) {
+                    root.player.togglePlaying()
+                }
+            }
         }
     }
-
-    Item { Layout.fillWidth: true }
 
     // Next
-    IconBtn {
-        icon:      "󰒭"
-        iconSize:  16
-        onClicked: if (root.player) root.player.next()
+    IconButton {
+        icon: "󰒭"
+        iconSize: 16
+        enabledState: root.player?.canGoNext ?? false
+        onClicked: {
+            if (root.player?.canGoNext) {
+                root.player.next()
+            }
+        }
     }
 
     Item { Layout.fillWidth: true }
-
-    // Loop
-    IconBtn {
-        icon: {
-            const ls = root.player?.loopState ?? MprisLoopState.None
-            return ls === MprisLoopState.Track ? "󰑘" : "󰑖"
-        }
-        iconSize:  13
-        iconColor: {
-            const ls = root.player?.loopState ?? MprisLoopState.None
-            return ls !== MprisLoopState.None ? Colors.primary : Colors.on_SurfaceVariant
-        }
-        onClicked: {
-            if (!root.player) return
-            const ls = root.player.loopState
-            if      (ls === MprisLoopState.None)     root.player.loopState = MprisLoopState.Playlist
-            else if (ls === MprisLoopState.Playlist) root.player.loopState = MprisLoopState.Track
-            else                                     root.player.loopState = MprisLoopState.None
-        }
-    }
 }

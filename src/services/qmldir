@@ -9,3 +9,4 @@ singleton BluetoothService    1.0 BluetoothService.qml
 singleton SessionService      1.0 SessionService.qml
 singleton BrightnessService   1.0 BrightnessService.qml
 singleton CaffeineService     1.0 CaffeineService.qml
+singleton MediaService        1.0 MediaService.qml
