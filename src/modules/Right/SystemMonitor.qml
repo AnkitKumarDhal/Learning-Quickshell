@@ -24,7 +24,7 @@ PillBase {
             color:          Colors.primary
             font.pointSize: 11
             font.bold:      true
-            font.family:    Fonts.font
+            font.family:    Fonts.fontM
             verticalAlignment: Text.AlignVCenter
         }
 
@@ -41,7 +41,7 @@ PillBase {
             color:          Colors.primary
             font.pointSize: 11
             font.bold:      true
-            font.family:    Fonts.font
+            font.family:    Fonts.fontM
             verticalAlignment: Text.AlignVCenter
         }
     }

@@ -178,9 +178,9 @@ Item {
                 text: root.player ? (root.player.trackTitle || "Unknown Track") : ""
                 color: Colors.primary
 
-                font.pointSize: 10.5
+                font.pointSize: 11
                 font.bold: true
-                font.family: Fonts.font
+                font.family: Fonts.fontM
 
                 elide: Text.ElideRight
                 width: Math.min(implicitWidth, 160)

@@ -21,7 +21,7 @@ PillBase {
         color: BatteryService.getColor()
         font.pointSize: 11
         font.bold:      true
-        font.family:    Fonts.font
+        font.family:    Fonts.fontM
         verticalAlignment: Text.AlignVCenter
 
         Behavior on color { ColorAnimation { duration: 300 } }

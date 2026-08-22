@@ -36,7 +36,7 @@ PillBase {
 
         color: root.caffeineColor
 
-        font.pixelSize: 11
+        font.pointSize: 11
         font.bold: CaffeineService.caffeineActive
         font.family: Fonts.fontM
 
@@ -61,7 +61,7 @@ PillBase {
 
         color: Colors.primary
 
-        font.pixelSize: 11
+        font.pointSize: 11
         font.bold: true
         font.family: Fonts.fontM
 

@@ -71,8 +71,8 @@ PillBase {
         visible: root.wifiGood && NetworkService.ssid.length > 0
         text: NetworkService.ssid
 
-        font.family: Fonts.font
-        font.pixelSize: 12
+        font.family: Fonts.fontM
+        font.pixelSize: 11
         font.bold: true
 
         color: Colors.primary
@@ -137,7 +137,7 @@ PillBase {
         visible: !root.hasWifi && root.hasEthernet && !root.hasBluetooth
         text: SystemStats.activeInterface
 
-        font.family: Fonts.font
+        font.family: Fonts.fontM
         font.pixelSize: 12
         font.bold: true
 
