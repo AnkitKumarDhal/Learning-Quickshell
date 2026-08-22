@@ -11,6 +11,7 @@ Rectangle {
     property bool hoverEnabled: true
     property bool mouseEnabled: true
     readonly property bool hovered: hov.containsMouse
+    property alias backgroundData: backgroundContent.data
 
     signal clicked(var mouse)
     signal rightClicked(var mouse)
@@ -30,14 +31,22 @@ Rectangle {
         radius:       parent.radius
         color:        Colors.primary
         opacity:      hoverEnabled && hov.containsMouse ? Theme.hoverOpacity : 0
+        z:            2
 
         Behavior on opacity { NumberAnimation { duration: Theme.hoverFadeDuration } }
+    }
+
+    Item {
+        id: backgroundContent
+        anchors.fill: parent
+        z: 1
     }
 
     RowLayout {
         id: innerLayout
         anchors.centerIn: parent
         spacing:          8
+        z:                3
     }
 
     MouseArea {
@@ -47,6 +56,7 @@ Rectangle {
         hoverEnabled:    true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape:     Qt.PointingHandCursor
+        z:               4
 
         onClicked: (mouse) => mouse.button === Qt.RightButton ? root.rightClicked(mouse) : root.clicked(mouse)
         onWheel:   (wheel) => root.scrolled(wheel)

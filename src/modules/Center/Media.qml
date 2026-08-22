@@ -51,6 +51,90 @@ Item {
             root.player.volume = Math.max(0, Math.min(1, root.player.volume + delta * step))
         }
 
+        backgroundData: [
+            Item {
+                id: visualizerLayer
+
+                anchors.fill: parent
+
+                property real visualizerBarWidth: 2
+                property real visualizerBarSpacing: 4
+                property int visualizerBarCount: Math.max(6, Math.floor((width + visualizerBarSpacing) / (visualizerBarWidth + visualizerBarSpacing)))
+
+                layer.enabled: true
+                layer.effect: OpacityMask {
+                    maskSource: Rectangle {
+                        width: visualizerLayer.width
+                        height: visualizerLayer.height
+                        radius: Theme.pillRadius
+                        color: "white"
+                    }
+                }
+
+                Repeater {
+                    id: visualizerBars
+
+                    model: visualizerLayer.visualizerBarCount
+
+                    Rectangle {
+                        property real targetHeight: 2
+
+                        x: index * (visualizerLayer.visualizerBarWidth + visualizerLayer.visualizerBarSpacing)
+                        y: visualizerLayer.height - height
+                        width: visualizerLayer.visualizerBarWidth
+                        height: targetHeight
+                        radius: width / 2
+                        color: Colors.primary
+                        opacity: root.isPlaying ? 0.18 : 0.08
+
+                        Behavior on targetHeight {
+                            NumberAnimation {
+                                duration: 160 + (index % 5) * 30
+                                easing.type: Easing.InOutSine
+                            }
+                        }
+
+                        Behavior on opacity {
+                            NumberAnimation { duration: Theme.hoverFadeDuration }
+                        }
+                    }
+                }
+
+                Timer {
+                    id: visualizerTimer
+
+                    interval: 140
+                    repeat: true
+                    running: root.isPlaying
+
+                    onTriggered: {
+                        for (let i = 0; i < visualizerBars.count; i++) {
+                            const bar = visualizerBars.itemAt(i)
+                            if (bar)
+                                bar.targetHeight = 2 + Math.random() * (visualizerLayer.height * 0.65)
+                        }
+                    }
+                }
+
+                Connections {
+                    target: root
+
+                    function onIsPlayingChanged() {
+                        for (let i = 0; i < visualizerBars.count; i++) {
+                            const bar = visualizerBars.itemAt(i)
+                            if (!bar)
+                                continue
+
+                            if (root.isPlaying)
+                                bar.targetHeight = 2 + Math.random() * (visualizerLayer.height * 0.65)
+                            else
+                                bar.targetHeight = 2
+                        }
+                    }
+                }
+            }
+        ]
+
         Row {
             id: contentRow
 
