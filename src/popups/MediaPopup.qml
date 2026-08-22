@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Services.Mpris
+
 import qs.src.components
 import qs.src.theme
 import qs.src.state
@@ -18,20 +19,34 @@ PanelWindow {
 
     anchors.top: true
 
-    implicitHeight: win.screen ? win.screen.height : 800
+    implicitHeight:
+        win.screen
+        ? win.screen.height
+        : 800
+
     implicitWidth: 600
 
     color: "transparent"
 
-    exclusionMode: ExclusionMode.Ignore
+    exclusionMode:
+        ExclusionMode.Ignore
 
-    visible: slide.windowVisible
+    visible:
+        slide.windowVisible
 
     mask: Region {
-        x: (win.implicitWidth - mediaCard.width) / 2
-        y: Theme.barHeight + 8
-        width: mediaCard.width
-        height: mediaCard.height
+        x:
+            (win.implicitWidth -
+             mediaCard.width) / 2
+
+        y:
+            Theme.barHeight + 8
+
+        width:
+            mediaCard.width
+
+        height:
+            mediaCard.height
     }
 
     property var player:
@@ -44,7 +59,15 @@ PanelWindow {
         MediaService.hasArt
 
     property real _position: 0
+
     property bool _seeking: false
+
+    property int trackChangeToken: 0
+
+    onPlayerChanged: {
+        _position = 0
+        trackChangeToken++
+    }
 
     Timer {
         interval: 1000
@@ -60,25 +83,37 @@ PanelWindow {
             if (!win.player)
                 return
 
-            win.player.positionChanged()
-            win._position = win.player.position
+            if (!win._seeking)
+                win._position =
+                    win.player.position
         }
     }
 
     Connections {
-        target: win.player ?? null
+        target:
+            win.player ?? null
 
+        /*
+         * Reset position as soon as MPRIS says
+         * the track changed.
+         */
         function onTrackChanged() {
             win._position = 0
         }
 
+        /*
+         * This is the important one for the visual transition.
+         * postTrackChanged occurs after the new metadata/artwork
+         * has propagated, so MediaArt won't grab the old cover.
+         */
         function onPostTrackChanged() {
-            win._position = 0
+            win.trackChangeToken++
         }
 
         function onPositionChanged() {
             if (!win._seeking)
-                win._position = win.player?.position ?? 0
+                win._position =
+                    win.player?.position ?? 0
         }
     }
 
@@ -87,7 +122,8 @@ PanelWindow {
 
         anchors.fill: parent
 
-        open: Popups.mediaOpen
+        open:
+            Popups.mediaOpen
 
         edge: "top"
 
@@ -99,41 +135,49 @@ PanelWindow {
             id: mediaCard
 
             width: 560
+            height: 230
 
             anchors.top: parent.top
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.topMargin: Theme.barHeight + 8
+            anchors.horizontalCenter:
+                parent.horizontalCenter
 
-            implicitHeight: 270
+            anchors.topMargin:
+                Theme.barHeight + 8
 
-            radius: Theme.popupRadius
+            radius:
+                Theme.popupRadius
 
-            color: Colors.surfaceContainer
+            color:
+                Colors.surfaceContainer
 
-            border.color: Colors.outlineVariant
-            border.width: Theme.popupBorder
+            border.color:
+                Colors.outlineVariant
+
+            border.width:
+                Theme.popupBorder
 
             clip: true
 
-            // ─────────────────────────────────────────────────────────────
-            // Artwork glow layer
-            // ─────────────────────────────────────────────────────────────
-
+            /*
+             * Subtle blurred-art background.
+             */
             Item {
                 anchors.fill: parent
 
-                opacity: win.hasArt ? 0.14 : 0
+                opacity:
+                    win.hasArt
+                    ? 0.14
+                    : 0
 
                 Behavior on opacity {
                     NumberAnimation {
                         duration: 350
-                        easing.type: Easing.OutCubic
+                        easing.type:
+                            Easing.OutCubic
                     }
                 }
 
                 Image {
-                    id: backgroundArt
-
                     anchors.fill: parent
 
                     source:
@@ -141,25 +185,22 @@ PanelWindow {
                         ? win.player.trackArtUrl
                         : ""
 
-                    fillMode: Image.PreserveAspectCrop
+                    fillMode:
+                        Image.PreserveAspectCrop
 
                     asynchronous: true
-
                     smooth: true
                 }
 
                 Rectangle {
                     anchors.fill: parent
 
-                    color: Colors.surfaceContainer
+                    color:
+                        Colors.surfaceContainer
 
                     opacity: 0.82
                 }
             }
-
-            // ─────────────────────────────────────────────────────────────
-            // Main content
-            // ─────────────────────────────────────────────────────────────
 
             RowLayout {
                 anchors.fill: parent
@@ -168,27 +209,44 @@ PanelWindow {
 
                 spacing: 16
 
-                // Album artwork
+                /*
+                 * Square artwork. No fillHeight/fillWidth here,
+                 * otherwise RowLayout stretches it.
+                 */
                 MediaArt {
                     id: art
 
-                    player: win.player
-                    hasArt: win.hasArt
+                    player:
+                        win.player
 
-                    Layout.preferredWidth: 192
-                    Layout.preferredHeight: 192
+                    hasArt:
+                        win.hasArt
+
+                    transitionKey:
+                        win.trackChangeToken
+
+                    Layout.preferredWidth: 196
+                    Layout.preferredHeight: 196
+
+                    Layout.alignment:
+                        Qt.AlignVCenter
                 }
 
-                // Right side
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
 
-                    spacing: 8
+                    Layout.alignment:
+                        Qt.AlignVCenter
 
-                    // Player identity
+                    spacing: 6
+
+                    /*
+                     * Player/device identity.
+                     */
                     RowLayout {
                         Layout.fillWidth: true
+                        Layout.preferredHeight: 18
 
                         Item {
                             Layout.fillWidth: true
@@ -197,6 +255,7 @@ PanelWindow {
                         Rectangle {
                             width: 7
                             height: 7
+
                             radius: 3.5
 
                             color:
@@ -212,34 +271,54 @@ PanelWindow {
                         }
 
                         Text {
-                            text: MediaService.playerIdentity
+                            text:
+                                MediaService.playerIdentity
 
-                            color: Colors.on_SurfaceVariant
+                            color:
+                                Colors.on_SurfaceVariant
 
-                            font.family: Fonts.font
+                            font.family:
+                                Fonts.font
+
                             font.pointSize: 8.5
                             font.bold: true
 
-                            elide: Text.ElideRight
+                            elide:
+                                Text.ElideRight
+
+                            maximumLineCount: 1
                         }
                     }
 
-                    // Track information
+                    /*
+                     * Track metadata.
+                     */
                     MediaTrackInfo {
-                        player: win.player
+                        player:
+                            win.player
+
+                        transitionKey:
+                            win.trackChangeToken
 
                         Layout.fillWidth: true
+                        Layout.preferredHeight: 54
                     }
 
-                    // Progress
+                    /*
+                     * Progress + timestamps.
+                     */
                     MediaProgress {
-                        player: win.player
+                        player:
+                            win.player
 
-                        position: win._position
+                        position:
+                            win._position
 
-                        seeking: win._seeking
+                        seeking:
+                            win._seeking
 
                         Layout.fillWidth: true
+                        Layout.preferredHeight: 31
 
                         onSeekStarted: (pos) => {
                             win._seeking = true
@@ -251,31 +330,54 @@ PanelWindow {
                         }
 
                         onSeekReleased: (pos) => {
-                            if (win.player && win.player.canSeek)
+                            if (
+                                win.player &&
+                                win.player.canSeek
+                            ) {
                                 win.player.position = pos
+                            }
 
                             win._seeking = false
                         }
                     }
 
-                    // Main transport controls
+                    /*
+                     * Shuffle / previous / play / next / repeat.
+                     */
                     MediaControls {
-                        player: win.player
+                        player:
+                            win.player
 
-                        isPlaying: win.isPlaying
-
-                        Layout.fillWidth: true
-                    }
-
-                    // Volume
-                    MediaVolumeRow {
-                        player: win.player
+                        isPlaying:
+                            win.isPlaying
 
                         Layout.fillWidth: true
+                        Layout.preferredHeight: 40
                     }
 
                     Item {
                         Layout.fillHeight: true
+                    }
+
+                    /*
+                     * Only the speaker icon is visible normally.
+                     * Hovering it expands the volume slider.
+                     */
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 28
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        MediaVolumeRow {
+                            player:
+                                win.player
+
+                            Layout.preferredWidth: 30
+                            Layout.preferredHeight: 24
+                        }
                     }
                 }
             }

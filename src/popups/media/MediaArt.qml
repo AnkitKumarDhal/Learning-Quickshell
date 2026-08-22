@@ -9,40 +9,213 @@ Item {
     required property var player
     required property bool hasArt
 
-    property string currentArt: ""
+    property int transitionKey: 0
+
+    property string displayedArt: ""
+    property string incomingArt: ""
 
     property bool showingFront: true
+    property bool initialized: false
 
-    Layout.fillWidth: true
-    Layout.fillHeight: true
+    Layout.preferredWidth: 196
+    Layout.preferredHeight: 196
 
     Component.onCompleted: {
-        currentArt = root.hasArt
-                ? root.player.trackArtUrl
-                : ""
+        initializeArtwork()
+        initialized = true
     }
 
-    Connections {
-        target: root.player ?? null
+    onPlayerChanged: {
+        initializeArtwork()
+    }
 
-        function onTrackChanged() {
-            root.updateArtwork()
-        }
+    onTransitionKeyChanged: {
+        if (
+            !root.initialized ||
+            !root.player
+        )
+            return
 
-        function onPostTrackChanged() {
-            root.updateArtwork()
-        }
+        updateArtwork()
+    }
+
+    function initializeArtwork() {
+        const nextArt =
+            root.player?.trackArtUrl || ""
+
+        artworkTransition.stop()
+
+        displayedArt = nextArt
+        incomingArt = ""
+
+        showingFront = true
+
+        frontImage.source = nextArt
+        frontImage.opacity =
+            nextArt !== ""
+            ? 1
+            : 0
+
+        frontImage.x = 0
+
+        backImage.opacity = 0
+        backImage.x =
+            root.width * 0.08
     }
 
     function updateArtwork() {
         const nextArt =
-            root.player?.trackArtUrl ?? ""
+            root.player?.trackArtUrl || ""
 
-        if (nextArt === root.currentArt)
+        if (
+            nextArt ===
+            root.displayedArt
+        )
             return
 
-        root.currentArt = nextArt
-        root.showingFront = !root.showingFront
+        root.incomingArt = nextArt
+
+        const incoming =
+            root.showingFront
+            ? backImage
+            : frontImage
+
+        const outgoing =
+            root.showingFront
+            ? frontImage
+            : backImage
+
+        /*
+         * The incoming layer always receives the newest
+         * artwork before the animation starts.
+         */
+        incoming.source =
+            nextArt
+
+        incoming.x =
+            root.width * 0.08
+
+        incoming.opacity = 0
+
+        /*
+         * Reset the outgoing layer to its current visual
+         * starting state in case a previous transition was
+         * interrupted.
+         */
+        outgoing.x = 0
+        outgoing.opacity = 1
+
+        artworkTransition.restart()
+    }
+
+    ParallelAnimation {
+        id: artworkTransition
+
+        NumberAnimation {
+            target:
+                root.showingFront
+                ? frontImage
+                : backImage
+
+            property: "x"
+
+            to:
+                -root.width * 0.08
+
+            duration: 300
+
+            easing.type:
+                Easing.InOutCubic
+        }
+
+        NumberAnimation {
+            target:
+                root.showingFront
+                ? frontImage
+                : backImage
+
+            property: "opacity"
+
+            to: 0
+
+            duration: 240
+
+            easing.type:
+                Easing.InOutCubic
+        }
+
+        NumberAnimation {
+            target:
+                root.showingFront
+                ? backImage
+                : frontImage
+
+            property: "x"
+
+            to: 0
+
+            duration: 350
+
+            easing.type:
+                Easing.OutCubic
+        }
+
+        NumberAnimation {
+            target:
+                root.showingFront
+                ? backImage
+                : frontImage
+
+            property: "opacity"
+
+            to: 1
+
+            duration: 320
+
+            easing.type:
+                Easing.OutCubic
+        }
+
+        onFinished: {
+            root.showingFront =
+                !root.showingFront
+
+            root.displayedArt =
+                root.incomingArt
+
+            root.incomingArt = ""
+
+            /*
+             * Do NOT clear the previous image source.
+             *
+             * Both layers retain their last artwork. On the next
+             * transition, the hidden layer is simply replaced with
+             * the new artwork.
+             */
+            if (root.showingFront) {
+                frontImage.x = 0
+                frontImage.opacity =
+                    root.hasArt
+                    ? 1
+                    : 0
+
+                backImage.x =
+                    root.width * 0.08
+
+                backImage.opacity = 0
+            } else {
+                backImage.x = 0
+                backImage.opacity =
+                    root.hasArt
+                    ? 1
+                    : 0
+
+                frontImage.x =
+                    root.width * 0.08
+
+                frontImage.opacity = 0
+            }
+        }
     }
 
     Rectangle {
@@ -70,44 +243,29 @@ Item {
 
         anchors.fill: parent
 
-        source:
-            root.showingFront
-            ? root.currentArt
-            : ""
+        fillMode:
+            Image.PreserveAspectCrop
 
-        fillMode: Image.PreserveAspectCrop
-
+        asynchronous: true
         smooth: true
 
         layer.enabled: true
 
         layer.effect: OpacityMask {
-            maskSource: frontMask
+            maskSource:
+                frontMask
         }
 
         opacity:
-            root.showingFront && root.hasArt
+            root.hasArt &&
+            root.showingFront
             ? 1
             : 0
 
         x:
             root.showingFront
             ? 0
-            : -18
-
-        Behavior on opacity {
-            NumberAnimation {
-                duration: 300
-                easing.type: Easing.OutCubic
-            }
-        }
-
-        Behavior on x {
-            NumberAnimation {
-                duration: 350
-                easing.type: Easing.OutCubic
-            }
-        }
+            : width * 0.08
     }
 
     Image {
@@ -115,44 +273,29 @@ Item {
 
         anchors.fill: parent
 
-        source:
-            root.showingFront
-            ? ""
-            : root.currentArt
+        fillMode:
+            Image.PreserveAspectCrop
 
-        fillMode: Image.PreserveAspectCrop
-
+        asynchronous: true
         smooth: true
 
         layer.enabled: true
 
         layer.effect: OpacityMask {
-            maskSource: backMask
+            maskSource:
+                backMask
         }
 
         opacity:
-            !root.showingFront && root.hasArt
+            root.hasArt &&
+            !root.showingFront
             ? 1
             : 0
 
         x:
             root.showingFront
-            ? 18
+            ? width * 0.08
             : 0
-
-        Behavior on opacity {
-            NumberAnimation {
-                duration: 300
-                easing.type: Easing.OutCubic
-            }
-        }
-
-        Behavior on x {
-            NumberAnimation {
-                duration: 350
-                easing.type: Easing.OutCubic
-            }
-        }
     }
 
     Rectangle {
@@ -160,19 +303,25 @@ Item {
 
         radius: 12
 
-        visible: !root.hasArt
+        visible:
+            !root.hasArt
 
-        color: Colors.surfaceContainerHigh
+        color:
+            Colors.surfaceContainerHigh
 
         Text {
-            anchors.centerIn: parent
+            anchors.centerIn:
+                parent
 
             text: "󰎆"
 
-            font.family: Fonts.fontM
+            font.family:
+                Fonts.fontM
+
             font.pointSize: 42
 
-            color: Colors.on_SurfaceVariant
+            color:
+                Colors.on_SurfaceVariant
         }
     }
 }

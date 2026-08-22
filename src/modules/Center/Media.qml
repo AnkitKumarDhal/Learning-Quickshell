@@ -16,62 +16,112 @@ Row {
     visible: MediaService.hasPlayer
 
     property var player: MediaService.activePlayer
-    property bool hasArt: player !== null && player.trackArtUrl !== ""
-    property bool isPlaying: player?.playbackState === MprisPlaybackState.Playing ?? false
+
+    property bool hasArt:
+        player !== null &&
+        player.trackArtUrl !== ""
+
+    property bool isPlaying:
+        player?.playbackState === MprisPlaybackState.Playing ?? false
 
     PillBase {
         hoverExpand: false
-        implicitWidth: contentRow.implicitWidth + Theme.pillPadding
 
-        onClicked: Popups.mediaOpen = !Popups.mediaOpen
+        implicitWidth:
+            contentRow.implicitWidth +
+            Theme.pillPadding
+
+        onClicked: {
+            Popups.mediaOpen = !Popups.mediaOpen
+        }
+
         onRightClicked: {
             if (root.player?.canTogglePlaying)
                 root.player.togglePlaying()
         }
-        onScrolled: (wheel) => {
-            if (!root.player?.volumeSupported) return
 
-            const delta = wheel.angleDelta.y / 120
+        onScrolled: (wheel) => {
+            if (!root.player?.volumeSupported)
+                return
+
+            const delta =
+                wheel.angleDelta.y / 120
+
             const step = 0.05
 
-            root.player.volume = Math.max(0, Math.min(1, root.player.volume + delta * step))
+            root.player.volume = Math.max(
+                0,
+                Math.min(
+                    1,
+                    root.player.volume +
+                    delta * step
+                )
+            )
         }
 
         Row {
             id: contentRow
 
-            Layout.alignment: Qt.AlignVCenter
             spacing: 8
 
             Item {
                 width: 20
                 height: 20
+
                 visible: root.hasArt
 
                 Rectangle {
                     id: artMask
+
                     anchors.fill: parent
-                    radius: width / 2
+
+                    radius:
+                        width / 2
+
                     visible: false
                 }
 
                 Image {
+                    id: artImage
+
                     anchors.fill: parent
-                    source: root.hasArt ? root.player.trackArtUrl : ""
-                    fillMode: Image.PreserveAspectCrop
+
+                    source:
+                        root.hasArt
+                        ? root.player.trackArtUrl
+                        : ""
+
+                    fillMode:
+                        Image.PreserveAspectCrop
+
                     smooth: true
 
                     layer.enabled: true
+
                     layer.effect: OpacityMask {
                         maskSource: artMask
                     }
+                }
 
-                    NumberAnimation on rotation {
-                        from: 0
-                        to: 360
-                        duration: 5000
-                        loops: Animation.Infinite
-                        running: root.isPlaying
+                /*
+                 * The old NumberAnimation was restarting from 0 whenever
+                 * playback resumed. This timer advances the existing
+                 * rotation value instead, so pausing never resets it.
+                 */
+                Timer {
+                    id: spinTimer
+
+                    interval: 16
+                    repeat: true
+
+                    running: root.isPlaying
+
+                    onTriggered: {
+                        artImage.rotation =
+                            (
+                                artImage.rotation +
+                                (360 * interval / 5000)
+                            ) % 360
                     }
                 }
             }
@@ -79,25 +129,33 @@ Row {
             Text {
                 id: trackTitle
 
-                anchors.verticalCenter: parent.verticalCenter
-                text: root.player ? (root.player.trackTitle || "Unknown Track") : ""
-                color: Colors.primary
+                anchors.verticalCenter:
+                    parent.verticalCenter
+
+                text:
+                    root.player
+                    ? (
+                        root.player.trackTitle ||
+                        "Unknown Track"
+                    )
+                    : ""
+
+                color:
+                    Colors.primary
 
                 font.pointSize: 10.5
                 font.bold: true
                 font.family: Fonts.font
 
-                elide: Text.ElideRight
-                width: Math.min(implicitWidth, 160)
+                elide:
+                    Text.ElideRight
+
+                width:
+                    Math.min(
+                        implicitWidth,
+                        160
+                    )
             }
-        }
-    }
-
-    Connections {
-        target: root.player ?? null
-
-        function onTrackChanged() {
-            // intentionally empty
         }
     }
 }

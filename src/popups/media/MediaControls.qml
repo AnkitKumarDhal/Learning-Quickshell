@@ -17,8 +17,11 @@ RowLayout {
         id: button
 
         property string icon: ""
-        property color iconColor: Colors.on_SurfaceVariant
+        property color iconColor:
+            Colors.on_SurfaceVariant
+
         property int iconSize: 16
+
         property bool enabledState: true
 
         signal clicked()
@@ -45,8 +48,7 @@ RowLayout {
                 ? 30
                 : 26
 
-            height:
-                width
+            height: width
 
             radius:
                 width / 2
@@ -64,20 +66,23 @@ RowLayout {
             Behavior on width {
                 NumberAnimation {
                     duration: 120
-                    easing.type: Easing.OutCubic
+                    easing.type:
+                        Easing.OutCubic
                 }
             }
 
             Behavior on height {
                 NumberAnimation {
                     duration: 120
-                    easing.type: Easing.OutCubic
+                    easing.type:
+                        Easing.OutCubic
                 }
             }
 
             Behavior on color {
                 ColorAnimation {
-                    duration: Theme.hoverFadeDuration
+                    duration:
+                        Theme.hoverFadeDuration
                 }
             }
         }
@@ -85,29 +90,37 @@ RowLayout {
         Text {
             anchors.centerIn: parent
 
-            text: button.icon
+            text:
+                button.icon
 
-            font.family: Fonts.fontM
-            font.pointSize: button.iconSize
+            font.family:
+                Fonts.fontM
 
-            color: button.iconColor
+            font.pointSize:
+                button.iconSize
+
+            color:
+                button.iconColor
         }
 
         MouseArea {
             id: mouse
 
-            anchors.fill: parent
+            anchors.fill:
+                parent
 
             hoverEnabled: true
 
-            enabled: button.enabledState
+            enabled:
+                button.enabledState
 
             cursorShape:
                 enabled
                 ? Qt.PointingHandCursor
                 : Qt.ArrowCursor
 
-            onClicked: button.clicked()
+            onClicked:
+                button.clicked()
         }
     }
 
@@ -127,14 +140,13 @@ RowLayout {
             : Colors.on_SurfaceVariant
 
         enabledState:
-            root.player?.canControl &&
-            root.player?.shuffleSupported
+            root.player?.shuffleSupported ??
+            false
 
         onClicked: {
             if (
                 root.player &&
-                root.player.shuffleSupported &&
-                root.player.canControl
+                root.player.shuffleSupported
             ) {
                 root.player.shuffle =
                     !root.player.shuffle
@@ -149,15 +161,19 @@ RowLayout {
         iconSize: 16
 
         enabledState:
-            root.player?.canGoPrevious ?? false
+            root.player?.canGoPrevious ??
+            false
 
         onClicked: {
-            if (root.player?.canGoPrevious)
+            if (
+                root.player?.canGoPrevious
+            ) {
                 root.player.previous()
+            }
         }
     }
 
-    // Play / pause
+    // Play / Pause
     Item {
         Layout.preferredWidth: 44
         Layout.preferredHeight: 44
@@ -166,7 +182,8 @@ RowLayout {
             playMouse.containsMouse
 
         Rectangle {
-            anchors.centerIn: parent
+            anchors.centerIn:
+                parent
 
             width:
                 parent.hovered
@@ -175,7 +192,8 @@ RowLayout {
 
             height: width
 
-            radius: width / 2
+            radius:
+                width / 2
 
             color:
                 parent.hovered
@@ -195,41 +213,48 @@ RowLayout {
             Behavior on width {
                 NumberAnimation {
                     duration: 130
-                    easing.type: Easing.OutCubic
+                    easing.type:
+                        Easing.OutCubic
                 }
             }
 
             Behavior on color {
                 ColorAnimation {
-                    duration: Theme.hoverFadeDuration
+                    duration:
+                        Theme.hoverFadeDuration
                 }
             }
         }
 
         Text {
-            anchors.centerIn: parent
+            anchors.centerIn:
+                parent
 
             text:
                 root.isPlaying
                 ? "󰏤"
                 : "󰐊"
 
-            font.family: Fonts.fontM
+            font.family:
+                Fonts.fontM
 
             font.pointSize: 18
 
-            color: Colors.primary
+            color:
+                Colors.primary
         }
 
         MouseArea {
             id: playMouse
 
-            anchors.fill: parent
+            anchors.fill:
+                parent
 
             hoverEnabled: true
 
             enabled:
-                root.player?.canTogglePlaying ?? false
+                root.player?.canTogglePlaying ??
+                false
 
             cursorShape:
                 enabled
@@ -237,8 +262,11 @@ RowLayout {
                 : Qt.ArrowCursor
 
             onClicked: {
-                if (root.player?.canTogglePlaying)
+                if (
+                    root.player?.canTogglePlaying
+                ) {
                     root.player.togglePlaying()
+                }
             }
         }
     }
@@ -250,11 +278,15 @@ RowLayout {
         iconSize: 16
 
         enabledState:
-            root.player?.canGoNext ?? false
+            root.player?.canGoNext ??
+            false
 
         onClicked: {
-            if (root.player?.canGoNext)
+            if (
+                root.player?.canGoNext
+            ) {
                 root.player.next()
+            }
         }
     }
 
@@ -265,7 +297,8 @@ RowLayout {
                 root.player?.loopState ??
                 MprisLoopState.None
 
-            return loop === MprisLoopState.Track
+            return loop ===
+                   MprisLoopState.Track
                    ? "󰑘"
                    : "󰑖"
         }
@@ -277,22 +310,23 @@ RowLayout {
                 root.player?.loopState ??
                 MprisLoopState.None
 
-            return loop !== MprisLoopState.None
+            return loop !==
+                   MprisLoopState.None
                    ? Colors.primary
                    : Colors.on_SurfaceVariant
         }
 
         enabledState:
-            root.player?.canControl &&
-            root.player?.loopSupported
+            root.player?.loopSupported ??
+            false
 
         onClicked: {
             if (
                 !root.player ||
-                !root.player.canControl ||
                 !root.player.loopSupported
-            )
+            ) {
                 return
+            }
 
             const loop =
                 root.player.loopState

@@ -15,7 +15,9 @@ ColumnLayout {
 
     Layout.fillWidth: true
 
-    spacing: 3
+    Layout.preferredHeight: 31
+
+    spacing: 2
 
     visible:
         root.player !== null &&
@@ -26,7 +28,7 @@ ColumnLayout {
 
         Layout.fillWidth: true
 
-        Layout.preferredHeight: 18
+        Layout.preferredHeight: 17
 
         property real trackLen:
             root.player?.length ?? 0
@@ -46,12 +48,19 @@ ColumnLayout {
             mouseArea.containsMouse
 
         Rectangle {
-            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenter:
+                parent.verticalCenter
 
-            width: parent.width
-            height: slider.hovered ? 5 : 4
+            width:
+                parent.width
 
-            radius: height / 2
+            height:
+                slider.hovered
+                ? 5
+                : 4
+
+            radius:
+                height / 2
 
             color:
                 Colors.surfaceContainerHighest
@@ -64,8 +73,11 @@ ColumnLayout {
         }
 
         Rectangle {
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
+            anchors.left:
+                parent.left
+
+            anchors.verticalCenter:
+                parent.verticalCenter
 
             width:
                 parent.width *
@@ -76,16 +88,20 @@ ColumnLayout {
                 ? 5
                 : 4
 
-            radius: height / 2
+            radius:
+                height / 2
 
-            color: Colors.primary
+            color:
+                Colors.primary
 
             Behavior on width {
-                enabled: !root.seeking
+                enabled:
+                    !root.seeking
 
                 NumberAnimation {
                     duration: 250
-                    easing.type: Easing.OutCubic
+                    easing.type:
+                        Easing.OutCubic
                 }
             }
 
@@ -97,7 +113,8 @@ ColumnLayout {
         }
 
         Rectangle {
-            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenter:
+                parent.verticalCenter
 
             x:
                 parent.width *
@@ -110,31 +127,26 @@ ColumnLayout {
                 : 8
 
             height:
-                slider.hovered
-                ? 12
-                : 8
+                width
 
             radius:
                 width / 2
 
-            color: Colors.primary
+            color:
+                Colors.primary
 
             Behavior on x {
-                enabled: !root.seeking
+                enabled:
+                    !root.seeking
 
                 NumberAnimation {
                     duration: 250
-                    easing.type: Easing.OutCubic
+                    easing.type:
+                        Easing.OutCubic
                 }
             }
 
             Behavior on width {
-                NumberAnimation {
-                    duration: 120
-                }
-            }
-
-            Behavior on height {
                 NumberAnimation {
                     duration: 120
                 }
@@ -144,10 +156,12 @@ ColumnLayout {
         MouseArea {
             id: mouseArea
 
-            anchors.fill: parent
+            anchors.fill:
+                parent
 
             enabled:
-                root.player?.canSeek ?? false
+                root.player?.canSeek ??
+                false
 
             hoverEnabled: true
 
@@ -164,14 +178,15 @@ ColumnLayout {
                         1
                     )
                 ) * (
-                    root.player?.length ?? 0
+                    root.player?.length ??
+                    0
                 )
             }
 
             onPressed: (mouse) => {
-                const pos = positionFromMouse(mouse.x)
-
-                root.seekStarted(pos)
+                root.seekStarted(
+                    positionFromMouse(mouse.x)
+                )
             }
 
             onPositionChanged: (mouse) => {
@@ -194,12 +209,20 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
 
+        Layout.preferredHeight: 12
+
         Text {
-            text: root.formatTime(root.position)
+            text:
+                root.formatTime(
+                    root.position
+                )
 
-            color: Colors.on_SurfaceVariant
+            color:
+                Colors.on_SurfaceVariant
 
-            font.family: Fonts.font
+            font.family:
+                Fonts.font
+
             font.pointSize: 8
         }
 
@@ -210,32 +233,40 @@ ColumnLayout {
         Text {
             text:
                 root.formatTime(
-                    root.player?.length ?? 0
+                    root.player?.length ??
+                    0
                 )
 
-            color: Colors.on_SurfaceVariant
+            color:
+                Colors.on_SurfaceVariant
 
-            font.family: Fonts.font
+            font.family:
+                Fonts.font
+
             font.pointSize: 8
         }
     }
 
     function formatTime(seconds) {
-        const s = Math.max(
-            0,
-            Math.floor(seconds)
-        )
+        const s =
+            Math.max(
+                0,
+                Math.floor(seconds)
+            )
 
-        const minutes = Math.floor(s / 60)
+        const minutes =
+            Math.floor(s / 60)
 
         const secs =
-            String(s % 60)
-            .padStart(2, "0")
+            String(
+                s % 60
+            ).padStart(
+                2,
+                "0"
+            )
 
-        return "%1:%2".arg(
-            minutes
-        ).arg(
-            secs
-        )
+        return "%1:%2"
+            .arg(minutes)
+            .arg(secs)
     }
 }
