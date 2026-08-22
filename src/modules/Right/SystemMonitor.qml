@@ -28,6 +28,15 @@ PillBase {
             verticalAlignment: Text.AlignVCenter
         }
 
+        Rectangle {
+            width:          1
+            height:         14
+            radius:         0.5
+            color:          Colors.outlineVariant
+            opacity:        0.8
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
         Text {
             text:           " " + Math.round(root.memUsage) + "%"
             color:          Colors.primary

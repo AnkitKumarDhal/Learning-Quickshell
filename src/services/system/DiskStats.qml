@@ -9,50 +9,79 @@ Singleton {
     readonly property var partitions: root._partitions
 
     property var _partitions: []
-    property var _currentPartitions: []
 
     Process {
         id: diskProc
         command: ["sh", "-c",
-            "df -B1 --output=target,fstype,used,size -x tmpfs -x devtmpfs -x overlay -x squashfs 2>/dev/null | tail -n +2"]
+            "lsblk -J -b -o NAME,TYPE,FSTYPE,LABEL,PARTLABEL,SIZE,FSUSED,FSAVAIL,FSUSE%,MOUNTPOINTS -e 1,7,11 2>/dev/null | tr -d '\\n'"]
         running: false
 
         stdout: SplitParser {
             onRead: (line) => {
-                const match = line.match(/^(.*)\s+(\S+)\s+(\d+)\s+(\d+)\s*$/)
-                if (!match) return
+                try {
+                    const data = JSON.parse(line)
+                    const devices = []
 
-                const mount = match[1].trim()
-                const fsType = match[2]
-                const used = Number(match[3])
-                const total = Number(match[4])
+                    function collect(nodes) {
+                        for (const node of (nodes || [])) {
+                            const type = node.type || ""
+                            const name = node.name || ""
+                            const fsUse = node["fsuse%"] || ""
+                            const size = Number(node.size || 0)
+                            const fsUsed = Number(node.fsused || 0)
+                            const fsAvail = Number(node.fsavail || 0)
 
-                if (!mount || !total || isNaN(used) || isNaN(total)) return
-                if (/^(proc|sysfs|devfs|devpts|cgroup.*|pstore|debugfs|securityfs|tracefs|configfs|fusectl|mqueue)$/.test(fsType)) return
+                            const ignored =
+                                name.startsWith("zram") ||
+                                name.startsWith("loop") ||
+                                type === "rom" ||
+                                type === "ram"
 
-                root._currentPartitions.push({ mount, fsType, used, total })
+                            if (!ignored && size > 0 && fsUse !== "") {
+                                const percentage = parseInt(String(fsUse).replace("%", ""))
+
+                                if (!isNaN(percentage)) {
+                                    let mountPoint = ""
+
+                                    if (Array.isArray(node.mountpoints) && node.mountpoints.length > 0)
+                                        mountPoint = node.mountpoints.find(point => point && point !== "null") || ""
+
+                                    devices.push({
+                                        name,
+                                        type,
+                                        fsType: node.fstype || "",
+                                        size,
+                                        used: fsUsed,
+                                        available: fsAvail,
+                                        percentage,
+                                        mountPoint
+                                    })
+                                }
+                            }
+
+                            if (node.children)
+                                collect(node.children)
+                        }
+                    }
+
+                    collect(data.blockdevices)
+
+                    root._partitions = devices
+                        .sort((a, b) => {
+                            if (a.mountPoint === "/" && b.mountPoint !== "/") return -1
+                            if (b.mountPoint === "/" && a.mountPoint !== "/") return 1
+                            return b.percentage - a.percentage
+                        })
+                        .slice(0, 6)
+                } catch (error) {
+                    root._partitions = []
+                }
             }
-        }
-
-        onExited: {
-            root._partitions = root._currentPartitions
-                .slice()
-                .sort((a, b) => {
-                    if (a.mount === "/") return -1
-                    if (b.mount === "/") return 1
-                    return (b.used / b.total) - (a.used / a.total)
-                })
-                .slice(0, 6)
-            root._currentPartitions = []
         }
     }
 
-    Timer {
-        interval:        10000
-        running:         true
-        repeat:          true
-        triggeredOnStart: true
-
-        onTriggered: diskProc.running = true
+    function refresh() {
+        if (!diskProc.running)
+            diskProc.running = true
     }
 }

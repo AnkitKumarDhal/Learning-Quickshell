@@ -5,14 +5,14 @@ import qs.src.theme
 Item {
     id: root
 
-    property string label:      "/"
-    property string mountPoint: "/"
-    property string fsType:     ""
-    property real   usedBytes:  0
-    property real   totalBytes: 1
-    property real   freeBytes:  1
+    property string device: ""
+    property string mountPoint:  ""
+    property string fsType:      ""
+    property real   usedBytes:   0
+    property real   totalBytes:  1
+    property real   percentage:  0
 
-    readonly property real fraction: totalBytes > 0 ? Math.max(0, Math.min(usedBytes / totalBytes, 1)) : 0
+    readonly property real fraction: Math.max(0, Math.min(root.percentage / 100, 1))
 
     function formatSize(bytes) {
         if (bytes >= 1e12) return (bytes / 1e12).toFixed(1) + " TB"
@@ -21,7 +21,7 @@ Item {
         return bytes.toFixed(0) + " B"
     }
 
-    implicitHeight: 36
+    implicitHeight: 44
 
     ColumnLayout {
         anchors.fill: parent
@@ -31,53 +31,77 @@ Item {
             Layout.fillWidth: true
 
             Text {
-                text:           root.label
-                color:          Colors.on_SurfaceVariant
+                text:           root.device
+                color:          Colors.on_Surface
                 font.pixelSize: 11
+                font.bold:      true
                 font.family:    Fonts.font
                 Layout.fillWidth: true
                 elide:          Text.ElideRight
             }
 
             Text {
-                text:           Math.round(root.fraction * 100) + "%"
-                color:          root.fraction >= 0.9
+                text:           Math.round(root.percentage) + "%"
+                color:          root.percentage >= 90
                                     ? Colors.error
-                                    : root.fraction >= 0.7
+                                    : root.percentage >= 70
                                         ? Colors.tertiary
                                         : Colors.on_Surface
                 font.pixelSize: 11
                 font.bold:      true
                 font.family:    Fonts.font
             }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+
+            Text {
+                visible:        root.mountPoint !== ""
+                text:           root.mountPoint
+                color:          Colors.on_SurfaceVariant
+                font.pixelSize: 9
+                font.family:    Fonts.font
+                Layout.fillWidth: true
+                elide:          Text.ElideRight
+            }
 
             Text {
                 text:           root.formatSize(root.usedBytes) + " / " + root.formatSize(root.totalBytes)
-                color:          Colors.on_Surface
-                font.pixelSize: 11
-                font.bold:      true
+                color:          Colors.on_SurfaceVariant
+                font.pixelSize: 9
                 font.family:    Fonts.font
             }
         }
 
         Rectangle {
             Layout.fillWidth: true
-            height:  6
-            radius:  3
+            height:  5
+            radius:  2.5
             color:   Colors.surfaceContainerHighest
 
             Rectangle {
                 width:  parent.width * root.fraction
                 height: parent.height
                 radius: parent.radius
-                color:  root.fraction >= 0.9
+                color:  root.percentage >= 90
                             ? Colors.error
-                            : root.fraction >= 0.7
+                            : root.percentage >= 70
                                 ? Colors.tertiary
                                 : Colors.primary
 
-                Behavior on width { NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                Behavior on color { ColorAnimation  { duration: 250 } }
+                Behavior on width {
+                    NumberAnimation {
+                        duration: 450
+                        easing.type: Easing.OutCubic
+                    }
+                }
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 250
+                    }
+                }
             }
         }
     }

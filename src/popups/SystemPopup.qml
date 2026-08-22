@@ -37,7 +37,13 @@ PanelWindow {
         anchors.fill: parent
         edge: "top"
         open: Popups.systemOpen && Popups.systemScreen === root.screen
+
         onCloseRequested: Popups.systemOpen = false
+
+        on_EffectiveOpenChanged: {
+            if (_effectiveOpen)
+                DiskStats.refresh()
+        }
 
         Rectangle {
             id: sysCard
@@ -66,38 +72,22 @@ PanelWindow {
                 spacing: 12
 
                 // ── Header ────────────────────────────────────────────────────────
-                RowLayout {
+                ColumnLayout {
                     Layout.fillWidth: true
+                    spacing: 0
 
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 0
-
-                        Text {
-                            text:           "System"
-                            color:          Colors.on_Surface
-                            font.pixelSize: 14
-                            font.bold:      true
-                            font.family:    Fonts.font
-                        }
-
-                        Text {
-                            text:           "Live system overview"
-                            color:          Colors.on_SurfaceVariant
-                            font.pixelSize: 9
-                            font.family:    Fonts.font
-                        }
+                    Text {
+                        text:           "System"
+                        color:          Colors.on_Surface
+                        font.pixelSize: 14
+                        font.bold:      true
+                        font.family:    Fonts.font
                     }
 
                     Text {
-                        text:           SystemStats.activeInterface !== ""
-                                      ? SystemStats.activeInterface
-                                      : "Offline"
-                        color:          SystemStats.activeInterface !== ""
-                                      ? Colors.primary
-                                      : Colors.outline
-                        font.pixelSize: 10
-                        font.bold:      true
+                        text:           "Live system overview"
+                        color:          Colors.on_SurfaceVariant
+                        font.pixelSize: 9
                         font.family:    Fonts.font
                     }
                 }
@@ -272,24 +262,40 @@ PanelWindow {
                             Layout.fillWidth: true
                         }
 
-                        RowLayout {
-                            spacing: 8
+                        Text {
+                            text:           SystemStats.activeInterface !== ""
+                                          ? SystemStats.activeInterface
+                                          : "Offline"
+                            color:          SystemStats.activeInterface !== ""
+                                          ? Colors.primary
+                                          : Colors.outline
+                            font.pixelSize: 9
+                            font.bold:      true
+                            font.family:    Fonts.font
+                        }
+                    }
 
-                            Text {
-                                text:           "↑ " + SystemStats.formatBytes(SystemStats.netUpRate)
-                                color:          Colors.tertiary
-                                font.pixelSize: 9
-                                font.bold:      true
-                                font.family:    Fonts.font
-                            }
+                    RowLayout {
+                        Layout.fillWidth: true
 
-                            Text {
-                                text:           "↓ " + SystemStats.formatBytes(SystemStats.netDownRate)
-                                color:          Colors.primary
-                                font.pixelSize: 9
-                                font.bold:      true
-                                font.family:    Fonts.font
-                            }
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        Text {
+                            text:           "↑ " + SystemStats.formatBytes(SystemStats.netUpRate)
+                            color:          Colors.tertiary
+                            font.pixelSize: 9
+                            font.bold:      true
+                            font.family:    Fonts.font
+                        }
+
+                        Text {
+                            text:           "↓ " + SystemStats.formatBytes(SystemStats.netDownRate)
+                            color:          Colors.primary
+                            font.pixelSize: 9
+                            font.bold:      true
+                            font.family:    Fonts.font
                         }
                     }
 
@@ -347,18 +353,18 @@ PanelWindow {
                             required property var modelData
                             Layout.fillWidth: true
 
-                            mountPoint: modelData.mount
-                            fsType:     modelData.fsType
-                            usedBytes:  modelData.used
-                            totalBytes: modelData.total
-                            freeBytes:  modelData.total - modelData.used
-                            label:      modelData.mount === "/" ? "Root" : modelData.mount
+                            device:      modelData.name
+                            mountPoint:  modelData.mountPoint
+                            fsType:      modelData.fsType
+                            usedBytes:   modelData.used
+                            totalBytes:  modelData.size
+                            percentage:  modelData.percentage
                         }
                     }
 
                     Text {
                         visible:        SystemStats.diskPartitions.length === 0
-                        text:           "No filesystem data available"
+                        text:           "No disk usage data available"
                         color:          Colors.outline
                         font.pixelSize: 9
                         font.family:    Fonts.font
@@ -397,7 +403,11 @@ PanelWindow {
                         font.bold:      true
                         font.family:    Fonts.font
 
-                        Behavior on color { ColorAnimation { duration: 300 } }
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: 300
+                            }
+                        }
                     }
                 }
 
