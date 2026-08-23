@@ -13,7 +13,6 @@ import qs.src.state
 PanelWindow {
     id: root
 
-
     color:         "transparent"
     exclusionMode: ExclusionMode.Auto
 
@@ -62,7 +61,7 @@ PanelWindow {
 
             ArchLogo    {}
             Workspaces  {}
-            WindowName  {}
+            SystemMonitor       { screen: root.screen }
         }
 
         // Center modules
@@ -85,7 +84,6 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.barSpacing
 
-            SystemMonitor       { screen: root.screen }
             Network             {}
             Volume              {}
             Battery             {}

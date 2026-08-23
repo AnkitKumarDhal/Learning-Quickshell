@@ -9,6 +9,10 @@ import qs.src.services.system
 PillBase {
     id: root
 
+    border.color: Colors.primary
+    border.width: Popups.systemOpen ? 1 : 0
+    Behavior on border.width { NumberAnimation { duration: 150 } }
+
     required property var screen
 
     hoverExpand: false
@@ -49,11 +53,13 @@ PillBase {
 
     onClicked: {
         Popups.systemScreen = root.screen
+        Popups.systemAnchorX = Theme.barMargin + root.x + root.width / 2
         Popups.systemOpen = !Popups.systemOpen
     }
 
     onRightClicked: {
         Popups.systemScreen = root.screen
+        Popups.systemAnchorX = Theme.barMargin + root.x + root.width / 2
         Popups.systemOpen = !Popups.systemOpen
     }
 }

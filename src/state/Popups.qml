@@ -9,6 +9,7 @@ Singleton {
     property bool notificationsOpen: false
     property bool systemOpen:        false
     property var  systemScreen:      null
+    property real systemAnchorX:     0
     property bool archMenuOpen:      false
     property bool calendarOpen:      false
     property bool mediaOpen:         false

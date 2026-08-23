@@ -33,6 +33,14 @@ Item {
     PillBase {
         id: mediaPill
 
+        border.color: Colors.primary
+        border.width: Popups.mediaOpen ? 1 : 0
+        Behavior on border.width {
+            NumberAnimation {
+                duration: 150
+            }
+        }
+
         anchors.centerIn: parent
         hoverExpand: false
         implicitWidth: contentRow.implicitWidth + Theme.pillPadding

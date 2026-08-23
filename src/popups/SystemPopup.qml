@@ -16,17 +16,17 @@ PanelWindow {
 
     anchors {
         top:   true
+        left:  true
         right: true
     }
 
-    implicitWidth:  420
     implicitHeight: root.screen ? root.screen.height : 800
 
     WlrLayershell.layer: WlrLayer.Overlay
     visible: slidePanel.windowVisible
 
     mask: Region {
-        x:      root.implicitWidth - sysCard.width - Theme.barMargin
+        x:      sysCard.x
         y:      Theme.barHeight + 8
         width:  sysCard.width
         height: sysCard.height
@@ -49,10 +49,9 @@ PanelWindow {
             id: sysCard
             anchors {
                 top:         parent.top
-                right:       parent.right
                 topMargin:   Theme.barHeight + 8
-                rightMargin: Theme.barMargin
             }
+            x:            Popups.systemAnchorX - width / 2
             width:        400
             height:       cardCol.implicitHeight + 24
             radius:       Theme.popupRadius
