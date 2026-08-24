@@ -26,7 +26,7 @@ Item {
         spacing: 0
 
         Text {
-            text:             "󰍉"
+            text:             ""
             color:            Colors.primary
             font.pixelSize:   20
             font.family:      Fonts.font

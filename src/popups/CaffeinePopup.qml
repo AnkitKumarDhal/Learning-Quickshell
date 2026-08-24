@@ -22,7 +22,6 @@ PanelWindow {
     implicitHeight: root.screen ? root.screen.height : 800
 
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
     visible: slidePanel.windowVisible
 
@@ -77,11 +76,8 @@ PanelWindow {
                 RowLayout {
                     Layout.fillWidth: true
 
-                    ColumnLayout {
-                        spacing: 2
-                        Layout.fillWidth: true
-
                         Text {
+                            Layout.alignment: Qt.AlignLeft
                             text: "Caffeine"
 
                             color: Colors.on_Surface
@@ -91,7 +87,12 @@ PanelWindow {
                             font.family: Fonts.font
                         }
 
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
                         Text {
+                            Layout.alignment: Qt.AlignRight
                             text: {
                                 if (CaffeineService.caffeineActive) {
                                     if (CaffeineService.infinite)
@@ -110,39 +111,6 @@ PanelWindow {
                             font.pixelSize: 10
                             font.family: Fonts.font
                         }
-                    }
-
-                    Rectangle {
-                        width: 30
-                        height: 30
-
-                        radius: 15
-
-                        color: closeHover.hovered
-                                ? Colors.surfaceContainerHighest
-                                : "transparent"
-
-                        HoverHandler {
-                            id: closeHover
-                        }
-
-                        Text {
-                            anchors.centerIn: parent
-
-                            text: "󰅖"
-
-                            color: Colors.outline
-
-                            font.family: Fonts.fontM
-                            font.pixelSize: 15
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Popups.caffeineOpen = false
-                        }
-                    }
                 }
 
                 Rectangle {
