@@ -26,6 +26,7 @@ PanelWindow {
     implicitHeight: root.screen ? root.screen.height : 800
 
     WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: Popups.networkOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     visible: slide.windowVisible
 
