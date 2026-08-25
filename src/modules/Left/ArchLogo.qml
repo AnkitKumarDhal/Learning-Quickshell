@@ -18,5 +18,5 @@ PillBase {
     }
 
 // Temporarily hijack the Arch logo click
-onClicked: Popups.clipboardOpen = !Popups.clipboardOpen
+onClicked: Popups.sessionOpen = !Popups.sessionOpen
 }
