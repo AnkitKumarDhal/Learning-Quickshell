@@ -7,7 +7,6 @@ import Quickshell.Networking
 
 import qs.src.services
 import qs.src.theme
-import qs.src.state
 
 ColumnLayout {
     id: root
@@ -391,11 +390,6 @@ ColumnLayout {
                                     root.selectedNetwork.connectWithPsk(text);
                                     text = "";
                                 }
-                            }
-
-                            Keys.onEscapePressed: (event) => {
-                                Popups.networkOpen = false;
-                                event.accepted = true;
                             }
 
                             Component.onCompleted: forceActiveFocus()
