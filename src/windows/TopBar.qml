@@ -60,7 +60,7 @@ PanelWindow {
             spacing: Theme.barSpacing
 
             ArchLogo    {}
-            Workspaces  {}
+            Workspaces          { screen: root.screen }
             SystemMonitor       { screen: root.screen }
         }
 
