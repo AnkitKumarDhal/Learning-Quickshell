@@ -4,6 +4,7 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
+import Qt5Compat.GraphicalEffects
 import qs.src.components
 import qs.src.theme
 import qs.src.state
@@ -29,6 +30,7 @@ PanelWindow {
             if (Popups.wallpaperOpen) {
                 dirField.text = root.wallpaperDir
                 root.scanWallpapers()
+                Qt.callLater(() => wallCarousel.forceActiveFocus())
             }
         }
     }
@@ -37,6 +39,7 @@ PanelWindow {
         if (Popups.wallpaperOpen) {
             dirField.text = root.wallpaperDir
             root.scanWallpapers()
+            Qt.callLater(() => wallCarousel.forceActiveFocus())
         }
     }
 
@@ -44,6 +47,7 @@ PanelWindow {
     property string wallpaperDir: "~/wallpapers"
     property var    wallpapers:   []
     property string currentWall:  ""
+    property int    selectedIndex: 0
     property bool   applying:     false
     property string _pendingWall: ""
 
@@ -71,6 +75,7 @@ PanelWindow {
     }
 
     function scanWallpapers() {
+        root._thumbnailQueue = []
         scanProc._lines  = []
         scanProc.running = true
     }
@@ -99,6 +104,16 @@ PanelWindow {
         }
 
         root.wallpapers = items
+
+        const currentIndex = items.findIndex(item => item.sourcePath === root.currentWall)
+        if (currentIndex >= 0) {
+            root.selectedIndex = currentIndex
+        } else if (root.selectedIndex >= items.length) {
+            root.selectedIndex = Math.max(0, items.length - 1)
+        } else {
+            root.selectedIndex = Math.max(0, root.selectedIndex)
+        }
+
         cacheMkdir.running = true
     }
 
@@ -111,24 +126,20 @@ PanelWindow {
         }
 
         const expected = new Set()
-        const missing = []
 
         const updated = root.wallpapers.map(item => {
             const name = item.thumbnailPath.substring(item.thumbnailPath.lastIndexOf("/") + 1)
             expected.add(name)
 
-            const ready = cached.has(name)
-            if (!ready) missing.push(item)
-
             return {
                 sourcePath: item.sourcePath,
                 thumbnailPath: item.thumbnailPath,
-                thumbReady: ready
+                thumbReady: cached.has(name)
             }
         })
 
         root.wallpapers = updated
-        root._thumbnailQueue = missing
+        root._rebuildThumbnailQueue()
 
         const orphanPaths = []
 
@@ -139,17 +150,70 @@ PanelWindow {
         if (orphanPaths.length > 0) {
             cleanupProc.command = ["rm", "-f", ...orphanPaths]
             cleanupProc.running = true
-        } else {
-            root._startNextThumbnail()
         }
     }
 
-    function applyWallpaper(imgPath) {
-        if (applying) return
-        applying     = true
-        currentWall  = imgPath
-        _pendingWall = imgPath
+    function selectWallpaper(index) {
+        if (root.wallpapers.length === 0) return
+
+        const nextIndex = Math.max(0, Math.min(index, root.wallpapers.length - 1))
+        root.selectedIndex = nextIndex
+        wallCarousel.positionViewAtIndex(nextIndex, ListView.SnapPosition)
+        root._rebuildThumbnailQueue()
+    }
+
+    function selectRelative(delta) {
+        if (root.wallpapers.length === 0) return
+        root.selectWallpaper(root.selectedIndex + delta)
+    }
+
+    function applySelectedWallpaper() {
+        if (root.applying) return
+        if (root.selectedIndex < 0 || root.selectedIndex >= root.wallpapers.length) return
+
+        const selected = root.wallpapers[root.selectedIndex]
+        if (!selected) return
+
+        if (selected.sourcePath === root.currentWall) return
+
+        root.applying     = true
+        root._pendingWall = selected.sourcePath
         wallProc.running = true
+    }
+
+    function _rebuildThumbnailQueue() {
+        if (root.wallpapers.length === 0) {
+            root._thumbnailQueue = []
+            return
+        }
+
+        const queued = new Set()
+        const ordered = []
+
+        const addIndex = (index) => {
+            if (index < 0 || index >= root.wallpapers.length) return
+
+            const item = root.wallpapers[index]
+            if (!item || item.thumbReady) return
+            if (thumbProc._item && thumbProc._item.sourcePath === item.sourcePath) return
+            if (queued.has(item.sourcePath)) return
+
+            queued.add(item.sourcePath)
+            ordered.push(item)
+        }
+
+        const priorityOffsets = [0, -1, 1, -2, 2, -3, 3]
+
+        for (const offset of priorityOffsets) {
+            addIndex(root.selectedIndex + offset)
+        }
+
+        for (let i = 0; i < root.wallpapers.length; i++) {
+            addIndex(i)
+        }
+
+        root._thumbnailQueue = ordered
+        root._startNextThumbnail()
     }
 
     Process {
@@ -226,6 +290,7 @@ PanelWindow {
         id: thumbProc
         running: false
         property var _item: null
+
         onExited: (exitCode, exitStatus) => {
             root._thumbnailFinished(exitCode === 0)
         }
@@ -236,6 +301,7 @@ PanelWindow {
 
         const next = root._thumbnailQueue.shift()
         thumbProc._item = next
+
         thumbProc.command = [
             "magick",
             next.sourcePath,
@@ -272,17 +338,26 @@ PanelWindow {
             })
         }
 
-        if (root._thumbnailQueue.length > 0) {
-            root._startNextThumbnail()
-        }
+        root._rebuildThumbnailQueue()
     }
 
     Process {
         id: wallProc
+
         command: ["fish", "-c",
-            "source ~/.config/fish/functions/wall.fish; wall '" + root._pendingWall + "'"]
+            "source ~/.config/fish/functions/wall.fish; wall $argv[1]",
+            "--",
+            root._pendingWall]
+
         running: false
-        onExited: root.applying = false
+
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0) {
+                root.currentWall = root._pendingWall
+            }
+
+            root.applying = false
+        }
     }
 
     PopupSlide {
@@ -315,7 +390,7 @@ PanelWindow {
                     margins:      16
                     bottomMargin: 12
                 }
-                spacing: 12
+                spacing: 10
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -378,6 +453,7 @@ PanelWindow {
                         Keys.onReturnPressed: {
                             root.wallpaperDir = text
                             root.scanWallpapers()
+                            wallCarousel.forceActiveFocus()
                         }
 
                         Keys.onEscapePressed: Popups.wallpaperOpen = false
@@ -387,6 +463,7 @@ PanelWindow {
                             color:        Colors.surfaceContainerHigh
                             border.width: 1
                             border.color: dirField.activeFocus ? Colors.primary : Colors.outline
+
                             Behavior on border.color {
                                 ColorAnimation { duration: Theme.hoverFadeDuration }
                             }
@@ -421,9 +498,11 @@ PanelWindow {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape:  Qt.PointingHandCursor
+
                             onClicked: {
                                 root.wallpaperDir = dirField.text
                                 root.scanWallpapers()
+                                wallCarousel.forceActiveFocus()
                             }
                         }
                     }
@@ -437,162 +516,474 @@ PanelWindow {
                     opacity:          0.5
                 }
 
-                GridView {
-                    id:               wallGrid
+                Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    clip:              true
 
-                    cellWidth:  150
-                    cellHeight: 108
+                    ListView {
+                        id:                        wallCarousel
+                        anchors.fill:              parent
+                        orientation:               ListView.Horizontal
+                        spacing:                   18
+                        clip:                      true
+                        boundsBehavior:            Flickable.StopAtBounds
+                        snapMode:                  ListView.SnapToItem
+                        preferredHighlightBegin:   Math.max(0, (width - 500) / 2)
+                        preferredHighlightEnd:     Math.max(0, (width - 500) / 2) + 500
+                        highlightRangeMode:        ListView.StrictlyEnforceRange
+                        highlightFollowsCurrentItem: true
+                        interactive:               root.wallpapers.length > 1
+                        focus:                     true
+                        keyNavigationWraps:        true
+                        model:                     root.wallpapers
 
-                    clip:           true
-                    boundsBehavior: Flickable.StopAtBounds
-                    focus:          true
-
-                    ScrollBar.vertical: ScrollBar {
-                        policy: wallGrid.contentHeight > wallGrid.height
-                                    ? ScrollBar.AlwaysOn
-                                    : ScrollBar.AlwaysOff
-                        contentItem: Rectangle {
-                            implicitWidth:  3
-                            implicitHeight: 40
-                            radius:         1.5
-                            color:          Qt.rgba(1, 1, 1, 0.25)
+                        Keys.onPressed: (event) => {
+                            if (event.key === Qt.Key_Escape) {
+                                Popups.wallpaperOpen = false
+                                event.accepted = true
+                            } else if (event.key === Qt.Key_Left) {
+                                root.selectRelative(-1)
+                                event.accepted = true
+                            } else if (event.key === Qt.Key_Right) {
+                                root.selectRelative(1)
+                                event.accepted = true
+                            } else if (event.key === Qt.Key_Return ||
+                                       event.key === Qt.Key_Enter ||
+                                       event.key === Qt.Key_Space) {
+                                root.applySelectedWallpaper()
+                                event.accepted = true
+                            } else if (event.key === Qt.Key_Home) {
+                                root.selectWallpaper(0)
+                                event.accepted = true
+                            } else if (event.key === Qt.Key_End) {
+                                root.selectWallpaper(root.wallpapers.length - 1)
+                                event.accepted = true
+                            }
                         }
-                        background: Item {}
-                    }
 
-                    model: root.wallpapers
-                    Keys.onEscapePressed: Popups.wallpaperOpen = false
-
-                    delegate: Item {
-                        id:       thumbDelegate
-                        required property var modelData
-                        required property int index
-
-                        readonly property bool isActive: root.currentWall === modelData.sourcePath
-
-                        width:  wallGrid.cellWidth
-                        height: wallGrid.cellHeight
-
-                        Rectangle {
-                            id: thumbCard
-                            anchors {
-                                fill:    parent
-                                margins: 4
+                        onCurrentIndexChanged: {
+                            if (root.selectedIndex !== currentIndex) {
+                                root.selectedIndex = currentIndex
+                                root._rebuildThumbnailQueue()
                             }
-                            radius: 10
-                            color:  Colors.surfaceContainerHigh
-                            clip:   true
+                        }
 
-                            // Thumbnail
-                            Image {
-                                anchors.fill: parent
-                                source:       thumbDelegate.modelData.thumbReady
-                                                    ? ("file://" + thumbDelegate.modelData.thumbnailPath)
-                                                    : ("file://" + thumbDelegate.modelData.sourcePath)
-                                sourceSize:   Qt.size(
-                                    root.thumbnailWidth,
-                                    root.thumbnailHeight
-                                )
-                                fillMode:     Image.PreserveAspectCrop
-                                asynchronous: true
-                                cache:        true
-                            }
+                        delegate: Item {
+                            id:       thumbDelegate
+                            required property var modelData
+                            required property int index
 
-                            // Dim overlay — less dim when active or hovered
+                            readonly property bool isSelected: root.selectedIndex === index
+                            readonly property bool isActive: root.currentWall === modelData.sourcePath
+
+                            width:  500
+                            height: Math.min(parent ? parent.height - 8 : 260, 280)
+
                             Rectangle {
-                                anchors.fill: parent
-                                color:        Colors.background
-                                opacity:      thumbHov.containsMouse    ? 0.08
-                                              : thumbDelegate.isActive  ? 0.0
-                                              :                           0.38
+                                id: thumbCard
+                                anchors.centerIn: parent
+                                width:             500
+                                height:            parent.height
+                                radius:            16
+                                color:             Colors.surfaceContainerHigh
+                                clip:              false
 
-                                Behavior on opacity { NumberAnimation { duration: 150 } }
-                            }
+                                scale:   thumbDelegate.isSelected ? 1.0 : 0.76
+                                opacity: thumbDelegate.isSelected ? 1.0 : 0.58
 
-                            // Active border ring
-                            Rectangle {
-                                anchors.fill:  parent
-                                radius:        thumbCard.radius
-                                color:         "transparent"
-                                border.width:  thumbDelegate.isActive ? 2 : 0
-                                border.color:  Colors.primary
-                            }
-
-                            // Active checkmark badge
-                            Rectangle {
-                                visible: thumbDelegate.isActive
-                                anchors {
-                                    top:     parent.top
-                                    right:   parent.right
-                                    margins: 6
+                                Behavior on scale {
+                                    NumberAnimation {
+                                        duration: 240
+                                        easing.type: Easing.OutCubic
+                                    }
                                 }
-                                width:  20
-                                height: 20
-                                radius: 10
-                                color:  Colors.primary
 
-                                Text {
-                                    anchors.centerIn: parent
-                                    text:             "󰄵"
-                                    color:            Colors.on_Primary
-                                    font.pixelSize:   10
-                                    font.family:      Fonts.font
+                                Behavior on opacity {
+                                    NumberAnimation {
+                                        duration: 200
+                                        easing.type: Easing.OutCubic
+                                    }
                                 }
-                            }
 
-                            // Applying spinner overlay
-                            Item {
-                                anchors.fill: parent
-                                visible:      root.applying && thumbDelegate.isActive
+                                layer.enabled: true
+
+                                Image {
+                                    id: wallpaperImage
+
+                                    anchors.fill: parent
+
+                                    source: thumbDelegate.modelData.thumbReady
+                                                ? ("file://" + thumbDelegate.modelData.thumbnailPath)
+                                                : ("file://" + thumbDelegate.modelData.sourcePath)
+
+                                    sourceSize: Qt.size(
+                                        root.thumbnailWidth,
+                                        root.thumbnailHeight
+                                    )
+
+                                    fillMode:     Image.PreserveAspectCrop
+                                    asynchronous: true
+                                    cache:        true
+
+                                    layer.enabled: true
+
+                                    layer.effect: OpacityMask {
+                                        maskSource: imageMask
+                                    }
+                                }
+
+                                Rectangle {
+                                    id: imageMask
+
+                                    anchors.fill: parent
+                                    radius:       thumbCard.radius
+                                    color:        "white"
+                                    visible:      false
+                                }
 
                                 Rectangle {
                                     anchors.fill: parent
-                                    color:        Qt.rgba(
-                                                      Colors.background.r,
-                                                      Colors.background.g,
-                                                      Colors.background.b, 0.55)
+                                    color:        Colors.background
+                                    opacity:      thumbDelegate.isSelected
+                                                      ? 0.0
+                                                      : 0.35
+
+                                    Behavior on opacity {
+                                        NumberAnimation { duration: 180 }
+                                    }
+                                }
+
+                                Rectangle {
+                                    visible: thumbDelegate.isActive
+
+                                    anchors {
+                                        top:     parent.top
+                                        left:    parent.left
+                                        margins: 10
+                                    }
+
+                                    width:  80
+                                    height: 26
+                                    radius: 13
+
+                                    color: Qt.rgba(
+                                        Colors.primary.r,
+                                        Colors.primary.g,
+                                        Colors.primary.b,
+                                        0.92)
+
+                                    RowLayout {
+                                        anchors.centerIn: parent
+                                        spacing: 5
+
+                                        Text {
+                                            text:           "󰄵"
+                                            color:          Colors.on_Primary
+                                            font.pixelSize: 11
+                                            font.family:    Fonts.font
+                                        }
+
+                                        Text {
+                                            text:           "Current"
+                                            color:          Colors.on_Primary
+                                            font.pixelSize: 10
+                                            font.bold:      true
+                                            font.family:    Fonts.font
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    id: vignette
+
+                                    visible: thumbDelegate.isSelected
+
+                                    anchors {
+                                        left:   parent.left
+                                        right:  parent.right
+                                        bottom: parent.bottom
+                                    }
+
+                                    height: 62
+                                    radius: thumbCard.radius
+                                    color:  "transparent"
+
+                                    gradient: Gradient {
+                                        GradientStop {
+                                            position: 0.0
+                                            color:    "transparent"
+                                        }
+
+                                        GradientStop {
+                                            position: 1.0
+                                            color: Qt.rgba(
+                                                Colors.background.r,
+                                                Colors.background.g,
+                                                Colors.background.b,
+                                                0.82)
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    anchors.fill:  parent
+                                    radius:        thumbCard.radius
+                                    color:         "transparent"
+                                    border.width:  thumbDelegate.isSelected ? 2 : 0
+                                    border.color:  Colors.primary
                                 }
 
                                 Text {
-                                    anchors.centerIn: parent
-                                    text:             "󰑐"
-                                    color:            Colors.primary
-                                    font.pixelSize:   22
-                                    font.family:      Fonts.fontM
+                                    visible: thumbDelegate.isSelected
 
-                                    NumberAnimation on rotation {
-                                        from:    0
-                                        to:      360
-                                        duration: 1000
-                                        loops:   Animation.Infinite
-                                        running: root.applying && thumbDelegate.isActive
+                                    anchors {
+                                        left:         parent.left
+                                        right:        parent.right
+                                        bottom:       parent.bottom
+                                        leftMargin:   14
+                                        rightMargin:  14
+                                        bottomMargin: 12
+                                    }
+
+                                    text:         thumbDelegate.modelData.sourcePath.split("/").pop()
+                                    color:        Colors.on_Surface
+                                    font.pixelSize: 11
+                                    font.bold:    true
+                                    font.family:   Fonts.font
+                                    elide:         Text.ElideMiddle
+                                }
+
+                                // Applying spinner overlay
+                                Item {
+                                    anchors.fill: parent
+                                    visible:      root.applying && thumbDelegate.isSelected
+
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        color:        Qt.rgba(
+                                                          Colors.background.r,
+                                                          Colors.background.g,
+                                                          Colors.background.b,
+                                                          0.55)
+                                    }
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text:             "󰑐"
+                                        color:            Colors.primary
+                                        font.pixelSize:   28
+                                        font.family:      Fonts.fontM
+
+                                        NumberAnimation on rotation {
+                                            from:     0
+                                            to:       360
+                                            duration: 1000
+                                            loops:    Animation.Infinite
+                                            running:  root.applying && thumbDelegate.isSelected
+                                        }
+                                    }
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape:  Qt.PointingHandCursor
+
+                                    onClicked: {
+                                        root.selectWallpaper(thumbDelegate.index)
+                                        wallCarousel.forceActiveFocus()
                                     }
                                 }
                             }
+                        }
+                    }
 
-                            MouseArea {
-                                id:           thumbHov
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape:  Qt.PointingHandCursor
-                                onClicked:    root.applyWallpaper(thumbDelegate.modelData.sourcePath)
+                    // Previous button
+                    Rectangle {
+                        visible:             root.wallpapers.length > 1
+                        anchors.left:         parent.left
+                        anchors.leftMargin:  6
+                        anchors.verticalCenter: parent.verticalCenter
+                        width:               38
+                        height:              38
+                        radius:              19
+                        color:               previousHov.containsMouse
+                                                ? Qt.rgba(
+                                                      Colors.primary.r,
+                                                      Colors.primary.g,
+                                                      Colors.primary.b,
+                                                      0.18)
+                                                : Qt.rgba(
+                                                      Colors.surfaceContainerHighest.r,
+                                                      Colors.surfaceContainerHighest.g,
+                                                      Colors.surfaceContainerHighest.b,
+                                                      0.88)
+
+                        Behavior on color {
+                            ColorAnimation { duration: Theme.hoverFadeDuration }
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text:             "󰁍"
+                            color:            previousHov.containsMouse
+                                                ? Colors.primary
+                                                : Colors.on_SurfaceVariant
+                            font.pixelSize:   16
+                            font.family:      Fonts.fontM
+                        }
+
+                        MouseArea {
+                            id:           previousHov
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape:  Qt.PointingHandCursor
+
+                            onClicked: {
+                                root.selectRelative(-1)
+                                wallCarousel.forceActiveFocus()
                             }
                         }
                     }
+
+                    // Next button
+                    Rectangle {
+                        visible:             root.wallpapers.length > 1
+                        anchors.right:        parent.right
+                        anchors.rightMargin: 6
+                        anchors.verticalCenter: parent.verticalCenter
+                        width:               38
+                        height:              38
+                        radius:              19
+                        color:               nextHov.containsMouse
+                                                ? Qt.rgba(
+                                                      Colors.primary.r,
+                                                      Colors.primary.g,
+                                                      Colors.primary.b,
+                                                      0.18)
+                                                : Qt.rgba(
+                                                      Colors.surfaceContainerHighest.r,
+                                                      Colors.surfaceContainerHighest.g,
+                                                      Colors.surfaceContainerHighest.b,
+                                                      0.88)
+
+                        Behavior on color {
+                            ColorAnimation { duration: Theme.hoverFadeDuration }
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text:             "󰁔"
+                            color:            nextHov.containsMouse
+                                                ? Colors.primary
+                                                : Colors.on_SurfaceVariant
+                            font.pixelSize:   16
+                            font.family:      Fonts.fontM
+                        }
+
+                        MouseArea {
+                            id:           nextHov
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape:  Qt.PointingHandCursor
+
+                            onClicked: {
+                                root.selectRelative(1)
+                                wallCarousel.forceActiveFocus()
+                            }
+                        }
+                    }
+
+                    Text {
+                        visible:          root.wallpapers.length === 0
+                        anchors.centerIn: parent
+                        text:             "No images found in " + root.wallpaperDir
+                        font.family:      Fonts.font
+                        font.pixelSize:   12
+                        color:            Colors.outline
+                    }
                 }
 
-                // Empty state
-                Text {
-                    visible:          root.wallpapers.length === 0
-                    Layout.alignment: Qt.AlignHCenter
-                    text:             "No images found in " + root.wallpaperDir
-                    font.family:      Fonts.font
-                    font.pixelSize:   12
-                    color:            Colors.outline
-                    topPadding:       16
-                    bottomPadding:    16
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.wallpapers.length > 0 && root.selectedIndex < root.wallpapers.length
+                                  ? root.wallpapers[root.selectedIndex].sourcePath.split("/").pop()
+                                  : "No wallpaper selected"
+                        color:            Colors.on_SurfaceVariant
+                        font.family:      Fonts.font
+                        font.pixelSize:   11
+                        elide:             Text.ElideMiddle
+                    }
+
+                    Text {
+                        visible:          root.wallpapers.length > 0
+                        text:             (root.selectedIndex + 1) + " / " + root.wallpapers.length
+                        color:            Colors.outline
+                        font.family:      Fonts.font
+                        font.pixelSize:   11
+                    }
+
+                    Rectangle {
+                        width:  130
+                        height: 34
+                        radius: 17
+
+                        color: root.applying ||
+                               root.wallpapers.length === 0 ||
+                               (root.selectedIndex < root.wallpapers.length &&
+                                root.wallpapers[root.selectedIndex].sourcePath === root.currentWall)
+                                ? Colors.surfaceContainerHighest
+                                : applyHov.containsMouse
+                                    ? Colors.primaryContainer
+                                    : Colors.primary
+
+                        Behavior on color {
+                            ColorAnimation { duration: Theme.hoverFadeDuration }
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+
+                            text: root.applying
+                                      ? "Applying…"
+                                      : (root.selectedIndex < root.wallpapers.length &&
+                                         root.wallpapers[root.selectedIndex].sourcePath === root.currentWall)
+                                            ? "󰄵 Applied"
+                                            : "󰀝 Apply Wallpaper"
+
+                            color: root.applying ||
+                                   (root.selectedIndex < root.wallpapers.length &&
+                                    root.wallpapers[root.selectedIndex].sourcePath === root.currentWall)
+                                      ? Colors.on_SurfaceVariant
+                                      : Colors.on_Primary
+
+                            font.family:    Fonts.font
+                            font.pixelSize: 11
+                            font.bold:      true
+                        }
+
+                        MouseArea {
+                            id:           applyHov
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape:  Qt.PointingHandCursor
+
+                            enabled: !root.applying &&
+                                     root.wallpapers.length > 0 &&
+                                     root.selectedIndex < root.wallpapers.length &&
+                                     root.wallpapers[root.selectedIndex].sourcePath !== root.currentWall
+
+                            onClicked: {
+                                root.applySelectedWallpaper()
+                                wallCarousel.forceActiveFocus()
+                            }
+                        }
+                    }
                 }
             }
         }
