@@ -29,6 +29,8 @@ PanelWindow {
         function onWallpaperOpenChanged() {
             if (Popups.wallpaperOpen) {
                 dirField.text = root.wallpaperDir
+                root._initialSyncComplete = false
+                root.queryCurrentWallpaper()
                 root.scanWallpapers()
                 Qt.callLater(() => wallCarousel.forceActiveFocus())
             }
@@ -36,6 +38,9 @@ PanelWindow {
     }
 
     Component.onCompleted: {
+        root._initialSyncComplete = false
+        root.queryCurrentWallpaper()
+
         if (Popups.wallpaperOpen) {
             dirField.text = root.wallpaperDir
             root.scanWallpapers()
@@ -50,10 +55,12 @@ PanelWindow {
     property int    selectedIndex: 0
     property bool   applying:     false
     property string _pendingWall: ""
+    property var    _currentWallQueryLines: []
+    property bool   _initialSyncComplete: false
 
-    readonly property string thumbnailDir: Quickshell.cachePath("wallpaper-thumbnails")
-    readonly property int thumbnailWidth: 300
-    readonly property int thumbnailHeight: 200
+    readonly property string thumbnailDir: Quickshell.cachePath("wallpaper-thumbnails-v2")
+    readonly property int thumbnailWidth: 420
+    readonly property int thumbnailHeight: 280
     property var _thumbnailQueue: []
 
     function _hashKey(value) {
@@ -72,6 +79,88 @@ PanelWindow {
     function _thumbnailPath(path, mtime, size) {
         const key = _hashKey(path + "\t" + mtime + "\t" + size)
         return root.thumbnailDir + "/" + key + ".webp"
+    }
+
+    function _syncCurrentWallSelection() {
+        if (!root.currentWall || root.wallpapers.length === 0) return false
+
+        const currentIndex = root.wallpapers.findIndex(
+            item => item.sourcePath === root.currentWall
+        )
+
+        if (currentIndex < 0) return false
+
+        root.selectedIndex = currentIndex
+        carouselSyncTimer.restart()
+        return true
+    }
+
+    function _syncCarouselToCurrentWallpaper() {
+        if (root._initialSyncComplete) return
+        if (!root.currentWall) return
+        if (root.wallpapers.length === 0) return
+
+        const currentIndex = root.wallpapers.findIndex(
+            item => item.sourcePath === root.currentWall
+        )
+
+        if (currentIndex < 0) return
+
+        root.selectedIndex = currentIndex
+        wallCarousel.currentIndex = currentIndex
+        wallCarousel.positionViewAtIndex(
+            currentIndex,
+            ListView.SnapPosition
+        )
+
+        Qt.callLater(() => {
+            if (root._initialSyncComplete) return
+            if (root.wallpapers.length === 0) return
+            if (currentIndex >= root.wallpapers.length) return
+            if (wallCarousel.count <= currentIndex) return
+
+            wallCarousel.currentIndex = currentIndex
+            wallCarousel.positionViewAtIndex(
+                currentIndex,
+                ListView.SnapPosition
+            )
+
+            root._initialSyncComplete = true
+        })
+    }
+
+    function queryCurrentWallpaper() {
+        currentWallProc._lines = []
+        currentWallProc.running = true
+    }
+
+    function _processCurrentWallpaperQuery(lines) {
+        const output = lines.join("\n").trim()
+
+        if (!output) return
+
+        try {
+            const data = JSON.parse(output)
+
+            for (const namespace in data) {
+                const outputs = data[namespace]
+
+                if (!Array.isArray(outputs)) continue
+
+                for (const outputInfo of outputs) {
+                    if (!outputInfo || !outputInfo.displaying) continue
+
+                    if (outputInfo.displaying.image) {
+                        root.currentWall = outputInfo.displaying.image
+                        root._syncCurrentWallSelection()
+                        carouselSyncTimer.restart()
+                        return
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn("WallpaperPopup: failed to parse awww query:", error)
+        }
     }
 
     function scanWallpapers() {
@@ -105,15 +194,17 @@ PanelWindow {
 
         root.wallpapers = items
 
-        const currentIndex = items.findIndex(item => item.sourcePath === root.currentWall)
-        if (currentIndex >= 0) {
-            root.selectedIndex = currentIndex
-        } else if (root.selectedIndex >= items.length) {
-            root.selectedIndex = Math.max(0, items.length - 1)
-        } else {
-            root.selectedIndex = Math.max(0, root.selectedIndex)
+        const hasCurrentWallpaper = root._syncCurrentWallSelection()
+
+        if (!hasCurrentWallpaper) {
+            if (root.selectedIndex >= items.length) {
+                root.selectedIndex = Math.max(0, items.length - 1)
+            } else {
+                root.selectedIndex = Math.max(0, root.selectedIndex)
+            }
         }
 
+        carouselSyncTimer.restart()
         cacheMkdir.running = true
     }
 
@@ -139,6 +230,8 @@ PanelWindow {
         })
 
         root.wallpapers = updated
+
+        carouselSyncTimer.restart()
         root._rebuildThumbnailQueue()
 
         const orphanPaths = []
@@ -158,6 +251,7 @@ PanelWindow {
 
         const nextIndex = Math.max(0, Math.min(index, root.wallpapers.length - 1))
         root.selectedIndex = nextIndex
+        wallCarousel.currentIndex = nextIndex
         wallCarousel.positionViewAtIndex(nextIndex, ListView.SnapPosition)
         root._rebuildThumbnailQueue()
     }
@@ -216,6 +310,14 @@ PanelWindow {
         root._startNextThumbnail()
     }
 
+    Timer {
+        id:       carouselSyncTimer
+        interval: 50
+        repeat:   false
+
+        onTriggered: root._syncCarouselToCurrentWallpaper()
+    }
+
     Process {
         id: scanProc
         command: ["sh", "-c",
@@ -238,6 +340,28 @@ PanelWindow {
             const lines = scanProc._lines.slice()
             scanProc._lines = []
             root._beginThumbnailSync(lines)
+        }
+    }
+
+    Process {
+        id: currentWallProc
+
+        command: ["awww", "query", "-j"]
+        running: false
+
+        property var _lines: []
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                const p = line.trim()
+                if (p) currentWallProc._lines.push(p)
+            }
+        }
+
+        onExited: {
+            const lines = currentWallProc._lines.slice()
+            currentWallProc._lines = []
+            root._processCurrentWallpaperQuery(lines)
         }
     }
 
@@ -726,14 +850,6 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle {
-                                    anchors.fill:  parent
-                                    radius:        thumbCard.radius
-                                    color:         "transparent"
-                                    border.width:  thumbDelegate.isSelected ? 2 : 0
-                                    border.color:  Colors.primary
-                                }
-
                                 Text {
                                     visible: thumbDelegate.isSelected
 
@@ -783,6 +899,14 @@ PanelWindow {
                                             running:  root.applying && thumbDelegate.isSelected
                                         }
                                     }
+                                }
+
+                                Rectangle {
+                                    anchors.fill:  parent
+                                    radius:        thumbCard.radius
+                                    color:         "transparent"
+                                    border.width:  thumbDelegate.isSelected ? 2 : 0
+                                    border.color:  Colors.primary
                                 }
 
                                 MouseArea {
@@ -937,10 +1061,10 @@ PanelWindow {
                                root.wallpapers.length === 0 ||
                                (root.selectedIndex < root.wallpapers.length &&
                                 root.wallpapers[root.selectedIndex].sourcePath === root.currentWall)
-                                ? Colors.surfaceContainerHighest
-                                : applyHov.containsMouse
-                                    ? Colors.primaryContainer
-                                    : Colors.primary
+                                 ? Colors.surfaceContainerHighest
+                                 : applyHov.containsMouse
+                                     ? Colors.primaryContainer
+                                     : Colors.primary
 
                         Behavior on color {
                             ColorAnimation { duration: Theme.hoverFadeDuration }
