@@ -19,8 +19,22 @@ QtObject {
     readonly property string thumbnailDir: Quickshell.cachePath("wallpaper-thumbnails-v2")
     readonly property int thumbnailWidth: 420
     readonly property int thumbnailHeight: 280
+    readonly property int thumbnailPrefetchRadius: 3
+    readonly property int thumbnailBackgroundDelay: 250
 
     property var _thumbnailQueue: []
+    property var _backgroundThumbnailQueue: []
+    property bool _backgroundPassActive: false
+
+    property Timer _backgroundThumbnailTimer: Timer {
+        interval: root.thumbnailBackgroundDelay
+        repeat:   false
+
+        onTriggered: {
+            root._backgroundPassActive = true
+            root._startNextThumbnail()
+        }
+    }
 
     function _hashKey(value) {
         let hashA = 2166136261
@@ -116,6 +130,9 @@ QtObject {
 
     function scanWallpapers() {
         root._thumbnailQueue = []
+        root._backgroundThumbnailQueue = []
+        root._backgroundPassActive = false
+        root._backgroundThumbnailTimer.stop()
 
         scanProc._lines  = []
         scanProc.running = true
@@ -266,13 +283,17 @@ QtObject {
     function _rebuildThumbnailQueue() {
         if (root.wallpapers.count === 0) {
             root._thumbnailQueue = []
+            root._backgroundThumbnailQueue = []
+            root._backgroundPassActive = false
+            root._backgroundThumbnailTimer.stop()
             return
         }
 
         const queued = new Set()
-        const ordered = []
+        const foreground = []
+        const background = []
 
-        const addIndex = (index) => {
+        const addIndex = (index, target) => {
             if (index < 0 ||
                 index >= root.wallpapers.count) {
                 return
@@ -290,63 +311,120 @@ QtObject {
             if (queued.has(item.sourcePath)) return
 
             queued.add(item.sourcePath)
-            ordered.push(item)
+            target.push(item)
         }
 
-        const priorityOffsets = [
-            0,
-            -1,
-            1,
-            -2,
-            2,
-            -3,
-            3
-        ]
+        for (let offset = 0;
+             offset <= root.thumbnailPrefetchRadius;
+             offset++) {
 
-        for (const offset of priorityOffsets) {
-            addIndex(root.selectedIndex + offset)
+            if (offset === 0) {
+                addIndex(
+                    root.selectedIndex,
+                    foreground
+                )
+
+                continue
+            }
+
+            addIndex(
+                root.selectedIndex - offset,
+                foreground
+            )
+
+            addIndex(
+                root.selectedIndex + offset,
+                foreground
+            )
         }
 
         for (let i = 0; i < root.wallpapers.count; i++) {
-            addIndex(i)
+            addIndex(
+                i,
+                background
+            )
         }
 
-        root._thumbnailQueue = ordered
+        root._thumbnailQueue = foreground
+        root._backgroundThumbnailQueue = background
+
+        root._backgroundPassActive = false
+        root._backgroundThumbnailTimer.stop()
 
         root._startNextThumbnail()
     }
 
     function _startNextThumbnail() {
-        if (thumbProc.running ||
-            root._thumbnailQueue.length === 0) {
+        if (thumbProc.running) {
             return
         }
 
-        const next = root._thumbnailQueue.shift()
+        if (root._thumbnailQueue.length > 0) {
+            const next = root._thumbnailQueue.shift()
 
-        thumbProc._item = next
+            thumbProc._item = next
 
-        thumbProc.command = [
-            "magick",
-            next.sourcePath,
-            "-auto-orient",
-            "-thumbnail",
-            root.thumbnailWidth +
-            "x" +
-            root.thumbnailHeight +
-            "^",
-            "-gravity", "center",
-            "-extent",
-            root.thumbnailWidth +
-            "x" +
-            root.thumbnailHeight,
-            "-strip",
-            "-quality",
-            "82",
-            next.thumbnailPath
-        ]
+            thumbProc.command = [
+                "magick",
+                next.sourcePath,
+                "-auto-orient",
+                "-thumbnail",
+                root.thumbnailWidth +
+                "x" +
+                root.thumbnailHeight +
+                "^",
+                "-gravity", "center",
+                "-extent",
+                root.thumbnailWidth +
+                "x" +
+                root.thumbnailHeight,
+                "-strip",
+                "-quality",
+                "82",
+                next.thumbnailPath
+            ]
 
-        thumbProc.running = true
+            thumbProc.running = true
+
+            return
+        }
+
+        if (!root._backgroundPassActive &&
+            root._backgroundThumbnailQueue.length > 0) {
+
+            root._backgroundThumbnailTimer.start()
+
+            return
+        }
+
+        if (root._backgroundThumbnailQueue.length > 0) {
+            const next =
+                root._backgroundThumbnailQueue.shift()
+
+            thumbProc._item = next
+
+            thumbProc.command = [
+                "magick",
+                next.sourcePath,
+                "-auto-orient",
+                "-thumbnail",
+                root.thumbnailWidth +
+                "x" +
+                root.thumbnailHeight +
+                "^",
+                "-gravity", "center",
+                "-extent",
+                root.thumbnailWidth +
+                "x" +
+                root.thumbnailHeight,
+                "-strip",
+                "-quality",
+                "82",
+                next.thumbnailPath
+            ]
+
+            thumbProc.running = true
+        }
     }
 
     function _thumbnailFinished(success) {
@@ -372,7 +450,7 @@ QtObject {
             }
         }
 
-        root._rebuildThumbnailQueue()
+        root._startNextThumbnail()
     }
 
     property Process scanProc: Process {
