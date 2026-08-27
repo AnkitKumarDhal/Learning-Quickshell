@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Controls
 import Quickshell
 import Quickshell.Wayland
 import qs.src.components
@@ -239,23 +238,23 @@ PanelWindow {
 
                     Layout.fillWidth: true
 
-                    filename: wallpaperModel.wallpapers.length > 0 &&
-                              wallpaperModel.selectedIndex < wallpaperModel.wallpapers.length
-                                  ? wallpaperModel.wallpapers[
+                    filename: wallpaperModel.wallpapers.count > 0 &&
+                              wallpaperModel.selectedIndex < wallpaperModel.wallpapers.count
+                                  ? wallpaperModel.wallpapers.get(
                                         wallpaperModel.selectedIndex
-                                    ].sourcePath.split("/").pop()
+                                    ).sourcePath.split("/").pop()
                                   : "No wallpaper selected"
 
                     index:     wallpaperModel.selectedIndex
-                    count:     wallpaperModel.wallpapers.length
+                    count:     wallpaperModel.wallpapers.count
 
                     applying:  wallpaperModel.applying
 
-                    applied: wallpaperModel.wallpapers.length > 0 &&
-                             wallpaperModel.selectedIndex < wallpaperModel.wallpapers.length &&
-                             wallpaperModel.wallpapers[
+                    applied: wallpaperModel.wallpapers.count > 0 &&
+                             wallpaperModel.selectedIndex < wallpaperModel.wallpapers.count &&
+                             wallpaperModel.wallpapers.get(
                                  wallpaperModel.selectedIndex
-                             ].sourcePath === wallpaperModel.currentWall
+                             ).sourcePath === wallpaperModel.currentWall
 
                     onApplyRequested: {
                         wallpaperModel.applySelectedWallpaper()

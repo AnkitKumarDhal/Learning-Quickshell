@@ -121,10 +121,6 @@ Item {
         }
     }
 
-    function focusField() {
-        dirField.forceActiveFocus()
-    }
-
     function updateDirectory(value) {
         if (dirField.text !== value) {
             dirField.text = value

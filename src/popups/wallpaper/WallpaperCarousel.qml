@@ -9,7 +9,7 @@ Item {
     signal applyRequested()
     signal escapeRequested()
 
-    property var    wallpapers:      []
+    property var    wallpapers:      null
     property int    selectedIndex:   0
     property string currentWall:     ""
     property bool   applying:        false
@@ -21,14 +21,6 @@ Item {
 
     onSelectedIndexChanged: {
         Qt.callLater(() => {
-            root.positionAt(root.selectedIndex)
-        })
-    }
-
-    onWallpapersChanged: {
-        Qt.callLater(() => {
-            if (root.wallpapers.length === 0) return
-
             root.positionAt(root.selectedIndex)
         })
     }
@@ -50,7 +42,9 @@ Item {
         highlightRangeMode:        ListView.StrictlyEnforceRange
         highlightFollowsCurrentItem: true
 
-        interactive:               root.wallpapers.length > 1
+        interactive:               root.wallpapers &&
+                                    root.wallpapers.count > 1
+
         focus:                     true
 
         model:                     root.wallpapers
@@ -69,7 +63,9 @@ Item {
                 root.selectWallpaper(0)
                 event.accepted = true
             } else if (event.key === Qt.Key_End) {
-                root.selectWallpaper(root.wallpapers.length - 1)
+                root.selectWallpaper(
+                    root.wallpapers.count - 1
+                )
                 event.accepted = true
             } else if (event.key === Qt.Key_Return ||
                        event.key === Qt.Key_Enter ||
@@ -81,7 +77,8 @@ Item {
 
         onMovementEnded: {
             if (currentIndex >= 0 &&
-                currentIndex < root.wallpapers.length &&
+                root.wallpapers &&
+                currentIndex < root.wallpapers.count &&
                 root.selectedIndex !== currentIndex) {
                 root.wallpaperSelected(currentIndex)
             }
@@ -90,8 +87,10 @@ Item {
         delegate: Item {
             id: thumbDelegate
 
-            required property var modelData
-            required property int index
+            required property string sourcePath
+            required property string thumbnailPath
+            required property bool   thumbReady
+            required property int    index
 
             width:  500
             height: Math.min(parent ? parent.height - 8 : 260, 280)
@@ -99,17 +98,17 @@ Item {
             WallpaperCard {
                 anchors.fill: parent
 
-                sourcePath:       thumbDelegate.modelData.sourcePath
-                thumbnailPath:    thumbDelegate.modelData.thumbnailPath
-                thumbReady:       thumbDelegate.modelData.thumbReady
-                selected:         root.selectedIndex === thumbDelegate.index
-                active:           root.currentWall === thumbDelegate.modelData.sourcePath
+                sourcePath:       thumbDelegate.sourcePath
+                thumbnailPath:    thumbDelegate.thumbnailPath
+                thumbReady:       thumbDelegate.thumbReady
+                selected:         root.selectedIndex === index
+                active:           root.currentWall === thumbDelegate.sourcePath
                 applying:         root.applying
                 thumbnailWidth:   root.thumbnailWidth
                 thumbnailHeight:  root.thumbnailHeight
 
                 onClicked: {
-                    root.selectWallpaper(thumbDelegate.index)
+                    root.selectWallpaper(index)
                     wallCarousel.forceActiveFocus()
                 }
             }
@@ -118,7 +117,9 @@ Item {
 
     // Previous button
     Rectangle {
-        visible:             root.wallpapers.length > 1
+        visible:             root.wallpapers &&
+                             root.wallpapers.count > 1
+
         anchors.left:        parent.left
         anchors.leftMargin:  6
         anchors.verticalCenter: parent.verticalCenter
@@ -175,7 +176,9 @@ Item {
 
     // Next button
     Rectangle {
-        visible:             root.wallpapers.length > 1
+        visible:             root.wallpapers &&
+                             root.wallpapers.count > 1
+
         anchors.right:       parent.right
         anchors.rightMargin: 6
         anchors.verticalCenter: parent.verticalCenter
@@ -231,7 +234,9 @@ Item {
     }
 
     Text {
-        visible:          root.wallpapers.length === 0
+        visible:          !root.wallpapers ||
+                          root.wallpapers.count === 0
+
         anchors.centerIn: parent
 
         text:             "No images found in " + root.wallpaperDir
@@ -242,18 +247,27 @@ Item {
     }
 
     function selectWallpaper(index) {
-        if (root.wallpapers.length === 0) return
+        if (!root.wallpapers ||
+            root.wallpapers.count === 0) {
+            return
+        }
 
         const nextIndex = Math.max(
             0,
-            Math.min(index, root.wallpapers.length - 1)
+            Math.min(
+                index,
+                root.wallpapers.count - 1
+            )
         )
 
         root.wallpaperSelected(nextIndex)
     }
 
     function selectRelative(delta) {
-        if (root.wallpapers.length === 0) return
+        if (!root.wallpapers ||
+            root.wallpapers.count === 0) {
+            return
+        }
 
         root.selectWallpaper(
             root.selectedIndex + delta
@@ -261,8 +275,9 @@ Item {
     }
 
     function positionAt(index) {
-        if (root.wallpapers.length === 0) return
-        if (index < 0 || index >= root.wallpapers.length) return
+        if (!root.wallpapers) return
+        if (root.wallpapers.count === 0) return
+        if (index < 0 || index >= root.wallpapers.count) return
         if (wallCarousel.count <= index) return
 
         wallCarousel.currentIndex = index
@@ -277,5 +292,9 @@ Item {
         wallCarousel.forceActiveFocus()
     }
 
-    property int count: wallCarousel.count
+    property int count: {
+        return root.wallpapers
+            ? wallCarousel.count
+            : 0
+    }
 }

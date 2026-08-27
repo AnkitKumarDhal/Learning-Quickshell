@@ -1,4 +1,5 @@
 import QtQuick
+import QtQml.Models
 import Quickshell
 import Quickshell.Io
 
@@ -7,7 +8,8 @@ QtObject {
 
     property string wallpaperDir: "~/wallpapers"
 
-    property var    wallpapers:   []
+    property ListModel wallpapers: ListModel {}
+
     property string currentWall:  ""
     property int    selectedIndex: 0
     property bool   applying:     false
@@ -60,20 +62,20 @@ QtObject {
     }
 
     function _syncCurrentWallSelection() {
-        if (!root.currentWall || root.wallpapers.length === 0) {
+        if (!root.currentWall || root.wallpapers.count === 0) {
             return false
         }
 
-        const currentIndex = root.wallpapers.findIndex(
-            item => item.sourcePath === root.currentWall
-        )
+        for (let i = 0; i < root.wallpapers.count; i++) {
+            const item = root.wallpapers.get(i)
 
-        if (currentIndex < 0) {
-            return false
+            if (item.sourcePath === root.currentWall) {
+                root.selectedIndex = i
+                return true
+            }
         }
 
-        root.selectedIndex = currentIndex
-        return true
+        return false
     }
 
     function queryCurrentWallpaper() {
@@ -99,9 +101,7 @@ QtObject {
 
                     if (outputInfo.displaying.image) {
                         root.currentWall = outputInfo.displaying.image
-
                         root._syncCurrentWallSelection()
-
                         return
                     }
                 }
@@ -122,7 +122,7 @@ QtObject {
     }
 
     function _beginThumbnailSync(lines) {
-        const items = []
+        root.wallpapers.clear()
 
         for (const line of lines) {
             const firstSep = line.indexOf("\t")
@@ -137,22 +137,26 @@ QtObject {
 
             if (!path) continue
 
-            items.push({
+            root.wallpapers.append({
                 sourcePath: path,
                 thumbnailPath: root._thumbnailPath(path, mtime, size),
                 thumbReady: false
             })
         }
 
-        root.wallpapers = items
-
         const hasCurrentWallpaper = root._syncCurrentWallSelection()
 
         if (!hasCurrentWallpaper) {
-            if (root.selectedIndex >= items.length) {
-                root.selectedIndex = Math.max(0, items.length - 1)
+            if (root.selectedIndex >= root.wallpapers.count) {
+                root.selectedIndex = Math.max(
+                    0,
+                    root.wallpapers.count - 1
+                )
             } else {
-                root.selectedIndex = Math.max(0, root.selectedIndex)
+                root.selectedIndex = Math.max(
+                    0,
+                    root.selectedIndex
+                )
             }
         }
 
@@ -164,26 +168,31 @@ QtObject {
 
         for (const line of cacheLines) {
             const name = line.trim()
-            if (name) cached.add(name)
+
+            if (name) {
+                cached.add(name)
+            }
         }
 
         const expected = new Set()
 
-        const updated = root.wallpapers.map(item => {
+        for (let i = 0; i < root.wallpapers.count; i++) {
+            const item = root.wallpapers.get(i)
+
             const name = item.thumbnailPath.substring(
                 item.thumbnailPath.lastIndexOf("/") + 1
             )
 
             expected.add(name)
 
-            return {
-                sourcePath: item.sourcePath,
-                thumbnailPath: item.thumbnailPath,
-                thumbReady: cached.has(name)
+            if (cached.has(name)) {
+                root.wallpapers.setProperty(
+                    i,
+                    "thumbReady",
+                    true
+                )
             }
-        })
-
-        root.wallpapers = updated
+        }
 
         root._rebuildThumbnailQueue()
 
@@ -191,29 +200,39 @@ QtObject {
 
         for (const name of cached) {
             if (!expected.has(name)) {
-                orphanPaths.push(root.thumbnailDir + "/" + name)
+                orphanPaths.push(
+                    root.thumbnailDir + "/" + name
+                )
             }
         }
 
         if (orphanPaths.length > 0) {
-            cleanupProc.command = ["rm", "-f", ...orphanPaths]
+            cleanupProc.command = [
+                "rm",
+                "-f",
+                ...orphanPaths
+            ]
+
             cleanupProc.running = true
         }
     }
 
     function selectWallpaper(index) {
-        if (root.wallpapers.length === 0) return
+        if (root.wallpapers.count === 0) return
 
         root.selectedIndex = Math.max(
             0,
-            Math.min(index, root.wallpapers.length - 1)
+            Math.min(
+                index,
+                root.wallpapers.count - 1
+            )
         )
 
         root._rebuildThumbnailQueue()
     }
 
     function selectRelative(delta) {
-        if (root.wallpapers.length === 0) return
+        if (root.wallpapers.count === 0) return
 
         root.selectWallpaper(
             root.selectedIndex + delta
@@ -224,11 +243,13 @@ QtObject {
         if (root.applying) return
 
         if (root.selectedIndex < 0 ||
-            root.selectedIndex >= root.wallpapers.length) {
+            root.selectedIndex >= root.wallpapers.count) {
             return
         }
 
-        const selected = root.wallpapers[root.selectedIndex]
+        const selected = root.wallpapers.get(
+            root.selectedIndex
+        )
 
         if (!selected) return
 
@@ -243,7 +264,7 @@ QtObject {
     }
 
     function _rebuildThumbnailQueue() {
-        if (root.wallpapers.length === 0) {
+        if (root.wallpapers.count === 0) {
             root._thumbnailQueue = []
             return
         }
@@ -253,11 +274,11 @@ QtObject {
 
         const addIndex = (index) => {
             if (index < 0 ||
-                index >= root.wallpapers.length) {
+                index >= root.wallpapers.count) {
                 return
             }
 
-            const item = root.wallpapers[index]
+            const item = root.wallpapers.get(index)
 
             if (!item || item.thumbReady) return
 
@@ -286,7 +307,7 @@ QtObject {
             addIndex(root.selectedIndex + offset)
         }
 
-        for (let i = 0; i < root.wallpapers.length; i++) {
+        for (let i = 0; i < root.wallpapers.count; i++) {
             addIndex(i)
         }
 
@@ -310,11 +331,18 @@ QtObject {
             next.sourcePath,
             "-auto-orient",
             "-thumbnail",
-            root.thumbnailWidth + "x" + root.thumbnailHeight + "^",
+            root.thumbnailWidth +
+            "x" +
+            root.thumbnailHeight +
+            "^",
             "-gravity", "center",
-            "-extent", root.thumbnailWidth + "x" + root.thumbnailHeight,
+            "-extent",
+            root.thumbnailWidth +
+            "x" +
+            root.thumbnailHeight,
             "-strip",
-            "-quality", "82",
+            "-quality",
+            "82",
             next.thumbnailPath
         ]
 
@@ -327,18 +355,21 @@ QtObject {
         thumbProc._item = null
 
         if (success && finished) {
-            root.wallpapers = root.wallpapers.map(item => {
-                if (item.sourcePath !== finished.sourcePath ||
-                    item.thumbnailPath !== finished.thumbnailPath) {
-                    return item
-                }
+            for (let i = 0; i < root.wallpapers.count; i++) {
+                const item = root.wallpapers.get(i)
 
-                return {
-                    sourcePath: item.sourcePath,
-                    thumbnailPath: item.thumbnailPath,
-                    thumbReady: true
+                if (item.sourcePath === finished.sourcePath &&
+                    item.thumbnailPath === finished.thumbnailPath) {
+
+                    root.wallpapers.setProperty(
+                        i,
+                        "thumbReady",
+                        true
+                    )
+
+                    break
                 }
-            })
+            }
         }
 
         root._rebuildThumbnailQueue()
@@ -466,7 +497,9 @@ QtObject {
         property var _item: null
 
         onExited: (exitCode, exitStatus) => {
-            root._thumbnailFinished(exitCode === 0)
+            root._thumbnailFinished(
+                exitCode === 0
+            )
         }
     }
 
@@ -482,9 +515,7 @@ QtObject {
         running: false
 
         onExited: (exitCode, exitStatus) => {
-            const success = exitCode === 0
-
-            if (success) {
+            if (exitCode === 0) {
                 root.currentWall = root._pendingWall
             }
 
