@@ -8,26 +8,45 @@ Item {
     signal applyRequested()
 
     property string filename:    "No wallpaper selected"
+    property string metadata:    ""
     property int    index:       0
     property int    count:       0
     property bool   applying:    false
     property bool   applied:     false
 
-    implicitHeight: 34
+    implicitHeight: 42
 
     RowLayout {
         anchors.fill: parent
         spacing: 10
 
-        Text {
+        ColumnLayout {
             Layout.fillWidth: true
+            spacing: 1
 
-            text:             root.filename
+            Text {
+                Layout.fillWidth: true
 
-            color:            Colors.on_SurfaceVariant
-            font.family:      Fonts.font
-            font.pixelSize:   11
-            elide:            Text.ElideMiddle
+                text:             root.filename
+
+                color:            Colors.on_SurfaceVariant
+                font.family:      Fonts.font
+                font.pixelSize:   11
+                elide:            Text.ElideMiddle
+            }
+
+            Text {
+                visible:          root.metadata !== ""
+
+                Layout.fillWidth: true
+
+                text:             root.metadata
+
+                color:            Colors.outline
+                font.family:      Fonts.font
+                font.pixelSize:   9
+                elide:            Text.ElideRight
+            }
         }
 
         Text {
@@ -45,7 +64,7 @@ Item {
             height: 34
             radius: 17
 
-            color: root.applying || root.applied
+            color: root.applying
                         ? Colors.surfaceContainerHighest
                         : applyHov.containsMouse
                             ? Colors.primaryContainer
@@ -63,12 +82,14 @@ Item {
                 text: root.applying
                           ? "Applying…"
                           : root.applied
-                              ? "󰄵 Applied"
+                              ? "↻ Re-apply"
                               : "󰀝 Apply Wallpaper"
 
-                color: root.applying || root.applied
+                color: root.applying
                           ? Colors.on_SurfaceVariant
-                          : Colors.on_Primary
+                          : root.applied
+                              ? Colors.on_Primary
+                              : Colors.on_Primary
 
                 font.family:    Fonts.font
                 font.pixelSize: 11
@@ -84,7 +105,6 @@ Item {
                 cursorShape:  Qt.PointingHandCursor
 
                 enabled: !root.applying &&
-                         !root.applied &&
                          root.count > 0
 
                 onClicked: root.applyRequested()
