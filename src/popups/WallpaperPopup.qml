@@ -223,7 +223,7 @@ PanelWindow {
                         }
 
                         onApplyRequested: {
-                            wallpaperModel.applySelectedWallpaper()
+                            wallpaperModel.applySelectedWallpaper(controls.applied)
                             wallpaperCarousel.forceActiveFocus()
                         }
 
@@ -245,6 +245,16 @@ PanelWindow {
                                     ).sourcePath.split("/").pop()
                                   : "No wallpaper selected"
 
+                    metadata: wallpaperModel.selectedFormat !== "" &&
+                              wallpaperModel.selectedDimensions !== "" &&
+                              wallpaperModel.selectedFileSize !== ""
+                                  ? wallpaperModel.selectedFormat
+                                    + " · "
+                                    + wallpaperModel.selectedDimensions
+                                    + " · "
+                                    + wallpaperModel.selectedFileSize
+                                  : ""
+
                     index:     wallpaperModel.selectedIndex
                     count:     wallpaperModel.wallpapers.count
 
@@ -257,7 +267,7 @@ PanelWindow {
                              ).sourcePath === wallpaperModel.currentWall
 
                     onApplyRequested: {
-                        wallpaperModel.applySelectedWallpaper()
+                        wallpaperModel.applySelectedWallpaper(controls.applied)
                         wallpaperCarousel.forceActiveFocus()
                     }
                 }

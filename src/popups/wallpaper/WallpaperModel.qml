@@ -14,13 +14,31 @@ QtObject {
     property int    selectedIndex: 0
     property bool   applying:     false
 
+    property string selectedFormat:      ""
+    property string selectedDimensions:  ""
+    property string selectedFileSize:    ""
+
     property string _pendingWall: ""
 
     readonly property string thumbnailDir: Quickshell.cachePath("wallpaper-thumbnails-v2")
     readonly property int thumbnailWidth: 420
     readonly property int thumbnailHeight: 280
+    readonly property int thumbnailPrefetchRadius: 3
+    readonly property int thumbnailBackgroundDelay: 250
 
     property var _thumbnailQueue: []
+    property var _backgroundThumbnailQueue: []
+    property bool _backgroundPassActive: false
+
+    property Timer _backgroundThumbnailTimer: Timer {
+        interval: root.thumbnailBackgroundDelay
+        repeat:   false
+
+        onTriggered: {
+            root._backgroundPassActive = true
+            root._startNextThumbnail()
+        }
+    }
 
     function _hashKey(value) {
         let hashA = 2166136261
@@ -78,6 +96,77 @@ QtObject {
         return false
     }
 
+    function _formatFileSize(bytes) {
+        const size = Number(bytes)
+
+        if (!Number.isFinite(size) || size < 0) {
+            return ""
+        }
+
+        if (size < 1024) {
+            return size + " B"
+        }
+
+        if (size < 1024 * 1024) {
+            return (size / 1024).toFixed(1) + " KiB"
+        }
+
+        if (size < 1024 * 1024 * 1024) {
+            return (size / (1024 * 1024)).toFixed(1) + " MiB"
+        }
+
+        return (size / (1024 * 1024 * 1024)).toFixed(1) + " GiB"
+    }
+
+    function _updateSelectedMetadata() {
+        root.selectedFormat = ""
+        root.selectedDimensions = ""
+        root.selectedFileSize = ""
+
+        if (root.wallpapers.count === 0) {
+            return
+        }
+
+        if (root.selectedIndex < 0 ||
+            root.selectedIndex >= root.wallpapers.count) {
+            return
+        }
+
+        const selected = root.wallpapers.get(
+            root.selectedIndex
+        )
+
+        if (!selected || !selected.sourcePath) {
+            return
+        }
+
+        const selectedPath = selected.sourcePath
+
+        imageMetadataProc._lines = []
+        imageMetadataProc._requestedPath = selectedPath
+
+        imageMetadataProc.command = [
+            "identify",
+            "-format",
+            "%m\t%wx%h",
+            selectedPath
+        ]
+
+        imageMetadataProc.running = true
+
+        fileSizeProc._lines = []
+        fileSizeProc._requestedPath = selectedPath
+
+        fileSizeProc.command = [
+            "stat",
+            "-c",
+            "%s",
+            selectedPath
+        ]
+
+        fileSizeProc.running = true
+    }
+
     function queryCurrentWallpaper() {
         currentWallProc._lines = []
         currentWallProc.running = true
@@ -116,6 +205,9 @@ QtObject {
 
     function scanWallpapers() {
         root._thumbnailQueue = []
+        root._backgroundThumbnailQueue = []
+        root._backgroundPassActive = false
+        root._backgroundThumbnailTimer.stop()
 
         scanProc._lines  = []
         scanProc.running = true
@@ -159,6 +251,8 @@ QtObject {
                 )
             }
         }
+
+        root._updateSelectedMetadata()
 
         cacheMkdir.running = true
     }
@@ -229,6 +323,7 @@ QtObject {
         )
 
         root._rebuildThumbnailQueue()
+        root._updateSelectedMetadata()
     }
 
     function selectRelative(delta) {
@@ -239,7 +334,7 @@ QtObject {
         )
     }
 
-    function applySelectedWallpaper() {
+    function applySelectedWallpaper(force = false) {
         if (root.applying) return
 
         if (root.selectedIndex < 0 ||
@@ -253,7 +348,8 @@ QtObject {
 
         if (!selected) return
 
-        if (selected.sourcePath === root.currentWall) {
+        if (!force &&
+            selected.sourcePath === root.currentWall) {
             return
         }
 
@@ -266,13 +362,17 @@ QtObject {
     function _rebuildThumbnailQueue() {
         if (root.wallpapers.count === 0) {
             root._thumbnailQueue = []
+            root._backgroundThumbnailQueue = []
+            root._backgroundPassActive = false
+            root._backgroundThumbnailTimer.stop()
             return
         }
 
         const queued = new Set()
-        const ordered = []
+        const foreground = []
+        const background = []
 
-        const addIndex = (index) => {
+        const addIndex = (index, target) => {
             if (index < 0 ||
                 index >= root.wallpapers.count) {
                 return
@@ -290,63 +390,120 @@ QtObject {
             if (queued.has(item.sourcePath)) return
 
             queued.add(item.sourcePath)
-            ordered.push(item)
+            target.push(item)
         }
 
-        const priorityOffsets = [
-            0,
-            -1,
-            1,
-            -2,
-            2,
-            -3,
-            3
-        ]
+        for (let offset = 0;
+             offset <= root.thumbnailPrefetchRadius;
+             offset++) {
 
-        for (const offset of priorityOffsets) {
-            addIndex(root.selectedIndex + offset)
+            if (offset === 0) {
+                addIndex(
+                    root.selectedIndex,
+                    foreground
+                )
+
+                continue
+            }
+
+            addIndex(
+                root.selectedIndex - offset,
+                foreground
+            )
+
+            addIndex(
+                root.selectedIndex + offset,
+                foreground
+            )
         }
 
         for (let i = 0; i < root.wallpapers.count; i++) {
-            addIndex(i)
+            addIndex(
+                i,
+                background
+            )
         }
 
-        root._thumbnailQueue = ordered
+        root._thumbnailQueue = foreground
+        root._backgroundThumbnailQueue = background
+
+        root._backgroundPassActive = false
+        root._backgroundThumbnailTimer.stop()
 
         root._startNextThumbnail()
     }
 
     function _startNextThumbnail() {
-        if (thumbProc.running ||
-            root._thumbnailQueue.length === 0) {
+        if (thumbProc.running) {
             return
         }
 
-        const next = root._thumbnailQueue.shift()
+        if (root._thumbnailQueue.length > 0) {
+            const next = root._thumbnailQueue.shift()
 
-        thumbProc._item = next
+            thumbProc._item = next
 
-        thumbProc.command = [
-            "magick",
-            next.sourcePath,
-            "-auto-orient",
-            "-thumbnail",
-            root.thumbnailWidth +
-            "x" +
-            root.thumbnailHeight +
-            "^",
-            "-gravity", "center",
-            "-extent",
-            root.thumbnailWidth +
-            "x" +
-            root.thumbnailHeight,
-            "-strip",
-            "-quality",
-            "82",
-            next.thumbnailPath
-        ]
+            thumbProc.command = [
+                "magick",
+                next.sourcePath,
+                "-auto-orient",
+                "-thumbnail",
+                root.thumbnailWidth +
+                "x" +
+                root.thumbnailHeight +
+                "^",
+                "-gravity", "center",
+                "-extent",
+                root.thumbnailWidth +
+                "x" +
+                root.thumbnailHeight,
+                "-strip",
+                "-quality",
+                "82",
+                next.thumbnailPath
+            ]
 
-        thumbProc.running = true
+            thumbProc.running = true
+
+            return
+        }
+
+        if (!root._backgroundPassActive &&
+            root._backgroundThumbnailQueue.length > 0) {
+
+            root._backgroundThumbnailTimer.start()
+
+            return
+        }
+
+        if (root._backgroundThumbnailQueue.length > 0) {
+            const next =
+                root._backgroundThumbnailQueue.shift()
+
+            thumbProc._item = next
+
+            thumbProc.command = [
+                "magick",
+                next.sourcePath,
+                "-auto-orient",
+                "-thumbnail",
+                root.thumbnailWidth +
+                "x" +
+                root.thumbnailHeight +
+                "^",
+                "-gravity", "center",
+                "-extent",
+                root.thumbnailWidth +
+                "x" +
+                root.thumbnailHeight,
+                "-strip",
+                "-quality",
+                "82",
+                next.thumbnailPath
+            ]
+
+            thumbProc.running = true
+        }
     }
 
     function _thumbnailFinished(success) {
@@ -372,7 +529,101 @@ QtObject {
             }
         }
 
-        root._rebuildThumbnailQueue()
+        root._startNextThumbnail()
+    }
+
+    property Process imageMetadataProc: Process {
+        running: false
+
+        property var _lines: []
+        property string _requestedPath: ""
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                const p = line.trim()
+
+                if (p) {
+                    imageMetadataProc._lines.push(p)
+                }
+            }
+        }
+
+        onExited: {
+            const lines = imageMetadataProc._lines.slice()
+            const requestedPath = imageMetadataProc._requestedPath
+
+            imageMetadataProc._lines = []
+
+            if (lines.length === 0 ||
+                !requestedPath ||
+                root.wallpapers.count === 0 ||
+                root.selectedIndex < 0 ||
+                root.selectedIndex >= root.wallpapers.count) {
+                return
+            }
+
+            const selected = root.wallpapers.get(
+                root.selectedIndex
+            )
+
+            if (!selected ||
+                selected.sourcePath !== requestedPath) {
+                return
+            }
+
+            const parts = lines[0].split("\t")
+
+            if (parts.length < 2) {
+                return
+            }
+
+            root.selectedFormat = parts[0]
+            root.selectedDimensions = parts[1]
+        }
+    }
+
+    property Process fileSizeProc: Process {
+        running: false
+
+        property var _lines: []
+        property string _requestedPath: ""
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                const p = line.trim()
+
+                if (p) {
+                    fileSizeProc._lines.push(p)
+                }
+            }
+        }
+
+        onExited: {
+            const lines = fileSizeProc._lines.slice()
+            const requestedPath = fileSizeProc._requestedPath
+
+            fileSizeProc._lines = []
+
+            if (lines.length === 0 ||
+                !requestedPath ||
+                root.wallpapers.count === 0 ||
+                root.selectedIndex < 0 ||
+                root.selectedIndex >= root.wallpapers.count) {
+                return
+            }
+
+            const selected = root.wallpapers.get(
+                root.selectedIndex
+            )
+
+            if (!selected ||
+                selected.sourcePath !== requestedPath) {
+                return
+            }
+
+            root.selectedFileSize =
+                root._formatFileSize(lines[0])
+        }
     }
 
     property Process scanProc: Process {
