@@ -40,9 +40,10 @@ Item {
         target:   wallCarousel
         property: "contentX"
 
-        duration: 280
+        duration: 340
 
-        easing.type: Easing.OutCubic
+        easing.type: Easing.OutBack
+        easing.overshoot: 1.15
     }
 
     ListView {

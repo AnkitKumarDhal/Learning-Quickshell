@@ -60,7 +60,7 @@ Item {
         y: root._effectiveOpen ? 0 : (root.edge === "top" ? -height : root.edge === "bottom" ? height : 0)
 
         Behavior on x { NumberAnimation { duration: root.slideDuration; easing.type: Easing.OutCubic } }
-        Behavior on y { NumberAnimation { duration: root.slideDuration; easing.type: Easing.OutCubic } }
+        Behavior on y { NumberAnimation { duration: root.slideDuration; easing.type: Easing.OutBack; easing.overshoot: 0.6 } }
 
         HoverHandler {
             onHoveredChanged: root._selfHovered = hovered
