@@ -30,13 +30,17 @@ PanelWindow {
 
     visible: slide.windowVisible
 
+    mask:
+        Region {
+            x:      (root.implicitWidth - wallRec.width) / 2
+            y:      root.implicitHeight - wallRec.height - 18
+            width:  wallRec.width
+            height: wallRec.height
+        }
+
     WallpaperModel {
         id: wallpaperModel
-
-        wallpaperDir: root.wallpaperDir
     }
-
-    property string wallpaperDir: wallpaperModel.wallpaperDir
 
     Connections {
         target: Popups
@@ -67,14 +71,6 @@ PanelWindow {
         Qt.callLater(() => {
             wallpaperCarousel.forceActiveFocus()
         })
-    }
-
-    function _handleSelection(index) {
-        wallpaperModel.selectWallpaper(index)
-    }
-
-    function _applySelectedWallpaper() {
-        wallpaperModel.applySelectedWallpaper()
     }
 
     PopupSlide {
@@ -224,11 +220,11 @@ PanelWindow {
                         wallpaperDir:    wallpaperModel.wallpaperDir
 
                         onWallpaperSelected: (index) => {
-                            root._handleSelection(index)
+                            wallpaperModel.selectWallpaper(index)
                         }
 
                         onApplyRequested: {
-                            root._applySelectedWallpaper()
+                            wallpaperModel.applySelectedWallpaper()
                             wallpaperCarousel.forceActiveFocus()
                         }
 
@@ -262,7 +258,7 @@ PanelWindow {
                              ].sourcePath === wallpaperModel.currentWall
 
                     onApplyRequested: {
-                        root._applySelectedWallpaper()
+                        wallpaperModel.applySelectedWallpaper()
                         wallpaperCarousel.forceActiveFocus()
                     }
                 }

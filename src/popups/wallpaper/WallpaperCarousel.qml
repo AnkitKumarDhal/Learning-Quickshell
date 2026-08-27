@@ -1,6 +1,5 @@
 import QtQuick
 import qs.src.theme
-import qs.src.state
 import qs.src.popups.wallpaper
 
 Item {
@@ -26,6 +25,14 @@ Item {
         })
     }
 
+    onWallpapersChanged: {
+        Qt.callLater(() => {
+            if (root.wallpapers.length === 0) return
+
+            root.positionAt(root.selectedIndex)
+        })
+    }
+
     ListView {
         id: wallCarousel
 
@@ -45,7 +52,6 @@ Item {
 
         interactive:               root.wallpapers.length > 1
         focus:                     true
-        keyNavigationWraps:        true
 
         model:                     root.wallpapers
 
@@ -73,8 +79,10 @@ Item {
             }
         }
 
-        onCurrentIndexChanged: {
-            if (root.selectedIndex !== currentIndex) {
+        onMovementEnded: {
+            if (currentIndex >= 0 &&
+                currentIndex < root.wallpapers.length &&
+                root.selectedIndex !== currentIndex) {
                 root.wallpaperSelected(currentIndex)
             }
         }
@@ -91,14 +99,14 @@ Item {
             WallpaperCard {
                 anchors.fill: parent
 
-                sourcePath:      thumbDelegate.modelData.sourcePath
-                thumbnailPath:   thumbDelegate.modelData.thumbnailPath
-                thumbReady:      thumbDelegate.modelData.thumbReady
-                selected:        root.selectedIndex === thumbDelegate.index
-                active:          root.currentWall === thumbDelegate.modelData.sourcePath
-                applying:        root.applying
-                thumbnailWidth:  root.thumbnailWidth
-                thumbnailHeight: root.thumbnailHeight
+                sourcePath:       thumbDelegate.modelData.sourcePath
+                thumbnailPath:    thumbDelegate.modelData.thumbnailPath
+                thumbReady:       thumbDelegate.modelData.thumbReady
+                selected:         root.selectedIndex === thumbDelegate.index
+                active:           root.currentWall === thumbDelegate.modelData.sourcePath
+                applying:         root.applying
+                thumbnailWidth:   root.thumbnailWidth
+                thumbnailHeight:  root.thumbnailHeight
 
                 onClicked: {
                     root.selectWallpaper(thumbDelegate.index)
@@ -255,6 +263,7 @@ Item {
     function positionAt(index) {
         if (root.wallpapers.length === 0) return
         if (index < 0 || index >= root.wallpapers.length) return
+        if (wallCarousel.count <= index) return
 
         wallCarousel.currentIndex = index
 

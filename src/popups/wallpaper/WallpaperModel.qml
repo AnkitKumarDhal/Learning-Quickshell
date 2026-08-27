@@ -20,8 +20,6 @@ QtObject {
 
     property var _thumbnailQueue: []
 
-    signal wallpaperApplied(bool success)
-
     function _hashKey(value) {
         let hashA = 2166136261
         let hashB = 5381
@@ -41,6 +39,24 @@ QtObject {
     function _thumbnailPath(path, mtime, size) {
         const key = _hashKey(path + "\t" + mtime + "\t" + size)
         return root.thumbnailDir + "/" + key + ".webp"
+    }
+
+    function _shellQuote(value) {
+        return "'" + value.replace(/'/g, "'\\''") + "'"
+    }
+
+    function _findDirectory() {
+        const directory = root.wallpaperDir.trim()
+
+        if (directory === "~") {
+            return "$HOME"
+        }
+
+        if (directory.startsWith("~/")) {
+            return "$HOME" + _shellQuote(directory.substring(1))
+        }
+
+        return _shellQuote(directory)
     }
 
     function _syncCurrentWallSelection() {
@@ -296,8 +312,7 @@ QtObject {
             "-thumbnail",
             root.thumbnailWidth + "x" + root.thumbnailHeight + "^",
             "-gravity", "center",
-            "-extent",
-            root.thumbnailWidth + "x" + root.thumbnailHeight,
+            "-extent", root.thumbnailWidth + "x" + root.thumbnailHeight,
             "-strip",
             "-quality", "82",
             next.thumbnailPath
@@ -333,7 +348,7 @@ QtObject {
         command: [
             "sh",
             "-c",
-            "find " + root.wallpaperDir + " -maxdepth 1 -type f " +
+            "find " + root._findDirectory() + " -maxdepth 1 -type f " +
             "\\( -iname '*.jpg' -o -iname '*.jpeg' " +
             "-o -iname '*.png' -o -iname '*.webp' \\) " +
             "-printf '%T@\\t%s\\t%p\\n' 2>/dev/null | sort -k3"
@@ -474,8 +489,6 @@ QtObject {
             }
 
             root.applying = false
-
-            root.wallpaperApplied(success)
         }
     }
 }
