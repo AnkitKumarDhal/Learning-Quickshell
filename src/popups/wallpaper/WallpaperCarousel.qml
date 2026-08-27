@@ -17,12 +17,32 @@ Item {
     property int    thumbnailHeight: 280
     property string wallpaperDir:    "~/wallpapers"
 
+    property bool   _positionedOnce: false
+
+    readonly property real centerX: width / 2
+
     clip: true
 
     onSelectedIndexChanged: {
         Qt.callLater(() => {
-            root.positionAt(root.selectedIndex)
+            root.positionAt(
+                root.selectedIndex,
+                root._positionedOnce
+            )
+
+            root._positionedOnce = true
         })
+    }
+
+    NumberAnimation {
+        id: carouselAnimation
+
+        target:   wallCarousel
+        property: "contentX"
+
+        duration: 280
+
+        easing.type: Easing.OutCubic
     }
 
     ListView {
@@ -30,24 +50,122 @@ Item {
 
         anchors.fill: parent
 
-        orientation:               ListView.Horizontal
-        spacing:                   18
-        clip:                      true
-        boundsBehavior:            Flickable.StopAtBounds
-        snapMode:                  ListView.SnapToItem
+        orientation: ListView.Horizontal
 
-        preferredHighlightBegin:   Math.max(0, (width - 500) / 2)
-        preferredHighlightEnd:     Math.max(0, (width - 500) / 2) + 500
+        model: root.wallpapers
 
-        highlightRangeMode:        ListView.StrictlyEnforceRange
+        clip: true
+
+        boundsBehavior: Flickable.StopAtBounds
+
+        snapMode: ListView.SnapToItem
+
+        spacing: -40
+
+        interactive: root.wallpapers &&
+                     root.wallpapers.count > 1
+
+        focus: true
+
+        preferredHighlightBegin:
+            Math.max(0, (width - 500) / 2)
+
+        preferredHighlightEnd:
+            Math.max(0, (width - 500) / 2) + 500
+
+        highlightRangeMode:
+            ListView.StrictlyEnforceRange
+
         highlightFollowsCurrentItem: true
 
-        interactive:               root.wallpapers &&
-                                    root.wallpapers.count > 1
+        delegate: Item {
+            id: thumbDelegate
 
-        focus:                     true
+            required property string sourcePath
+            required property string thumbnailPath
+            required property bool   thumbReady
+            required property int    index
 
-        model:                     root.wallpapers
+            width:  500
+            height: 280
+
+            z: visualZ
+
+            readonly property real delegateCenter:
+                x + width / 2
+
+            readonly property real viewportCenter:
+                wallCarousel.contentX +
+                wallCarousel.width / 2
+
+            readonly property real distance:
+                Math.abs(
+                    delegateCenter -
+                    viewportCenter
+                )
+
+            readonly property real normalizedDistance:
+                Math.min(
+                    distance / 500,
+                    1.0
+                )
+
+            readonly property real visualScale:
+                1.0 -
+                (
+                    normalizedDistance *
+                    0.16
+                )
+
+            readonly property real visualOpacity:
+                1.0 -
+                (
+                    normalizedDistance *
+                    0.30
+                )
+
+            readonly property real visualOffsetY:
+                normalizedDistance * 8
+
+            readonly property real visualZ:
+                100 -
+                Math.round(
+                    normalizedDistance * 50
+                )
+
+            readonly property bool isCentered:
+                distance < 40
+
+            WallpaperCard {
+                anchors.fill: parent
+
+                sourcePath:      thumbDelegate.sourcePath
+                thumbnailPath:   thumbDelegate.thumbnailPath
+                thumbReady:      thumbDelegate.thumbReady
+
+                selected:        thumbDelegate.isCentered
+
+                active:          root.currentWall ===
+                                 thumbDelegate.sourcePath
+
+                applying:        root.applying
+
+                thumbnailWidth:  root.thumbnailWidth
+                thumbnailHeight: root.thumbnailHeight
+
+                visualScale:     thumbDelegate.visualScale
+                visualOpacity:   thumbDelegate.visualOpacity
+                visualOffsetY:   thumbDelegate.visualOffsetY
+
+                onClicked: {
+                    root.selectWallpaper(
+                        thumbDelegate.index
+                    )
+
+                    wallCarousel.forceActiveFocus()
+                }
+            }
+        }
 
         Keys.onPressed: (event) => {
             if (event.key === Qt.Key_Escape) {
@@ -80,65 +198,36 @@ Item {
                 root.wallpapers &&
                 currentIndex < root.wallpapers.count &&
                 root.selectedIndex !== currentIndex) {
+
                 root.wallpaperSelected(currentIndex)
-            }
-        }
-
-        delegate: Item {
-            id: thumbDelegate
-
-            required property string sourcePath
-            required property string thumbnailPath
-            required property bool   thumbReady
-            required property int    index
-
-            width:  500
-            height: Math.min(parent ? parent.height - 8 : 260, 280)
-
-            WallpaperCard {
-                anchors.fill: parent
-
-                sourcePath:       thumbDelegate.sourcePath
-                thumbnailPath:    thumbDelegate.thumbnailPath
-                thumbReady:       thumbDelegate.thumbReady
-                selected:         root.selectedIndex === index
-                active:           root.currentWall === thumbDelegate.sourcePath
-                applying:         root.applying
-                thumbnailWidth:   root.thumbnailWidth
-                thumbnailHeight:  root.thumbnailHeight
-
-                onClicked: {
-                    root.selectWallpaper(index)
-                    wallCarousel.forceActiveFocus()
-                }
             }
         }
     }
 
     // Previous button
     Rectangle {
-        visible:             root.wallpapers &&
-                             root.wallpapers.count > 1
+        visible: root.wallpapers &&
+                 root.wallpapers.count > 1
 
         anchors.left:        parent.left
         anchors.leftMargin:  6
         anchors.verticalCenter: parent.verticalCenter
 
-        width:               38
-        height:              38
-        radius:              19
+        width:  38
+        height: 38
+        radius: 19
 
-        color:               previousHov.containsMouse
-                                ? Qt.rgba(
-                                      Colors.primary.r,
-                                      Colors.primary.g,
-                                      Colors.primary.b,
-                                      0.18)
-                                : Qt.rgba(
-                                      Colors.surfaceContainerHighest.r,
-                                      Colors.surfaceContainerHighest.g,
-                                      Colors.surfaceContainerHighest.b,
-                                      0.88)
+        color: previousHov.containsMouse
+                   ? Qt.rgba(
+                         Colors.primary.r,
+                         Colors.primary.g,
+                         Colors.primary.b,
+                         0.18)
+                   : Qt.rgba(
+                         Colors.surfaceContainerHighest.r,
+                         Colors.surfaceContainerHighest.g,
+                         Colors.surfaceContainerHighest.b,
+                         0.88)
 
         Behavior on color {
             ColorAnimation {
@@ -149,18 +238,18 @@ Item {
         Text {
             anchors.centerIn: parent
 
-            text:             "󰁍"
+            text: "󰁍"
 
-            color:            previousHov.containsMouse
-                                ? Colors.primary
-                                : Colors.on_SurfaceVariant
+            color: previousHov.containsMouse
+                       ? Colors.primary
+                       : Colors.on_SurfaceVariant
 
-            font.pixelSize:   16
-            font.family:      Fonts.fontM
+            font.pixelSize: 16
+            font.family:    Fonts.fontM
         }
 
         MouseArea {
-            id:           previousHov
+            id: previousHov
 
             anchors.fill: parent
 
@@ -176,28 +265,28 @@ Item {
 
     // Next button
     Rectangle {
-        visible:             root.wallpapers &&
-                             root.wallpapers.count > 1
+        visible: root.wallpapers &&
+                 root.wallpapers.count > 1
 
         anchors.right:       parent.right
         anchors.rightMargin: 6
         anchors.verticalCenter: parent.verticalCenter
 
-        width:               38
-        height:              38
-        radius:              19
+        width:  38
+        height: 38
+        radius: 19
 
-        color:               nextHov.containsMouse
-                                ? Qt.rgba(
-                                      Colors.primary.r,
-                                      Colors.primary.g,
-                                      Colors.primary.b,
-                                      0.18)
-                                : Qt.rgba(
-                                      Colors.surfaceContainerHighest.r,
-                                      Colors.surfaceContainerHighest.g,
-                                      Colors.surfaceContainerHighest.b,
-                                      0.88)
+        color: nextHov.containsMouse
+                   ? Qt.rgba(
+                         Colors.primary.r,
+                         Colors.primary.g,
+                         Colors.primary.b,
+                         0.18)
+                   : Qt.rgba(
+                         Colors.surfaceContainerHighest.r,
+                         Colors.surfaceContainerHighest.g,
+                         Colors.surfaceContainerHighest.b,
+                         0.88)
 
         Behavior on color {
             ColorAnimation {
@@ -208,18 +297,18 @@ Item {
         Text {
             anchors.centerIn: parent
 
-            text:             "󰁔"
+            text: "󰁔"
 
-            color:            nextHov.containsMouse
-                                ? Colors.primary
-                                : Colors.on_SurfaceVariant
+            color: nextHov.containsMouse
+                       ? Colors.primary
+                       : Colors.on_SurfaceVariant
 
-            font.pixelSize:   16
-            font.family:      Fonts.fontM
+            font.pixelSize: 16
+            font.family:    Fonts.fontM
         }
 
         MouseArea {
-            id:           nextHov
+            id: nextHov
 
             anchors.fill: parent
 
@@ -234,16 +323,16 @@ Item {
     }
 
     Text {
-        visible:          !root.wallpapers ||
-                          root.wallpapers.count === 0
+        visible: !root.wallpapers ||
+                 root.wallpapers.count === 0
 
         anchors.centerIn: parent
 
-        text:             "No images found in " + root.wallpaperDir
+        text: "No images found in " + root.wallpaperDir
 
-        font.family:      Fonts.font
-        font.pixelSize:   12
-        color:            Colors.outline
+        font.family:    Fonts.font
+        font.pixelSize: 12
+        color:          Colors.outline
     }
 
     function selectWallpaper(index) {
@@ -274,11 +363,20 @@ Item {
         )
     }
 
-    function positionAt(index) {
+    function positionAt(index, animate) {
         if (!root.wallpapers) return
         if (root.wallpapers.count === 0) return
-        if (index < 0 || index >= root.wallpapers.count) return
+
+        if (index < 0 ||
+            index >= root.wallpapers.count) {
+            return
+        }
+
         if (wallCarousel.count <= index) return
+
+        carouselAnimation.stop()
+
+        const oldX = wallCarousel.contentX
 
         wallCarousel.currentIndex = index
 
@@ -286,6 +384,21 @@ Item {
             index,
             ListView.SnapPosition
         )
+
+        const targetX = wallCarousel.contentX
+
+        if (!animate ||
+            Math.abs(targetX - oldX) < 1) {
+            wallCarousel.contentX = targetX
+            return
+        }
+
+        wallCarousel.contentX = oldX
+
+        carouselAnimation.from = oldX
+        carouselAnimation.to   = targetX
+
+        carouselAnimation.start()
     }
 
     function forceActiveFocus() {

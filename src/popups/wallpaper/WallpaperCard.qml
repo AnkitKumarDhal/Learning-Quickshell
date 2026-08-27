@@ -19,34 +19,35 @@ Item {
     property int thumbnailWidth: 420
     property int thumbnailHeight: 280
 
+    property real visualScale:   1.0
+    property real visualOpacity: 1.0
+    property real visualOffsetY: 0
+    property real visualZ:       0
+
     width:  500
     height: 280
 
     Rectangle {
         id: thumbCard
-        anchors.fill: parent
+
+        anchors {
+            horizontalCenter: parent.horizontalCenter
+            verticalCenter:   parent.verticalCenter
+        }
+
+        width:  parent.width
+        height: parent.height
+
         radius: 16
+
         color: Colors.surfaceContainerHigh
-        clip: false
+        clip:  false
 
-        scale:   root.selected ? 1.0 : 0.76
-        opacity: root.selected ? 1.0 : 0.58
+        scale:   root.visualScale
+        opacity: root.visualOpacity
 
-        Behavior on scale {
-            NumberAnimation {
-                duration: 240
-                easing.type: Easing.OutCubic
-            }
-        }
+        y: root.visualOffsetY
 
-        Behavior on opacity {
-            NumberAnimation {
-                duration: 200
-                easing.type: Easing.OutCubic
-            }
-        }
-
-        layer.enabled: true
 
         Image {
             id: wallpaperImage
@@ -77,6 +78,7 @@ Item {
             id: imageMask
 
             anchors.fill: parent
+
             radius:       thumbCard.radius
             color:        "white"
             visible:      false
@@ -84,14 +86,11 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            color:        Colors.background
-            opacity:      root.selected
-                              ? 0.0
-                              : 0.35
 
-            Behavior on opacity {
-                NumberAnimation { duration: 180 }
-            }
+            color:   Colors.background
+            opacity: root.selected
+                          ? 0.0
+                          : 0.35
         }
 
         Rectangle {
@@ -146,6 +145,7 @@ Item {
             }
 
             height: 62
+
             radius: thumbCard.radius
             color:  "transparent"
 
@@ -181,28 +181,32 @@ Item {
             text:         root.sourcePath.split("/").pop()
             color:        Colors.on_Surface
             font.pixelSize: 11
-            font.bold:    true
-            font.family:   Fonts.font
+            font.bold:      true
+            font.family:    Fonts.font
             elide:         Text.ElideMiddle
         }
 
         // Applying spinner overlay
         Item {
             anchors.fill: parent
-            visible:      root.applying && root.selected
+
+            visible: root.applying && root.selected
 
             Rectangle {
                 anchors.fill: parent
-                color:        Qt.rgba(
-                                  Colors.background.r,
-                                  Colors.background.g,
-                                  Colors.background.b,
-                                  0.55)
+
+                color: Qt.rgba(
+                    Colors.background.r,
+                    Colors.background.g,
+                    Colors.background.b,
+                    0.55)
             }
 
             Text {
                 anchors.centerIn: parent
+
                 text:             "󰑐"
+
                 color:            Colors.primary
                 font.pixelSize:   28
                 font.family:      Fonts.fontM
@@ -218,15 +222,18 @@ Item {
         }
 
         Rectangle {
-            anchors.fill:  parent
-            radius:        thumbCard.radius
-            color:         "transparent"
-            border.width:  root.selected ? 2 : 0
-            border.color:  Colors.primary
+            anchors.fill: parent
+
+            radius:       thumbCard.radius
+            color:        "transparent"
+
+            border.width: root.selected ? 2 : 0
+            border.color: Colors.primary
         }
 
         MouseArea {
             anchors.fill: parent
+
             hoverEnabled: true
             cursorShape:  Qt.PointingHandCursor
 
