@@ -765,6 +765,8 @@ PanelWindow {
                                             ? "Image"
                                             : modelData.preview
 
+                                    textFormat: Text.PlainText
+
                                     color:      Colors.on_Surface
                                     font.pixelSize: 12
                                     font.family:  Fonts.font

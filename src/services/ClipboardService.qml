@@ -24,9 +24,14 @@ Singleton {
     })
 
     property var _previewSearchMatches: []
+    property bool searchCacheReady: false
+
+    property bool _searchCachePending: false
+    property bool _searchPending: false
 
     readonly property string stateFilePath: Quickshell.statePath("clipboard.json")
     readonly property string imageCachePath: Quickshell.cachePath("clipboard/images")
+    readonly property string searchCachePath: Quickshell.cachePath("clipboard/search")
 
     function itemSignature(item) {
         return item.id
@@ -196,6 +201,7 @@ Singleton {
 
         root.loading = true
         root.errorMessage = ""
+        root.searchCacheReady = false
 
         listProc._tempHist = []
         listProc._refreshPending = false
@@ -253,16 +259,45 @@ Singleton {
     }
 
     function startFullSearch(query) {
+        if (query === "")
+            return
+
+        if (!root.searchCacheReady) {
+            root._searchPending = true
+            root.ensureSearchCache()
+            return
+        }
+
         searchProc._query = query
         searchProc._matches = []
 
         searchProc.exec([
             "sh",
             "-c",
-            "cliphist list | while IFS=\"$(printf '\\t')\" read -r id preview; do case \"$preview\" in \"[[ binary data \"*) continue ;; esac; if printf '%s\\t\\n' \"$id\" | cliphist decode 2>/dev/null | LC_ALL=C grep -Fqi -- \"$1\"; then printf '%s\\n' \"$id\"; fi; done; exit 0",
+            "find \"$1\" -type f -name '*.txt' -exec grep -ilaF -- \"$2\" {} + 2>/dev/null",
             "--",
+            root.searchCachePath,
             query
         ])
+    }
+
+    function ensureSearchCache() {
+        if (cacheProc.running) {
+            root._searchCachePending = true
+            return
+        }
+
+        root.searchCacheReady = false
+        cacheProc.running = true
+    }
+
+    function finishSearchCache() {
+        root.searchCacheReady = true
+
+        if (root._searchPending) {
+            root._searchPending = false
+            root.startFullSearch(root.searchQuery.trim().toLowerCase())
+        }
     }
 
     function finishSearch() {
@@ -273,8 +308,17 @@ Singleton {
 
         const matches = {}
 
-        for (let i = 0; i < searchProc._matches.length; i++)
-            matches[searchProc._matches[i]] = true
+        for (let i = 0; i < searchProc._matches.length; i++) {
+            const path = searchProc._matches[i]
+            const filename = path.substring(path.lastIndexOf("/") + 1)
+
+            if (!filename.endsWith(".txt"))
+                continue
+
+            const id = filename.substring(0, filename.length - 4)
+
+            matches[id] = true
+        }
 
         const result = []
 
@@ -291,6 +335,43 @@ Singleton {
             if (matches[item.id] || previewMatched)
                 result.push(item)
         }
+
+        result.sort((a, b) => {
+            const aText = a.preview.toLowerCase()
+            const bText = b.preview.toLowerCase()
+
+            function score(text, fullMatch) {
+                if (text === query)
+                    return 0
+
+                if (text.startsWith(query))
+                    return 1
+
+                const wordMatch = new RegExp(
+                    "(^|\\s)" + query.replace(
+                        /[.*+?^${}()|[\]\\]/g,
+                        "\\$&"
+                    ) + "(\\s|$)",
+                    "i"
+                ).test(text)
+
+                if (wordMatch)
+                    return 2
+
+                if (text.includes(query))
+                    return 3
+
+                return fullMatch ? 4 : 5
+            }
+
+            const aScore = score(aText, !!matches[a.id])
+            const bScore = score(bText, !!matches[b.id])
+
+            if (aScore !== bScore)
+                return aScore - bScore
+
+            return a.position - b.position
+        })
 
         root.filteredHistory = result
     }
@@ -523,6 +604,7 @@ Singleton {
                 root.errorMessage = ""
 
                 root.applyFilter()
+                root.ensureSearchCache()
             }
 
             listProc._tempHist = []
@@ -531,6 +613,32 @@ Singleton {
                 listProc._refreshPending = false
                 root.refresh()
             }
+        }
+    }
+
+    Process {
+        id: cacheProc
+
+        command: [
+            "sh",
+            "-c",
+            "mkdir -p \"$1\" && cliphist list | while IFS=\"$(printf '\\t')\" read -r id preview; do case \"$preview\" in \"[[ binary data \"*) continue ;; esac; [ -s \"$1/$id.txt\" ] || printf '%s\\t\\n' \"$id\" | cliphist decode > \"$1/$id.txt\"; done; exit 0",
+            "--",
+            root.searchCachePath
+        ]
+
+        running: false
+
+        stderr: StdioCollector {}
+
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0) {
+                root.searchCacheReady = false
+                root.errorMessage = "Unable to build clipboard search cache."
+                return
+            }
+
+            root.finishSearchCache()
         }
     }
 
@@ -621,8 +729,15 @@ Singleton {
         stderr: StdioCollector {}
 
         onExited: (exitCode, exitStatus) => {
-            if (exitCode !== 0)
+            if (exitCode !== 0) {
                 root.errorMessage = "Unable to delete clipboard item."
+            } else {
+                cleanupProc.exec([
+                    "rm",
+                    "-f",
+                    root.searchCachePath + "/" + deleteProc._itemId + ".txt"
+                ])
+            }
 
             root.startNextDelete()
         }
@@ -649,6 +764,11 @@ Singleton {
             }
 
             root.saveMetadata()
+            cleanupProc.exec([
+                "rm",
+                "-rf",
+                root.searchCachePath
+            ])
             root.refresh()
         }
     }
