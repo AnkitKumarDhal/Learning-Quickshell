@@ -48,21 +48,14 @@ Item {
 
         y: root.visualOffsetY
 
-
         Image {
             id: wallpaperImage
-
             anchors.fill: parent
-
             source: root.thumbReady
                         ? ("file://" + root.thumbnailPath)
                         : ("file://" + root.sourcePath)
 
-            sourceSize: Qt.size(
-                root.thumbnailWidth,
-                root.thumbnailHeight
-            )
-
+            sourceSize: Qt.size(root.thumbnailWidth, root.thumbnailHeight)
             fillMode:     Image.PreserveAspectCrop
             asynchronous: true
             cache:        true
