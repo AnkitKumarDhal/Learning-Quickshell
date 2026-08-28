@@ -1109,7 +1109,10 @@ PanelWindow {
 
             height:
                 root.actionsOpen
-                    ? 180
+                    ? Math.max(
+                        180,
+                        actionMenu.actionCount * 46 + 54
+                    )
                     : root.mode === "apps"
                         ? resultsList.height
                         : 112

@@ -3,6 +3,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import qs.src.theme
+import qs.src.state
 
 Singleton {
     id: root
@@ -283,18 +285,52 @@ Singleton {
             return false
         }
 
-        if (toplevel.workspace)
-            toplevel.workspace.activate()
+        let address =
+            String(toplevel.address)
 
-        if (toplevel.wayland)
-            toplevel.wayland.activate()
-        else
-            Hyprland.dispatch(
-                "focuswindow address:" +
-                toplevel.address
-            )
+        if (!address.startsWith("0x"))
+            address = "0x" + address
+
+        root.pendingFocusAddress = address
+
+        Popups.launcherOpen = false
+
+        pendingFocusTimer.start()
 
         return true
+    }
+
+    property string pendingFocusAddress: ""
+
+    Timer {
+        id: pendingFocusTimer
+
+        interval: Theme.animDuration + 60
+        running: false
+        repeat: false
+
+        onTriggered: {
+            if (!root.pendingFocusAddress)
+                return
+
+            const address =
+                root.pendingFocusAddress
+
+            root.pendingFocusAddress = ""
+
+            if (Hyprland.usingLua) {
+                Hyprland.dispatch(
+                    "hl.dsp.focus({ window = \"address:" +
+                    address +
+                    "\" })"
+                )
+            } else {
+                Hyprland.dispatch(
+                    "focuswindow address:" +
+                    address
+                )
+            }
+        }
     }
 
     FileView {

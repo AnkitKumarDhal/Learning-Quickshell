@@ -20,16 +20,28 @@ Item {
               ) !== null
             : false
 
-    readonly property int desktopActionCount:
+    readonly property var desktopActions:
         root.appData &&
         root.appData.actions
-            ? root.appData.actions.length
-            : 0
+            ? root.appData.actions
+            : []
+
+    readonly property int desktopActionCount:
+        root.desktopActions.length
 
     readonly property int actionCount:
         (root.hasExistingWindow ? 1 : 0) +
         root.desktopActionCount +
         1
+
+    function getDesktopAction(index) {
+        const action =
+            root.desktopActions[index]
+
+        return action
+            ? action
+            : null
+    }
 
     function actionLabel(index) {
         let offset = 0
@@ -41,11 +53,20 @@ Item {
             offset = 1
         }
 
-        if (index <
-            offset + root.desktopActionCount) {
-            return root.appData.actions[
-                index - offset
-            ].name || "Action"
+        if (
+            index >= offset &&
+            index <
+            offset + root.desktopActionCount
+        ) {
+            const action =
+                root.getDesktopAction(
+                    index - offset
+                )
+
+            return action &&
+                   action.name
+                ? action.name
+                : "Action"
         }
 
         return LauncherService.isPinned(
@@ -65,14 +86,24 @@ Item {
             offset = 1
         }
 
-        if (index <
-            offset + root.desktopActionCount) {
+        if (
+            index >= offset &&
+            index <
+            offset + root.desktopActionCount
+        ) {
             const action =
-                root.appData.actions[
+                root.getDesktopAction(
                     index - offset
-                ]
+                )
 
-            return action.icon || ""
+            if (
+                action &&
+                action.icon
+            ) {
+                return action.icon
+            }
+
+            return ""
         }
 
         return LauncherService.isPinned(
@@ -98,12 +129,15 @@ Item {
             offset = 1
         }
 
-        if (index <
-            offset + root.desktopActionCount) {
+        if (
+            index >= offset &&
+            index <
+            offset + root.desktopActionCount
+        ) {
             const action =
-                root.appData.actions[
+                root.getDesktopAction(
                     index - offset
-                ]
+                )
 
             if (action)
                 action.execute()
@@ -124,6 +158,15 @@ Item {
 
     focus:
         visible
+
+    onSelectedActionChanged: {
+        if (
+            root.selectedAction < 0 ||
+            root.selectedAction >= root.actionCount
+        ) {
+            root.selectedAction = 0
+        }
+    }
 
     ColumnLayout {
         anchors {
@@ -160,7 +203,8 @@ Item {
         }
 
         Repeater {
-            model: root.actionCount
+            model:
+                root.actionCount
 
             delegate: Item {
                 required property int index
@@ -240,30 +284,39 @@ Item {
 
                             anchors.centerIn: parent
 
-                            width:  20
+                            width: 20
                             height: 20
 
                             source: {
                                 const icon =
                                     root.actionIcon(index)
 
-                                return icon !== "" &&
-                                       icon.charAt(0) !== "󰖯" &&
-                                       icon.charAt(0) !== "󰌐" &&
-                                       icon.charAt(0) !== "󰐕"
-                                    ? Quickshell.iconPath(
-                                        icon,
-                                        true
-                                      )
-                                    : ""
+                                if (
+                                    !icon ||
+                                    icon === "󰖯" ||
+                                    icon === "󰌐" ||
+                                    icon === "󰐕"
+                                ) {
+                                    return ""
+                                }
+
+                                return Quickshell.iconPath(
+                                    icon,
+                                    true
+                                )
                             }
 
                             fillMode:
                                 Image.PreserveAspectFit
 
-                            smooth:       true
-                            mipmap:       true
-                            asynchronous: true
+                            smooth:
+                                true
+
+                            mipmap:
+                                true
+
+                            asynchronous:
+                                true
 
                             visible:
                                 status === Image.Ready
@@ -340,8 +393,11 @@ Item {
 
         case Qt.Key_Up:
             root.selectedAction =
-                (root.selectedAction - 1 +
-                 root.actionCount) %
+                (
+                    root.selectedAction -
+                    1 +
+                    root.actionCount
+                ) %
                 root.actionCount
 
             event.accepted = true
@@ -349,7 +405,10 @@ Item {
 
         case Qt.Key_Down:
             root.selectedAction =
-                (root.selectedAction + 1) %
+                (
+                    root.selectedAction +
+                    1
+                ) %
                 root.actionCount
 
             event.accepted = true
