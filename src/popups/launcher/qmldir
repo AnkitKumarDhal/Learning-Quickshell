@@ -1,3 +1,5 @@
 LauncherSearchBar   1.0 LauncherSearchBar.qml
 LauncherResultItem  1.0 LauncherResultItem.qml
 LauncherResultsList 1.0 LauncherResultsList.qml
+LauncherQuickAccess 1.0 LauncherQuickAccess.qml
+LauncherActionsMenu 1.0 LauncherActionsMenu.qml
