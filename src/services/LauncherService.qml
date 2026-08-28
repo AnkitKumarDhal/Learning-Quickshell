@@ -18,10 +18,23 @@ Singleton {
 
     property var pinnedIds:  []
     property var recentIds:  []
-    property var pinnedApps:  []
-    property var recentApps:  []
+    property var pinnedApps: []
+    property var recentApps: []
 
     property int revision: 0
+
+    property string pendingFocusAddress: ""
+
+    property bool currencyLoading: false
+    property string currencyResult: ""
+    property bool currencyError: false
+    property string currencyFrom: ""
+    property string currencyTo: ""
+    property string currencyAmount: ""
+
+    property var currencyCache: ({})
+
+    readonly property int currencyCacheLifetime: 30 * 60 * 1000
 
     function appKey(app) {
         if (!app)
@@ -58,9 +71,11 @@ Singleton {
         const nextPinned = []
         const nextRecent = []
 
-        for (let i = 0;
-             i < root.pinnedIds.length;
-             i++) {
+        for (
+            let i = 0;
+            i < root.pinnedIds.length;
+            i++
+        ) {
             const key =
                 root.pinnedIds[i]
 
@@ -68,14 +83,18 @@ Singleton {
                 nextPinned.push(key)
         }
 
-        for (let i = 0;
-             i < root.recentIds.length;
-             i++) {
+        for (
+            let i = 0;
+            i < root.recentIds.length;
+            i++
+        ) {
             const key =
                 root.recentIds[i]
 
-            if (byKey[key] &&
-                nextRecent.indexOf(key) === -1) {
+            if (
+                byKey[key] &&
+                nextRecent.indexOf(key) === -1
+            ) {
                 nextRecent.push(key)
             }
         }
@@ -83,17 +102,21 @@ Singleton {
         const pinned = []
         const recent = []
 
-        for (let i = 0;
-             i < nextPinned.length;
-             i++) {
+        for (
+            let i = 0;
+            i < nextPinned.length;
+            i++
+        ) {
             pinned.push(
                 byKey[nextPinned[i]]
             )
         }
 
-        for (let i = 0;
-             i < nextRecent.length;
-             i++) {
+        for (
+            let i = 0;
+            i < nextRecent.length;
+            i++
+        ) {
             if (
                 nextPinned.indexOf(
                     nextRecent[i]
@@ -109,7 +132,6 @@ Singleton {
 
         root.pinnedIds = nextPinned
         root.recentIds = nextRecent
-
         root.pinnedApps = pinned
         root.recentApps = recent
 
@@ -117,7 +139,8 @@ Singleton {
     }
 
     function recordLaunch(app) {
-        const key = root.appKey(app)
+        const key =
+            root.appKey(app)
 
         if (!key)
             return
@@ -130,10 +153,13 @@ Singleton {
             next.length < 24;
             i++
         ) {
-            if (root.recentIds[i] !== key)
+            if (
+                root.recentIds[i] !== key
+            ) {
                 next.push(
                     root.recentIds[i]
                 )
+            }
         }
 
         root.recentIds = next
@@ -146,7 +172,8 @@ Singleton {
     }
 
     function isPinned(app) {
-        const key = root.appKey(app)
+        const key =
+            root.appKey(app)
 
         return (
             key !== "" &&
@@ -155,7 +182,8 @@ Singleton {
     }
 
     function togglePin(app) {
-        const key = root.appKey(app)
+        const key =
+            root.appKey(app)
 
         if (!key)
             return
@@ -183,8 +211,14 @@ Singleton {
     function save() {
         launcherState.setText(
             JSON.stringify({
-                pinned: root.pinnedIds,
-                recent: root.recentIds
+                pinned:
+                    root.pinnedIds,
+
+                recent:
+                    root.recentIds,
+
+                currencyCache:
+                    root.currencyCache
             })
         )
     }
@@ -213,6 +247,8 @@ Singleton {
             root.normalizeClass(
                 app.name
             )
+
+        Hyprland.refreshToplevels()
 
         const toplevels =
             Hyprland.toplevels.values
@@ -286,51 +322,21 @@ Singleton {
         }
 
         let address =
-            String(toplevel.address)
+            String(
+                toplevel.address
+            )
 
         if (!address.startsWith("0x"))
             address = "0x" + address
 
-        root.pendingFocusAddress = address
+        root.pendingFocusAddress =
+            address
 
         Popups.launcherOpen = false
 
         pendingFocusTimer.start()
 
         return true
-    }
-
-    property string pendingFocusAddress: ""
-
-    Timer {
-        id: pendingFocusTimer
-
-        interval: Theme.animDuration + 60
-        running: false
-        repeat: false
-
-        onTriggered: {
-            if (!root.pendingFocusAddress)
-                return
-
-            const address =
-                root.pendingFocusAddress
-
-            root.pendingFocusAddress = ""
-
-            if (Hyprland.usingLua) {
-                Hyprland.dispatch(
-                    "hl.dsp.focus({ window = \"address:" +
-                    address +
-                    "\" })"
-                )
-            } else {
-                Hyprland.dispatch(
-                    "focuswindow address:" +
-                    address
-                )
-            }
-        }
     }
 
     FileView {
@@ -368,9 +374,16 @@ Singleton {
                     )
                         ? data.recent
                         : []
+
+                root.currencyCache =
+                    data.currencyCache &&
+                    typeof data.currencyCache === "object"
+                        ? data.currencyCache
+                        : {}
             } catch (error) {
                 root.pinnedIds = []
                 root.recentIds = []
+                root.currencyCache = {}
             }
 
             root.refreshApps(
@@ -381,6 +394,7 @@ Singleton {
         onLoadFailed: {
             root.pinnedIds = []
             root.recentIds = []
+            root.currencyCache = {}
 
             root.refreshApps(
                 DesktopEntries.applications.values
@@ -388,12 +402,42 @@ Singleton {
         }
     }
 
-    property bool currencyLoading: false
-    property string currencyResult: ""
-    property bool currencyError: false
-    property string currencyFrom: ""
-    property string currencyTo: ""
-    property string currencyAmount: ""
+    Timer {
+        id: pendingFocusTimer
+
+        interval:
+            Theme.animDuration + 60
+
+        running:
+            false
+
+        repeat:
+            false
+
+        onTriggered: {
+            if (!root.pendingFocusAddress)
+                return
+
+            const address =
+                root.pendingFocusAddress
+
+            root.pendingFocusAddress =
+                ""
+
+            if (Hyprland.usingLua) {
+                Hyprland.dispatch(
+                    "hl.dsp.focus({ window = \"address:" +
+                    address +
+                    "\" })"
+                )
+            } else {
+                Hyprland.dispatch(
+                    "focuswindow address:" +
+                    address
+                )
+            }
+        }
+    }
 
     Process {
         id: currencyProc
@@ -401,6 +445,9 @@ Singleton {
         property string amount: ""
         property string fromCurrency: ""
         property string toCurrency: ""
+
+        property string cacheKey: ""
+
         property var lines: []
 
         stdout: SplitParser {
@@ -408,10 +455,11 @@ Singleton {
                 const text =
                     line.trim()
 
-                if (text !== "")
+                if (text !== "") {
                     currencyProc.lines.push(
                         text
                     )
+                }
             }
         }
 
@@ -428,20 +476,30 @@ Singleton {
                             currencyProc.lines.join("")
                         )
 
-                    if (
+                    const rate =
                         data.rates &&
                         data.rates[
                             currencyProc.toCurrency
-                        ] !== undefined
-                    ) {
-                        root.currencyResult =
-                            String(
-                                data.rates[
-                                    currencyProc.toCurrency
-                                ]
-                            )
+                        ]
 
-                        root.currencyError = false
+                    if (rate !== undefined) {
+                        root.currencyResult =
+                            String(rate)
+
+                        root.currencyError =
+                            false
+
+                        root.currencyCache[
+                            currencyProc.cacheKey
+                        ] = {
+                            value:
+                                String(rate),
+
+                            timestamp:
+                                Date.now()
+                        }
+
+                        root.save()
                     } else {
                         root.currencyResult = ""
                         root.currencyError = true
@@ -488,16 +546,23 @@ Singleton {
             return false
         }
 
-        if (currencyProc.running)
-            return false
+        const cacheKey =
+            amountNumber +
+            "|" +
+            from +
+            "|" +
+            to
+
+        root.currencyAmount =
+            String(amountNumber)
+
+        root.currencyFrom =
+            from
+
+        root.currencyTo =
+            to
 
         if (from === to) {
-            root.currencyAmount =
-                String(amountNumber)
-
-            root.currencyFrom = from
-            root.currencyTo = to
-
             root.currencyResult =
                 String(amountNumber)
 
@@ -507,11 +572,32 @@ Singleton {
             return true
         }
 
-        root.currencyAmount =
-            String(amountNumber)
+        const cached =
+            root.currencyCache[
+                cacheKey
+            ]
 
-        root.currencyFrom = from
-        root.currencyTo = to
+        if (
+            cached &&
+            cached.value !== undefined &&
+            cached.timestamp !== undefined &&
+            Date.now() -
+                Number(
+                    cached.timestamp
+                ) <
+                root.currencyCacheLifetime
+        ) {
+            root.currencyResult =
+                String(cached.value)
+
+            root.currencyError = false
+            root.currencyLoading = false
+
+            return true
+        }
+
+        if (currencyProc.running)
+            return false
 
         root.currencyResult = ""
         root.currencyError = false
@@ -526,6 +612,9 @@ Singleton {
         currencyProc.toCurrency =
             to
 
+        currencyProc.cacheKey =
+            cacheKey
+
         currencyProc.command = [
             "curl",
             "-fsS",
@@ -536,12 +625,17 @@ Singleton {
                 String(amountNumber)
             ) +
             "&from=" +
-            encodeURIComponent(from) +
+            encodeURIComponent(
+                from
+            ) +
             "&to=" +
-            encodeURIComponent(to)
+            encodeURIComponent(
+                to
+            )
         ]
 
-        currencyProc.running = true
+        currencyProc.running =
+            true
 
         return true
     }
