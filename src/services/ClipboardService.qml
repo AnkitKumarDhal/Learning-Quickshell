@@ -201,7 +201,6 @@ Singleton {
 
         root.loading = true
         root.errorMessage = ""
-        root.searchCacheReady = false
 
         listProc._tempHist = []
         listProc._refreshPending = false
@@ -268,6 +267,8 @@ Singleton {
             return
         }
 
+        root._searchPending = false
+
         searchProc._query = query
         searchProc._matches = []
 
@@ -287,17 +288,26 @@ Singleton {
             return
         }
 
-        root.searchCacheReady = false
         cacheProc.running = true
     }
 
     function finishSearchCache() {
         root.searchCacheReady = true
 
+        if (root._searchCachePending) {
+            root._searchCachePending = false
+            root.ensureSearchCache()
+            return
+        }
+
         if (root._searchPending) {
             root._searchPending = false
             root.startFullSearch(root.searchQuery.trim().toLowerCase())
+            return
         }
+
+        if (root.searchQuery.trim() !== "")
+            root.startFullSearch(root.searchQuery.trim().toLowerCase())
     }
 
     function finishSearch() {
@@ -633,8 +643,9 @@ Singleton {
 
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0) {
-                root.searchCacheReady = false
-                root.errorMessage = "Unable to build clipboard search cache."
+                if (!root.searchCacheReady)
+                    root.errorMessage = "Unable to build clipboard search cache."
+
                 return
             }
 
