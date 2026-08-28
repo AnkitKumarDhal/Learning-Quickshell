@@ -622,297 +622,293 @@ Singleton {
         )
     }
 
-    function search(
-        apps,
-        query,
-        recentKeys,
-        pinnedKeys
+function search(
+    apps,
+    query,
+    recentKeys,
+    pinnedKeys
+) {
+    const raw =
+        String(query || "")
+            .trim()
+
+    const normalized =
+        root.normalize(raw)
+
+    const mode =
+        root.detectMode(raw)
+
+    if (
+        mode === "calculator"
     ) {
-        const raw =
-            String(query || "")
-                .trim()
-
-        const normalized =
-            root.normalize(raw)
-
-        const mode =
-            root.detectMode(
-                normalized
-            )
-
-        if (
-            mode === "calculator"
-        ) {
-            const result =
-                root.calculate(raw)
-
-            return {
-                mode: mode,
-                results: [],
-                title:
-                    result !== ""
-                        ? result
-                        : "Invalid expression",
-                text:
-                    result !== ""
-                        ? "Press Enter to copy the result"
-                        : "Try pi * 10, sqrt(144), sin(30), or 2^10",
-                detail: "",
-                valid:
-                    result !== ""
-            }
-        }
-
-        if (
-            mode === "unit"
-        ) {
-            const parsed =
-                LauncherConvertService.parseUnit(
-                    raw
-                )
-
-            const result =
-                LauncherConvertService.convertUnit(
-                    raw
-                )
-
-            return {
-                mode: mode,
-                results: [],
-                title:
-                    result !== null &&
-                    Number.isFinite(result)
-                        ? String(
-                            Number(
-                                result.toFixed(10)
-                            )
-                          ) +
-                          " " +
-                          parsed.to
-                        : "Invalid conversion",
-                text:
-                    result !== null &&
-                    Number.isFinite(result)
-                        ? "Press Enter to copy the result"
-                        : "Try 10 km to mi, 100 kmh to mph, or 2 gb to mb",
-                detail:
-                    parsed
-                        ? parsed.value +
-                          " " +
-                          parsed.from +
-                          " → " +
-                          parsed.to
-                        : "",
-                valid:
-                    result !== null &&
-                    Number.isFinite(result)
-            }
-        }
-
-        if (
-            mode === "currency"
-        ) {
-            const parsed =
-                LauncherConvertService.parseCurrency(
-                    raw
-                )
-
-            if (!parsed) {
-                return {
-                    mode: mode,
-                    results: [],
-                    title:
-                        "Invalid currency conversion",
-                    text:
-                        "Try 100 USD to INR",
-                    detail: "",
-                    valid: false
-                }
-            }
-
-            if (
-                !LauncherConvertService.currencyLoading &&
-                !(
-                    LauncherConvertService.currencyFrom === parsed.from &&
-                    LauncherConvertService.currencyTo === parsed.to &&
-                    LauncherConvertService.currencyAmount === String(parsed.amount) &&
-                    LauncherConvertService.currencyResult !== ""
-                )
-            ) {
-                LauncherConvertService.convertCurrency(
-                    parsed.amount,
-                    parsed.from,
-                    parsed.to
-                )
-            }
-
-            return {
-                mode: mode,
-                results: [],
-                title:
-                    LauncherConvertService.currencyLoading
-                        ? "Converting…"
-                        : LauncherConvertService.currencyError
-                            ? "Unable to fetch exchange rate"
-                            : LauncherConvertService.currencyResult !== ""
-                                ? LauncherConvertService.currencyResult +
-                                  " " +
-                                  parsed.to
-                                : "Fetching exchange rate…",
-                text:
-                    LauncherConvertService.currencyError
-                        ? "Check your internet connection and try again"
-                        : "Using a live or cached exchange rate",
-                detail:
-                    parsed.amount +
-                    " " +
-                    parsed.from +
-                    " → " +
-                    parsed.to,
-                valid:
-                    LauncherConvertService.currencyResult !== ""
-            }
-        }
-
-        if (
-            mode === "web" ||
-            mode === "google" ||
-            mode === "startpage"
-        ) {
-            const value =
-                root.webQuery(raw)
-
-            return {
-                mode: mode,
-                results: [],
-                title:
-                    value !== ""
-                        ? "Search for “" +
-                          value +
-                          "”"
-                        : "Enter a search query",
-                text:
-                    value !== ""
-                        ? "Press Enter to open it in your browser"
-                        : "Use ? for web search, !g for Google, or !s for Startpage",
-                detail: "",
-                valid:
-                    value !== ""
-            }
-        }
-
-        if (
-            mode === "command"
-        ) {
-            const command =
-                raw.substring(1)
-                    .trim()
-
-            return {
-                mode: mode,
-                results: [],
-                title:
-                    command !== ""
-                        ? command
-                        : "Run a shell command",
-                text:
-                    command !== ""
-                        ? "Press Enter to execute it"
-                        : "Type > followed by a command",
-                detail: "",
-                valid:
-                    command !== ""
-            }
-        }
-
-        const results = []
-        const seen = {}
-
-        const recent =
-            Array.isArray(recentKeys)
-                ? recentKeys
-                : []
-
-        const pinned =
-            Array.isArray(pinnedKeys)
-                ? pinnedKeys
-                : []
-
-        for (
-            let i = 0;
-            i < apps.length;
-            i++
-        ) {
-            const app =
-                apps[i]
-
-            const key =
-                root.appKey(app)
-
-            if (
-                !key ||
-                app.noDisplay ||
-                seen[key]
-            ) {
-                continue
-            }
-
-            seen[key] = true
-
-            if (
-                normalized === ""
-            ) {
-                results.push({
-                    app: app,
-                    score: 0
-                })
-
-                continue
-            }
-
-            const score =
-                root.scoreApp(
-                    app,
-                    normalized,
-                    recent,
-                    pinned
-                )
-
-            if (score >= 0) {
-                results.push({
-                    app: app,
-                    score: score
-                })
-            }
-        }
-
-        results.sort((a, b) => {
-            if (
-                a.score !== b.score
-            ) {
-                return b.score -
-                    a.score
-            }
-
-            return (
-                a.app.name || ""
-            ).localeCompare(
-                b.app.name || ""
-            )
-        })
+        const result =
+            root.calculate(raw)
 
         return {
-            mode: "apps",
-
-            results:
-                results.map(
-                    item => item.app
-                ),
-
-            title: "",
-            text: "",
+            mode: mode,
+            results: [],
+            title:
+                result !== ""
+                    ? result
+                    : "Invalid expression",
+            text:
+                result !== ""
+                    ? "Press Enter to copy the result"
+                    : "Try pi * 10, sqrt(144), sin(30), or 2^10",
             detail: "",
-            valid: false
+            valid:
+                result !== ""
         }
     }
-}
+
+    if (
+        mode === "unit"
+    ) {
+        const parsed =
+            LauncherConvertService.parseUnit(
+                raw
+            )
+
+        const result =
+            LauncherConvertService.convertUnit(
+                raw
+            )
+
+        return {
+            mode: mode,
+            results: [],
+            title:
+                result !== null &&
+                Number.isFinite(result)
+                    ? String(
+                        Number(
+                            result.toFixed(10)
+                        )
+                      ) +
+                      " " +
+                      parsed.to
+                    : "Invalid conversion",
+            text:
+                result !== null &&
+                Number.isFinite(result)
+                    ? "Press Enter to copy the result"
+                    : "Try 10 km to mi, 100 kmh to mph, or 2 gb to mb",
+            detail:
+                parsed
+                    ? parsed.value +
+                      " " +
+                      parsed.from +
+                      " → " +
+                      parsed.to
+                    : "",
+            valid:
+                result !== null &&
+                Number.isFinite(result)
+        }
+    }
+
+    if (
+        mode === "currency"
+    ) {
+        const parsed =
+            LauncherConvertService.parseCurrency(
+                raw
+            )
+
+        if (!parsed) {
+            return {
+                mode: mode,
+                results: [],
+                title:
+                    "Invalid currency conversion",
+                text:
+                    "Try 100 USD to INR",
+                detail: "",
+                valid: false
+            }
+        }
+
+        if (
+            !LauncherConvertService.currencyLoading &&
+            !(
+                LauncherConvertService.currencyFrom === parsed.from &&
+                LauncherConvertService.currencyTo === parsed.to &&
+                LauncherConvertService.currencyAmount === String(parsed.amount) &&
+                LauncherConvertService.currencyResult !== ""
+            )
+        ) {
+            LauncherConvertService.convertCurrency(
+                parsed.amount,
+                parsed.from,
+                parsed.to
+            )
+        }
+
+        return {
+            mode: mode,
+            results: [],
+            title:
+                LauncherConvertService.currencyLoading
+                    ? "Converting…"
+                    : LauncherConvertService.currencyError
+                        ? "Unable to fetch exchange rate"
+                        : LauncherConvertService.currencyResult !== ""
+                            ? LauncherConvertService.currencyResult +
+                              " " +
+                              parsed.to
+                            : "Fetching exchange rate…",
+            text:
+                LauncherConvertService.currencyError
+                    ? "Check your internet connection and try again"
+                    : "Using a live or cached exchange rate",
+            detail:
+                parsed.amount +
+                " " +
+                parsed.from +
+                " → " +
+                parsed.to,
+            valid:
+                LauncherConvertService.currencyResult !== ""
+        }
+    }
+
+    if (
+        mode === "web" ||
+        mode === "google" ||
+        mode === "startpage"
+    ) {
+        const value =
+            root.webQuery(raw)
+
+        return {
+            mode: mode,
+            results: [],
+            title:
+                value !== ""
+                    ? "Search for “" +
+                      value +
+                      "”"
+                    : "Enter a search query",
+            text:
+                value !== ""
+                    ? "Press Enter to open it in your browser"
+                    : "Use ? for web search, !g for Google, or !s for Startpage",
+            detail: "",
+            valid:
+                value !== ""
+        }
+    }
+
+    if (
+        mode === "command"
+    ) {
+        const command =
+            raw.substring(1).trim()
+
+        return {
+            mode: mode,
+            results: [],
+            title:
+                command !== ""
+                    ? command
+                    : "Run a shell command",
+            text:
+                command !== ""
+                    ? "Press Enter to execute it"
+                    : "Type > followed by a command",
+            detail: "",
+            valid:
+                command !== ""
+        }
+    }
+
+    const results = []
+    const seen = {}
+
+    const recent =
+        Array.isArray(recentKeys)
+            ? recentKeys
+            : []
+
+    const pinned =
+        Array.isArray(pinnedKeys)
+            ? pinnedKeys
+            : []
+
+    for (
+        let i = 0;
+        i < apps.length;
+        i++
+    ) {
+        const app =
+            apps[i]
+
+        const key =
+            root.appKey(app)
+
+        if (
+            !key ||
+            app.noDisplay ||
+            seen[key]
+        ) {
+            continue
+        }
+
+        seen[key] = true
+
+        if (
+            normalized === ""
+        ) {
+            results.push({
+                app: app,
+                score: 0
+            })
+
+            continue
+        }
+
+        const score =
+            root.scoreApp(
+                app,
+                normalized,
+                recent,
+                pinned
+            )
+
+        if (score >= 0) {
+            results.push({
+                app: app,
+                score: score
+            })
+        }
+    }
+
+    results.sort((a, b) => {
+        if (
+            a.score !== b.score
+        ) {
+            return b.score -
+                a.score
+        }
+
+        return (
+            a.app.name || ""
+        ).localeCompare(
+            b.app.name || ""
+        )
+    })
+
+    return {
+        mode: "apps",
+
+        results:
+            results.map(
+                item => item.app
+            ),
+
+        title: "",
+        text: "",
+        detail: "",
+        valid: false
+    }
+}}
