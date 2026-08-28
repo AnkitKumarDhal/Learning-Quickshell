@@ -177,6 +177,28 @@ PanelWindow {
                             event.accepted = true
                         }
 
+                        Keys.onReturnPressed: (event) => {
+                            const item = ClipboardService.filteredHistory[0]
+
+                            if (item) {
+                                ClipboardService.copy(item)
+                                Popups.clipboardOpen = false
+                            }
+
+                            event.accepted = true
+                        }
+
+                        Keys.onEnterPressed: (event) => {
+                            const item = ClipboardService.filteredHistory[0]
+
+                            if (item) {
+                                ClipboardService.copy(item)
+                                Popups.clipboardOpen = false
+                            }
+
+                            event.accepted = true
+                        }
+
                         background: Rectangle {
                             radius: 8
                             color: Colors.surfaceContainerHigh
@@ -576,7 +598,9 @@ PanelWindow {
                             event.key === Qt.Key_Enter
                         ) {
                             const item =
-                                ClipboardService.filteredHistory[currentIndex]
+                                ClipboardService.searchQuery.trim() !== ""
+                                    ? ClipboardService.filteredHistory[0]
+                                    : ClipboardService.filteredHistory[currentIndex]
 
                             if (item) {
                                 ClipboardService.copy(item)
@@ -894,7 +918,7 @@ PanelWindow {
                                         hoverEnabled: true
                                         cursorShape:  Qt.PointingHandCursor
 
-                                        onClicked: (mouse) => {
+                                        onClicked: {
                                             ClipboardService.togglePin(
                                                 modelData
                                             )
@@ -943,7 +967,7 @@ PanelWindow {
                                         hoverEnabled: true
                                         cursorShape:  Qt.PointingHandCursor
 
-                                        onClicked: (mouse) => {
+                                        onClicked: {
                                             ClipboardService.deleteItem(
                                                 modelData
                                             )
