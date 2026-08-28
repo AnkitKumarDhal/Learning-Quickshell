@@ -10,11 +10,9 @@ Singleton {
     id: root
 
     property string stateFilePath:
-        Quickshell.statePath("launcher.json")
-
-    property string defaultSearchUrl:
-        Quickshell.env("LAUNCHER_SEARCH_URL") ||
-        "https://www.google.com/search?q="
+        Quickshell.statePath(
+            "launcher.json"
+        )
 
     property var pinnedIds:  []
     property var recentIds:  []
@@ -24,17 +22,6 @@ Singleton {
     property int revision: 0
 
     property string pendingFocusAddress: ""
-
-    property bool currencyLoading: false
-    property string currencyResult: ""
-    property bool currencyError: false
-    property string currencyFrom: ""
-    property string currencyTo: ""
-    property string currencyAmount: ""
-
-    property var currencyCache: ({})
-
-    readonly property int currencyCacheLifetime: 30 * 60 * 1000
 
     function appKey(app) {
         if (!app)
@@ -52,24 +39,36 @@ Singleton {
 
     function refreshApps(apps) {
         const source =
-            Array.isArray(apps)
+            apps && apps.length !== undefined
                 ? apps
                 : []
 
         const byKey = {}
+        const nextPinned = []
+        const nextRecent = []
+        const pinned = []
+        const recent = []
 
-        for (let i = 0; i < source.length; i++) {
-            const app = source[i]
-            const key = root.appKey(app)
+        for (
+            let i = 0;
+            i < source.length;
+            i++
+        ) {
+            const app =
+                source[i]
 
-            if (!key || app.noDisplay)
+            const key =
+                root.appKey(app)
+
+            if (
+                !key ||
+                app.noDisplay
+            ) {
                 continue
+            }
 
             byKey[key] = app
         }
-
-        const nextPinned = []
-        const nextRecent = []
 
         for (
             let i = 0;
@@ -79,8 +78,13 @@ Singleton {
             const key =
                 root.pinnedIds[i]
 
-            if (byKey[key])
+            if (byKey[key]) {
                 nextPinned.push(key)
+
+                pinned.push(
+                    byKey[key]
+                )
+            }
         }
 
         for (
@@ -96,44 +100,28 @@ Singleton {
                 nextRecent.indexOf(key) === -1
             ) {
                 nextRecent.push(key)
+
+                if (
+                    nextPinned.indexOf(key) === -1
+                ) {
+                    recent.push(
+                        byKey[key]
+                    )
+                }
             }
         }
 
-        const pinned = []
-        const recent = []
+        root.pinnedIds =
+            nextPinned
 
-        for (
-            let i = 0;
-            i < nextPinned.length;
-            i++
-        ) {
-            pinned.push(
-                byKey[nextPinned[i]]
-            )
-        }
+        root.recentIds =
+            nextRecent
 
-        for (
-            let i = 0;
-            i < nextRecent.length;
-            i++
-        ) {
-            if (
-                nextPinned.indexOf(
-                    nextRecent[i]
-                ) !== -1
-            ) {
-                continue
-            }
+        root.pinnedApps =
+            pinned
 
-            recent.push(
-                byKey[nextRecent[i]]
-            )
-        }
-
-        root.pinnedIds = nextPinned
-        root.recentIds = nextRecent
-        root.pinnedApps = pinned
-        root.recentApps = recent
+        root.recentApps =
+            recent
 
         root.revision++
     }
@@ -145,7 +133,8 @@ Singleton {
         if (!key)
             return
 
-        const next = [key]
+        const next =
+            [key]
 
         for (
             let i = 0;
@@ -162,7 +151,8 @@ Singleton {
             }
         }
 
-        root.recentIds = next
+        root.recentIds =
+            next
 
         root.refreshApps(
             DesktopEntries.applications.values
@@ -177,7 +167,9 @@ Singleton {
 
         return (
             key !== "" &&
-            root.pinnedIds.indexOf(key) !== -1
+            root.pinnedIds.indexOf(
+                key
+            ) !== -1
         )
     }
 
@@ -199,7 +191,8 @@ Singleton {
         else
             next.splice(index, 1)
 
-        root.pinnedIds = next
+        root.pinnedIds =
+            next
 
         root.refreshApps(
             DesktopEntries.applications.values
@@ -215,16 +208,15 @@ Singleton {
                     root.pinnedIds,
 
                 recent:
-                    root.recentIds,
-
-                currencyCache:
-                    root.currencyCache
+                    root.recentIds
             })
         )
     }
 
     function normalizeClass(value) {
-        return String(value || "")
+        return String(
+            value || ""
+        )
             .trim()
             .toLowerCase()
     }
@@ -262,7 +254,8 @@ Singleton {
                 toplevels[i]
 
             const data =
-                toplevel.lastIpcObject || {}
+                toplevel.lastIpcObject ||
+                {}
 
             const classes = [
                 data.initialClass,
@@ -271,7 +264,9 @@ Singleton {
                 data.initialClassName,
                 data.xwaylandClass
             ]
-                .filter(value => value)
+                .filter(
+                    value => value
+                )
                 .map(
                     value =>
                         root.normalizeClass(
@@ -312,7 +307,9 @@ Singleton {
 
     function focusExisting(app) {
         const toplevel =
-            root.findExistingWindow(app)
+            root.findExistingWindow(
+                app
+            )
 
         if (
             !toplevel ||
@@ -326,13 +323,21 @@ Singleton {
                 toplevel.address
             )
 
-        if (!address.startsWith("0x"))
-            address = "0x" + address
+        if (
+            !address.startsWith(
+                "0x"
+            )
+        ) {
+            address =
+                "0x" +
+                address
+        }
 
         root.pendingFocusAddress =
             address
 
-        Popups.launcherOpen = false
+        Popups.launcherOpen =
+            false
 
         pendingFocusTimer.start()
 
@@ -374,16 +379,9 @@ Singleton {
                     )
                         ? data.recent
                         : []
-
-                root.currencyCache =
-                    data.currencyCache &&
-                    typeof data.currencyCache === "object"
-                        ? data.currencyCache
-                        : {}
             } catch (error) {
                 root.pinnedIds = []
                 root.recentIds = []
-                root.currencyCache = {}
             }
 
             root.refreshApps(
@@ -394,7 +392,6 @@ Singleton {
         onLoadFailed: {
             root.pinnedIds = []
             root.recentIds = []
-            root.currencyCache = {}
 
             root.refreshApps(
                 DesktopEntries.applications.values
@@ -415,8 +412,11 @@ Singleton {
             false
 
         onTriggered: {
-            if (!root.pendingFocusAddress)
+            if (
+                !root.pendingFocusAddress
+            ) {
                 return
+            }
 
             const address =
                 root.pendingFocusAddress
@@ -424,7 +424,9 @@ Singleton {
             root.pendingFocusAddress =
                 ""
 
-            if (Hyprland.usingLua) {
+            if (
+                Hyprland.usingLua
+            ) {
                 Hyprland.dispatch(
                     "hl.dsp.focus({ window = \"address:" +
                     address +
@@ -437,206 +439,5 @@ Singleton {
                 )
             }
         }
-    }
-
-    Process {
-        id: currencyProc
-
-        property string amount: ""
-        property string fromCurrency: ""
-        property string toCurrency: ""
-
-        property string cacheKey: ""
-
-        property var lines: []
-
-        stdout: SplitParser {
-            onRead: (line) => {
-                const text =
-                    line.trim()
-
-                if (text !== "") {
-                    currencyProc.lines.push(
-                        text
-                    )
-                }
-            }
-        }
-
-        stderr: StdioCollector {}
-
-        onExited: (exitCode, exitStatus) => {
-            if (
-                exitCode === 0 &&
-                currencyProc.lines.length > 0
-            ) {
-                try {
-                    const data =
-                        JSON.parse(
-                            currencyProc.lines.join("")
-                        )
-
-                    const rate =
-                        data.rates &&
-                        data.rates[
-                            currencyProc.toCurrency
-                        ]
-
-                    if (rate !== undefined) {
-                        root.currencyResult =
-                            String(rate)
-
-                        root.currencyError =
-                            false
-
-                        root.currencyCache[
-                            currencyProc.cacheKey
-                        ] = {
-                            value:
-                                String(rate),
-
-                            timestamp:
-                                Date.now()
-                        }
-
-                        root.save()
-                    } else {
-                        root.currencyResult = ""
-                        root.currencyError = true
-                    }
-                } catch (error) {
-                    root.currencyResult = ""
-                    root.currencyError = true
-                }
-            } else {
-                root.currencyResult = ""
-                root.currencyError = true
-            }
-
-            root.currencyLoading = false
-            currencyProc.lines = []
-        }
-    }
-
-    function convertCurrency(
-        amount,
-        fromCurrency,
-        toCurrency
-    ) {
-        const amountNumber =
-            Number(amount)
-
-        const from =
-            String(
-                fromCurrency || ""
-            ).toUpperCase()
-
-        const to =
-            String(
-                toCurrency || ""
-            ).toUpperCase()
-
-        if (
-            !Number.isFinite(
-                amountNumber
-            ) ||
-            !from ||
-            !to
-        ) {
-            return false
-        }
-
-        const cacheKey =
-            amountNumber +
-            "|" +
-            from +
-            "|" +
-            to
-
-        root.currencyAmount =
-            String(amountNumber)
-
-        root.currencyFrom =
-            from
-
-        root.currencyTo =
-            to
-
-        if (from === to) {
-            root.currencyResult =
-                String(amountNumber)
-
-            root.currencyError = false
-            root.currencyLoading = false
-
-            return true
-        }
-
-        const cached =
-            root.currencyCache[
-                cacheKey
-            ]
-
-        if (
-            cached &&
-            cached.value !== undefined &&
-            cached.timestamp !== undefined &&
-            Date.now() -
-                Number(
-                    cached.timestamp
-                ) <
-                root.currencyCacheLifetime
-        ) {
-            root.currencyResult =
-                String(cached.value)
-
-            root.currencyError = false
-            root.currencyLoading = false
-
-            return true
-        }
-
-        if (currencyProc.running)
-            return false
-
-        root.currencyResult = ""
-        root.currencyError = false
-        root.currencyLoading = true
-
-        currencyProc.amount =
-            String(amountNumber)
-
-        currencyProc.fromCurrency =
-            from
-
-        currencyProc.toCurrency =
-            to
-
-        currencyProc.cacheKey =
-            cacheKey
-
-        currencyProc.command = [
-            "curl",
-            "-fsS",
-            "--max-time",
-            "5",
-            "https://api.frankfurter.app/latest?amount=" +
-            encodeURIComponent(
-                String(amountNumber)
-            ) +
-            "&from=" +
-            encodeURIComponent(
-                from
-            ) +
-            "&to=" +
-            encodeURIComponent(
-                to
-            )
-        ]
-
-        currencyProc.running =
-            true
-
-        return true
     }
 }
