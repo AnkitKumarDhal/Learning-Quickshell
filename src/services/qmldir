@@ -10,3 +10,6 @@ singleton SessionService      1.0 SessionService.qml
 singleton BrightnessService   1.0 BrightnessService.qml
 singleton CaffeineService     1.0 CaffeineService.qml
 singleton MediaService        1.0 MediaService.qml
+singleton LauncherService     1.0 LauncherService.qml
+singleton LauncherSearchService 1.0 LauncherSearchService.qml
+singleton LauncherConvertService 1.0 LauncherConvertService.qml
