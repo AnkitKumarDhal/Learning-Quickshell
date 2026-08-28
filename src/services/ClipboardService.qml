@@ -9,11 +9,14 @@ Singleton {
 
     property var history: []
     property var filteredHistory: []
+
     property string searchQuery: ""
     property string filterCategory: "all"
 
     property bool loading: false
     property string errorMessage: ""
+
+    property var imageStates: ({})
 
     property var _metadata: ({
         pinned: {},
@@ -22,11 +25,11 @@ Singleton {
 
     property var _previewSearchMatches: []
 
-    function itemSignature(item) {
-        if (item.kind === "image")
-            return "image:" + item.id
+    readonly property string stateFilePath: Quickshell.statePath("clipboard.json")
+    readonly property string imageCachePath: Quickshell.cachePath("clipboard/images")
 
-        return "text:" + item.preview
+    function itemSignature(item) {
+        return item.id
     }
 
     function isPinned(item) {
@@ -52,20 +55,58 @@ Singleton {
         return new Date(timestamp).toLocaleDateString()
     }
 
-    function recencyLabel(item, index) {
+    function recencyLabel(item) {
         const usedAt = root._metadata.usedAt[itemSignature(item)] || 0
 
         if (usedAt > 0)
-            return root.relativeTime(usedAt)
+            return "Used " + root.relativeTime(usedAt)
 
-        if (index === 0) return "Latest"
-        if (index < 5) return "Recent"
+        if (item.position === 0)
+            return "Latest"
+
+        if (item.position < 5)
+            return "Recent"
 
         return "Earlier"
     }
 
-    function parseItem(line) {
+    function categoryLabel(category) {
+        switch (category) {
+        case "text":
+            return "Text"
+
+        case "images":
+            return "Images"
+
+        case "link":
+            return "Links"
+
+        case "code":
+            return "Code"
+
+        case "pinned":
+            return "Pinned"
+
+        default:
+            return "All"
+        }
+    }
+
+    function resultCountLabel() {
+        const count = root.filteredHistory.length
+
+        if (root.searchQuery.trim() !== "")
+            return count + " result" + (count === 1 ? "" : "s")
+
+        if (root.filterCategory !== "all")
+            return count + " " + root.categoryLabel(root.filterCategory).toLowerCase()
+
+        return count + " item" + (count === 1 ? "" : "s")
+    }
+
+    function parseItem(line, position) {
         const tabIdx = line.indexOf('\t')
+
         if (tabIdx < 0)
             return null
 
@@ -96,38 +137,55 @@ Singleton {
                 sizeText: imageMatch[1],
                 width: Number(imageMatch[3]),
                 height: Number(imageMatch[4]),
-                imagePath: Quickshell.cachePath("clipboard/images/" + id + "." + extension)
+                imagePath: root.imageCachePath + "/" + id + "." + extension,
+                position: position
             }
         }
 
         const isLink = /^(https?:\/\/|www\.)/i.test(preview.trim())
+
         const isCode = /(^|\n)\s*(#include\b|import\s+|from\s+\S+\s+import\s+|const\s+|let\s+|var\s+|function\s+|class\s+|def\s+|sudo\s+|git\s+|npm\s+|pnpm\s+|yarn\s+|pacman\s+|curl\s+|wget\s+)/i.test(preview)
+
         const isShebang = preview.trim().startsWith("#!")
 
         return {
             id: id,
             preview: preview,
-            kind: isLink ? "link" : (isCode || isShebang) ? "code" : "text",mimeType: "text/plain",
+            kind: isLink ? "link" : (isCode || isShebang) ? "code" : "text",
+            mimeType: "text/plain",
             format: "",
             extension: "",
             sizeText: "",
             width: 0,
             height: 0,
-            imagePath: ""
+            imagePath: "",
+            position: position
         }
     }
 
     function matchesCategory(item) {
-        if (root.filterCategory === "all")
+        switch (root.filterCategory) {
+        case "all":
             return true
 
-        if (root.filterCategory === "pinned")
-            return root.isPinned(item)
+        case "text":
+            return item.kind === "text"
 
-        if (root.filterCategory === "images")
+        case "images":
             return item.kind === "image"
 
-        return item.kind === root.filterCategory
+        case "link":
+            return item.kind === "link"
+
+        case "code":
+            return item.kind === "code"
+
+        case "pinned":
+            return root.isPinned(item)
+
+        default:
+            return true
+        }
     }
 
     function refresh() {
@@ -138,8 +196,10 @@ Singleton {
 
         root.loading = true
         root.errorMessage = ""
+
         listProc._tempHist = []
         listProc._refreshPending = false
+
         listProc.running = true
     }
 
@@ -148,8 +208,12 @@ Singleton {
         const result = []
 
         if (query === "") {
+            searchProc._query = ""
+            searchProc.exec(["true"])
+
             for (let i = 0; i < root.history.length; i++) {
                 const item = root.history[i]
+
                 if (root.matchesCategory(item))
                     result.push(item)
             }
@@ -162,6 +226,7 @@ Singleton {
 
         for (let i = 0; i < root.history.length; i++) {
             const item = root.history[i]
+
             if (!root.matchesCategory(item))
                 continue
 
@@ -171,12 +236,11 @@ Singleton {
 
         root._previewSearchMatches = previewMatches
         root.filteredHistory = previewMatches
-        startFullSearch(query)
+
+        root.startFullSearch(query)
     }
 
-    function onSearchQueryChanged() {
-        filterDebounce.restart()
-    }
+    onSearchQueryChanged: filterDebounce.restart()
 
     function setFilterCategory(category) {
         if (root.filterCategory === category) {
@@ -195,14 +259,16 @@ Singleton {
         searchProc.exec([
             "sh",
             "-c",
-            "cliphist list | while IFS=$'\\t' read -r id preview; do case \"$preview\" in \"[[ binary data \"*) continue ;; esac; if printf '%s\\t\\n' \"$id\" | cliphist decode 2>/dev/null | LC_ALL=C grep -Fqi -- \"$1\"; then printf '%s\\n' \"$id\"; fi; done",
+            "cliphist list | while IFS=\"$(printf '\\t')\" read -r id preview; do case \"$preview\" in \"[[ binary data \"*) continue ;; esac; if printf '%s\\t\\n' \"$id\" | cliphist decode 2>/dev/null | LC_ALL=C grep -Fqi -- \"$1\"; then printf '%s\\n' \"$id\"; fi; done; exit 0",
             "--",
             query
         ])
     }
 
     function finishSearch() {
-        if (searchProc._query !== root.searchQuery.trim().toLowerCase())
+        const query = root.searchQuery.trim().toLowerCase()
+
+        if (searchProc._query !== query)
             return
 
         const matches = {}
@@ -218,7 +284,7 @@ Singleton {
             if (!root.matchesCategory(item))
                 continue
 
-            const previewMatched = item.kind === "image" && root._previewSearchMatches.some(
+            const previewMatched = root._previewSearchMatches.some(
                 (previewItem) => previewItem.id === item.id
             )
 
@@ -229,12 +295,65 @@ Singleton {
         root.filteredHistory = result
     }
 
+    function setImageState(id, state) {
+        const states = Object.assign({}, root.imageStates)
+
+        states[id] = state
+
+        root.imageStates = states
+    }
+
+    function ensureImage(item) {
+        if (!item || item.kind !== "image")
+            return
+
+        const state = root.imageStates[item.id] || 0
+
+        if (state === 1 || state === 2)
+            return
+
+        root.setImageState(item.id, 1)
+
+        imageProc._queue.push({
+            id: item.id,
+            path: item.imagePath
+        })
+
+        root.startNextImage()
+    }
+
+    function startNextImage() {
+        if (imageProc.running)
+            return
+
+        if (imageProc._queue.length === 0)
+            return
+
+        const next = imageProc._queue.shift()
+
+        imageProc._currentId = next.id
+        imageProc._currentPath = next.path
+        imageProc.running = true
+    }
+
     function copy(item) {
         if (!item || !item.id)
             return
 
-        root._metadata.usedAt[itemSignature(item)] = Date.now()
-        saveMetadata()
+        root.errorMessage = ""
+
+        const signature = root.itemSignature(item)
+
+        const usedAt = Object.assign({}, root._metadata.usedAt)
+
+        usedAt[signature] = Date.now()
+
+        root._metadata = {
+            pinned: root._metadata.pinned,
+            usedAt: usedAt
+        }
+
+        root.saveMetadata()
 
         copyProc.exec([
             "sh",
@@ -249,14 +368,20 @@ Singleton {
         if (!item || !item.id)
             return
 
-        const signature = itemSignature(item)
+        const signature = root.itemSignature(item)
+        const pinned = Object.assign({}, root._metadata.pinned)
 
-        if (root._metadata.pinned[signature])
-            delete root._metadata.pinned[signature]
+        if (pinned[signature])
+            delete pinned[signature]
         else
-            root._metadata.pinned[signature] = true
+            pinned[signature] = true
 
-        saveMetadata()
+        root._metadata = {
+            pinned: pinned,
+            usedAt: root._metadata.usedAt
+        }
+
+        root.saveMetadata()
         root.applyFilter()
     }
 
@@ -264,25 +389,34 @@ Singleton {
         if (!item || !item.id)
             return
 
-        const signature = itemSignature(item)
+        const signature = root.itemSignature(item)
 
-        delete root._metadata.pinned[signature]
-        delete root._metadata.usedAt[signature]
+        const pinned = Object.assign({}, root._metadata.pinned)
+        const usedAt = Object.assign({}, root._metadata.usedAt)
 
-        saveMetadata()
+        delete pinned[signature]
+        delete usedAt[signature]
+
+        root._metadata = {
+            pinned: pinned,
+            usedAt: usedAt
+        }
+
+        root.saveMetadata()
 
         if (deleteProc.running) {
             deleteProc._queue.push(item.id)
             return
         }
 
+        deleteProc._queue = []
         deleteProc._itemId = item.id
         deleteProc.running = true
     }
 
     function startNextDelete() {
         if (deleteProc._queue.length === 0) {
-            refresh()
+            root.refresh()
             return
         }
 
@@ -306,9 +440,10 @@ Singleton {
     FileView {
         id: metadataFile
 
-        path: Quickshell.statePath("clipboard.json")
+        path: root.stateFilePath
         preload: true
         watchChanges: false
+        printErrors: false
 
         onLoaded: {
             try {
@@ -318,7 +453,7 @@ Singleton {
                     pinned: data.pinned || {},
                     usedAt: data.usedAt || {}
                 }
-            } catch (e) {
+            } catch (error) {
                 root._metadata = {
                     pinned: {},
                     usedAt: {}
@@ -336,12 +471,17 @@ Singleton {
 
             root.applyFilter()
         }
+
+        onSaveFailed: {
+            root.errorMessage = "Unable to save clipboard metadata."
+        }
     }
 
     Timer {
         id: filterDebounce
 
         interval: 150
+        repeat: false
 
         onTriggered: root.applyFilter()
     }
@@ -373,7 +513,7 @@ Singleton {
                 const parsed = []
 
                 for (let i = 0; i < listProc._tempHist.length; i++) {
-                    const item = root.parseItem(listProc._tempHist[i])
+                    const item = root.parseItem(listProc._tempHist[i], i)
 
                     if (item)
                         parsed.push(item)
@@ -381,6 +521,7 @@ Singleton {
 
                 root.history = parsed
                 root.errorMessage = ""
+
                 root.applyFilter()
             }
 
@@ -409,8 +550,44 @@ Singleton {
         stderr: StdioCollector {}
 
         onExited: (exitCode, exitStatus) => {
-            if (exitCode === 0)
+            if (exitCode === 0 && searchProc._query !== "")
                 root.finishSearch()
+        }
+    }
+
+    Process {
+        id: imageProc
+
+        property var _queue: []
+        property string _currentId: ""
+        property string _currentPath: ""
+
+        command: [
+            "sh",
+            "-c",
+            "mkdir -p \"$1\" && if [ -s \"$3\" ]; then exit 0; fi; printf '%s\\t\\n' \"$2\" | cliphist decode > \"$3\"",
+            "--",
+            root.imageCachePath,
+            _currentId,
+            _currentPath
+        ]
+
+        running: false
+
+        stderr: StdioCollector {}
+
+        onExited: (exitCode, exitStatus) => {
+            if (_currentId !== "") {
+                root.setImageState(_currentId, exitCode === 0 ? 2 : 3)
+
+                if (exitCode !== 0)
+                    root.errorMessage = "Unable to load an image from clipboard history."
+            }
+
+            _currentId = ""
+            _currentPath = ""
+
+            root.startNextImage()
         }
     }
 
@@ -434,7 +611,7 @@ Singleton {
         command: [
             "sh",
             "-c",
-            "printf '%s\\t\\n' \"$1\" | cliphist delete",
+            "printf '%s\\n' \"$1\" | cliphist delete",
             "--",
             _itemId
         ]
@@ -447,10 +624,7 @@ Singleton {
             if (exitCode !== 0)
                 root.errorMessage = "Unable to delete clipboard item."
 
-            if (deleteProc._queue.length > 0)
-                root.startNextDelete()
-            else
-                root.refresh()
+            root.startNextDelete()
         }
     }
 
