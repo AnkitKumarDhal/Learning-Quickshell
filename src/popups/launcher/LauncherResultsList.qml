@@ -13,22 +13,15 @@ Item {
     signal selectionChanged(int index)
 
     function positionAt(idx) {
-        listView.positionViewAtIndex(
-            idx,
-            ListView.Contain
-        )
+        listView.positionViewAtIndex(idx, ListView.Contain)
     }
 
     readonly property int itemH:    54
     readonly property int emptyH:   72
     readonly property int maxListH: 416
 
-    height:
-        root.filteredApps.length > 0
-            ? Math.min(
-                root.filteredApps.length * root.itemH,
-                root.maxListH
-            )
+    height: root.filteredApps.length > 0
+            ? Math.min(root.filteredApps.length * root.itemH, root.maxListH)
             : root.emptyH
 
     Item {
@@ -39,17 +32,11 @@ Item {
         }
 
         height: root.emptyH
-
         visible: root.filteredApps.length === 0
 
         Text {
             anchors.centerIn: parent
-
-            text:
-                root.searchText === ""
-                    ? "Loading applications…"
-                    : "No results for " + root.searchText
-
+            text: root.searchText === "" ? "Loading applications…" : "No results for " + root.searchText
             color:          Colors.on_SurfaceVariant
             font.pixelSize: 13
             font.family:    Fonts.font
@@ -59,24 +46,15 @@ Item {
 
     ListView {
         id: listView
-
         anchors.fill: parent
-
-        visible:
-            root.filteredApps.length > 0
-
+        visible: root.filteredApps.length > 0
         model: root.filteredApps
-
         clip: true
-
-        boundsBehavior:
-            Flickable.StopAtBounds
-
+        boundsBehavior: Flickable.StopAtBounds
         keyNavigationEnabled: false
 
         ScrollBar.vertical: ScrollBar {
-            policy:
-                listView.contentHeight > listView.height
+            policy: listView.contentHeight > listView.height
                     ? ScrollBar.AlwaysOn
                     : ScrollBar.AlwaysOff
 
@@ -93,21 +71,11 @@ Item {
         delegate: LauncherResultItem {
             required property var modelData
             required property int index
-
-            width:
-                listView.width -
-                (listView.contentHeight > listView.height
-                    ? 10
-                    : 0)
-
+            width: listView.width - (listView.contentHeight > listView.height ? 10 : 0)
             appData:    modelData
             isSelected: index === root.selectedIndex
-
-            onActivated:
-                root.launched(index)
-
-            onHovered:
-                root.selectionChanged(index)
+            onActivated: root.launched(index)
+            onHovered: root.selectionChanged(index)
         }
     }
 }

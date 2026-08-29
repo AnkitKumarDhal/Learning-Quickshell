@@ -17,25 +17,13 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-
         topRightRadius:    15
         bottomRightRadius: 15
 
-        color:
-            root.isSelected
-                ? Qt.rgba(
-                    Colors.primary.r,
-                    Colors.primary.g,
-                    Colors.primary.b,
-                    0.18
-                )
+        color: root.isSelected
+                ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.18)
                 : hov.containsMouse
-                    ? Qt.rgba(
-                        Colors.primary.r,
-                        Colors.primary.g,
-                        Colors.primary.b,
-                        0.08
-                    )
+                    ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.08)
                     : "transparent"
 
         Behavior on color {
@@ -78,16 +66,11 @@ Item {
             height: 36
             radius: 9
 
-            color:
-                iconImg.status === Image.Ready
-                    ? "transparent"
-                    : (
-                        root.isSelected
-                            ? Colors.primaryContainer
-                            : Colors.surfaceContainerHigh
-                    )
-
             Layout.alignment: Qt.AlignVCenter
+
+            color: iconImg.status === Image.Ready
+                    ? "transparent"
+                    : (root.isSelected ? Colors.primaryContainer : Colors.surfaceContainerHigh)
 
             Behavior on color {
                 ColorAnimation {
@@ -97,20 +80,10 @@ Item {
 
             Image {
                 id: iconImg
-
                 anchors.fill: parent
                 anchors.margins: 3
-
-                source:
-                    root.appData.icon
-                        ? Quickshell.iconPath(
-                            root.appData.icon,
-                            true
-                        )
-                        : ""
-
+                source: root.appData.icon ? Quickshell.iconPath(root.appData.icon, true) : ""
                 fillMode: Image.PreserveAspectFit
-
                 smooth:       true
                 mipmap:       true
                 visible:      status === Image.Ready
@@ -119,20 +92,9 @@ Item {
 
             Text {
                 anchors.centerIn: parent
-
-                visible:
-                    iconImg.status !== Image.Ready
-
-                text:
-                    (root.appData.name || "?")
-                        .charAt(0)
-                        .toUpperCase()
-
-                color:
-                    root.isSelected
-                        ? Colors.on_PrimaryContainer
-                        : Colors.on_SurfaceVariant
-
+                visible: iconImg.status !== Image.Ready
+                text: (root.appData.name || "?").charAt(0).toUpperCase()
+                color: root.isSelected ? Colors.on_PrimaryContainer : Colors.on_SurfaceVariant
                 font.pixelSize: 15
                 font.bold:       true
                 font.family:     Fonts.fontM
@@ -150,30 +112,13 @@ Item {
             spacing: 2
 
             Text {
-                text:
-                    root.appData.name || ""
-
-                color:
-                    root.isSelected
-                        ? Colors.on_Surface
-                        : Colors.on_SurfaceVariant
-
-                font.pixelSize:
-                    13
-
-                font.weight:
-                    root.isSelected
-                        ? Font.Medium
-                        : Font.Normal
-
-                font.family:
-                    Fonts.fontM
-
-                elide:
-                    Text.ElideRight
-
-                Layout.fillWidth:
-                    true
+                text: root.appData.name || ""
+                color: root.isSelected ? Colors.on_Surface : Colors.on_SurfaceVariant
+                font.pixelSize: 13
+                font.weight: root.isSelected ? Font.Medium : Font.Normal
+                font.family: Fonts.fontM
+                elide: Text.ElideRight
+                Layout.fillWidth: true
 
                 Behavior on color {
                     ColorAnimation {
@@ -183,72 +128,40 @@ Item {
             }
 
             Text {
-                visible:
-                    root.metaText !== ""
-
-                text:
-                    root.metaText
-
-                color:
-                    Colors.on_SurfaceVariant
-
+                visible: root.metaText !== ""
+                text: root.metaText
+                color: Colors.on_SurfaceVariant
                 font.pixelSize: 11
                 font.family:     Fonts.font
-
-                elide:
-                    Text.ElideRight
-
-                Layout.fillWidth:
-                    true
-
-                opacity:
-                    0.65
+                elide: Text.ElideRight
+                Layout.fillWidth: true
+                opacity: 0.65
             }
         }
     }
 
     readonly property string metaText: {
-        const generic =
-            String(
-                root.appData.genericName || ""
-            ).trim()
-
-        const comment =
-            String(
-                root.appData.comment || ""
-            ).trim()
-
-        if (generic && comment)
-            return generic + "  ·  " + comment
-
+        const generic = String(root.appData.genericName || "").trim()
+        const comment = String(root.appData.comment || "").trim()
+        if (generic && comment) return generic + " · " + comment
         return generic || comment
     }
 
     MouseArea {
         id: hov
-
         anchors.fill: parent
-
         hoverEnabled: true
-
-        cursorShape:
-            Qt.PointingHandCursor
-
-        acceptedButtons:
-            Qt.LeftButton |
-            Qt.RightButton
+        cursorShape: Qt.PointingHandCursor
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
 
         onClicked: (mouse) => {
             if (mouse.button === Qt.RightButton) {
-                LauncherService.togglePin(
-                    root.appData
-                )
+                LauncherService.togglePin(root.appData)
             } else {
                 root.activated()
             }
         }
 
-        onEntered:
-            root.hovered()
+        onEntered: root.hovered()
     }
 }
