@@ -337,9 +337,9 @@ PillBase {
             Item {
                 id: overflowViewport
 
-                Layout.preferredWidth: root.collapsed ? 0 : overflowRow.implicitWidth
+                Layout.preferredWidth: root.collapsed ? 0 : overflowRow.implicitWidth + 4
                 Layout.minimumWidth: 0
-                Layout.maximumWidth: overflowRow.implicitWidth
+                Layout.maximumWidth: overflowRow.implicitWidth + 4
                 Layout.preferredHeight: root.iconSize
 
                 clip: true
