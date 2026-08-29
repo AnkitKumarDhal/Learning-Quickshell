@@ -1,553 +1,288 @@
 # Quickshell Shell Configuration
 
-A modern, modular shell configuration built with Quickshell for Hyprland Wayland compositor. Features a sleek top bar with dynamic modules, animated popups, and deep system integration.
+A modern, modular shell configuration built with Quickshell for the Hyprland Wayland compositor. It provides a polished top bar, system controls, application launcher, clipboard manager, wallpaper selector, notifications, media controls, and other desktop utilities while keeping the configuration modular and easy to customize.
 
 ## Resources
 
-- [Quickshell Documentation](https://quickshell.org/docs/v0.3.0/types/)
-- [Hyprland Lua Configuration](https://wiki.hypr.land/)
-- [License](LICENSE)
+* [Quickshell Documentation](https://quickshell.org/docs/v0.3.0/types/)
+* [Hyprland Wiki](https://wiki.hypr.land/)
+* [License](LICENSE)
 
 ---
 
 ## Table of Contents
 
 1. [Project Overview](#project-overview)
-2. [Complete File Structure](#complete-file-structure)
-3. [Architecture and Data Flow](#architecture-and-data-flow)
-4. [Module System](#module-system)
-5. [Popup System](#popup-system)
-6. [Service Layer](#service-layer)
-7. [State Management](#state-management)
-8. [Theme System](#theme-system)
-9. [Keybindings](#keybindings)
-10. [Installation](#installation)
-11. [Configuration](#configuration)
-12. [Component Interactions](#component-interactions)
-13. [Known Issues](#known-issues)
-14. [Roadmap](#roadmap)
-15. [Contributing](#contributing)
+2. [Installation](#installation)
+3. [Known Issues](#known-issues)
+4. [Core Components](#core-components)
+5. [Keybindings](#keybindings)
+6. [Configuration](#configuration)
+7. [Roadmap](#roadmap)
+8. [Contributing](#contributing)
 
 ---
 
 ## Project Overview
 
-This Quickshell configuration provides a comprehensive desktop shell experience with:
+Velox-Q is a modular Quickshell configuration designed primarily for Hyprland and Wayland.
 
-- **Top Bar**: Three-module layout (Left, Center, Right) with dynamic content
-- **Popups**: Animated overlays for notifications, media control, launcher, clipboard, and system settings
-- **Services**: Background QML services for battery, network, volume, clipboard, and notifications
-- **Theming**: Material Design 3 color system generated from wallpaper using Matugen
-- **Animations**: Smooth transitions and slide effects for all UI elements
+The configuration is split into independent modules, popups, services, state, and theme components so that individual parts of the shell can be developed and customized without turning the entire configuration into one large file.
 
 ### Key Features
 
-| Feature | Description | Location |
-|---------|-------------|----------|
-| Focus Mode | Auto-hides bar during fullscreen, manual toggle available* | ShellState.qml |
-| Application Launcher | Fuzzy-search application finder with results list | src/popups/Launcher.qml |
-| Clipboard Manager | History-based clipboard with paste functionality | src/popups/ClipboardPopup.qml |
-| Media Controls | Player controls with progress, volume, and track info | src/popups/MediaPopup.qml |
-| Notification Panel | Toast notifications with stacking and dismiss actions | src/popups/NotificationPanel.qml |
-| Network Popup | WiFi, Bluetooth, VPN, and Hotspot management tabs** | src/popups/NetworkPopup.qml |
-| System Monitor | Real-time CPU, memory, disk, and network usage graphs | src/popups/SystemPopup.qml |
-| Volume Control | Per-application volume mixer*** with device selection | src/popups/VolumePopup.qml |
-
-- *- broken right now
-- **- vpn and hotspot still in progress
-- ***- per application volume mixer is not available yet
----
-
-## Complete File Structure
-
-```
-/workspace/
-├── LICENSE
-├── README.md
-├── shell.qml
-└── src/
-    ├── components/
-    │   ├── PillBase.qml
-    │   ├── PopupPage.qml
-    │   ├── PopupSlide.qml
-    │   ├── TabBar.qml
-    │   └── TrayContextMenu.qml
-    ├── modules/
-    │   ├── Center/
-    │   │   ├── ClockDate.qml
-    │   │   ├── IdleInhibitor.qml
-    │   │   └── Media.qml
-    │   ├── Left/
-    │   │   ├── ArchLogo.qml
-    │   │   ├── WindowName.qml
-    │   │   └── Workspaces.qml
-    │   └── Right/
-    │       ├── Battery.qml
-    │       ├── Network.qml
-    │       ├── NotificationButton.qml
-    │       ├── SystemMonitor.qml
-    │       ├── Tray.qml
-    │       └── Volume.qml
-    ├── popups/
-    │   ├── launcher/
-    │   │   ├── LauncherAppLoader.qml
-    │   │   ├── LauncherResultItem.qml
-    │   │   ├── LauncherResultsList.qml
-    │   │   └── LauncherSearchBar.qml
-    │   ├── media/
-    │   │   ├── MediaArt.qml
-    │   │   ├── MediaControls.qml
-    │   │   ├── MediaProgress.qml
-    │   │   ├── MediaTrackInfo.qml
-    │   │   └── MediaVolumeRow.qml
-    │   ├── system/
-    │   │   ├── DiskBar.qml
-    │   │   ├── NetworkGraph.qml
-    │   │   └── Speedometer.qml
-    │   ├── ClipboardPopup.qml
-    │   ├── DeviceRow.qml
-    │   ├── Launcher.qml
-    │   ├── MediaPopup.qml
-    │   ├── NetworkPopup.qml
-    │   ├── NetworkRow.qml
-    │   ├── NotificationPanel.qml
-    │   ├── NotificationToast.qml
-    │   ├── SystemPopup.qml
-    │   ├── ToastItem.qml
-    │   ├── VolumePopup.qml
-    │   └── VolumeSlider.qml
-    ├── services/
-    │   ├── system/
-    │   │   └── SystemStats.qml
-    │   ├── BatteryService.qml
-    │   ├── ClipboardService.qml
-    │   ├── NetworkService.qml
-    │   ├── NotificationService.qml
-    │   └── VolumeService.qml
-    ├── state/
-    │   ├── Popups.qml
-    │   └── ShellState.qml
-    ├── theme/
-    │   ├── Colors.json
-    │   ├── Colors.qml
-    │   ├── Fonts.qml
-    │   ├── Theme.qml
-    │   └── quickshell.json.hbs
-    └── windows/
-        ├── PopupDismiss.qml
-        └── TopBar.qml
-```
-
----
-
-## Architecture and Data Flow
-
-### High-Level Architecture
-
-The shell follows a layered architecture pattern:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Entry Point                            │
-│                       shell.qml                             │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Windows Layer                          │
-│                    TopBar, PopupDismiss                     │
-└─────────────────────────────────────────────────────────────┘
-                              │
-              ┌───────────────┴───────────────┐
-              ▼                               ▼
-┌─────────────────────────┐         ┌─────────────────────────┐
-│     Modules Layer       │         │      Popups Layer       │
-│  Left, Center, Right    │         │  Launcher, Media, etc.  │
-└─────────────────────────┘         └─────────────────────────┘
-              │                               │
-              └───────────────┬───────────────┘
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     Services Layer                          │
-│    Battery, Network, Volume, Clipboard, Notification        │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      State Layer                            │
-│              ShellState.qml, Popups.qml                     │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Theme Layer                            │
-│         Colors.json, Colors.qml, Fonts.qml, Theme.qml       │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Data Flow Patterns
-
-#### 1. Service to Module Flow
-```
-[System Event] → [Service] → [Property Change] → [Module UI Update]
-     │              │              │                    │
-     ▼              ▼              ▼                    ▼
-  DBus/Pipe    BatteryService   batteryLevel       Battery.qml
-               NetworkService   connectionStatus   Network.qml
-               VolumeService    currentVolume      Volume.qml
-```
-
-#### 2. User Input to Action Flow
-```
-[User Click] → [Module/Popup] → [State Change] → [Popup Visibility]
-     │              │                │                  │
-     ▼              ▼                ▼                  ▼
-  Mouse Event    Network.qml    networkOpen=true    NetworkPopup.qml
-```
-
-#### 3. Theme Application Flow
-```
-[Matugen Generate] → [Colors.json] → [Colors.qml] → [All Components]
-        │                │               │               │
-        ▼                ▼               ▼               ▼
-   Wallpaper       JSON File      Qt Singleton    Color Properties
-```
-
----
-
-## Module System
-
-Modules are the building blocks of the top bar, organized into three sections: Left, Center, and Right.
-
-### Left Module Files
-
-| File | Purpose | Dependencies | Properties Exposed |
-|------|---------|--------------|-------------------|
-| `src/modules/Left/ArchLogo.qml` | Arch Linux logo with context menu popup | Popups.qml, TrayContextMenu.qml | archMenuOpen state |
-| `src/modules/Left/WindowName.qml` | Displays active window title | Hyprland IPC | windowTitle property |
-| `src/modules/Left/Workspaces.qml` | Workspace switcher buttons | Hyprland IPC | workspaceList array |
-
-### Center Module Files
-
-| File | Purpose | Dependencies | Properties Exposed |
-|------|---------|--------------|-------------------|
-| `src/modules/Center/ClockDate.qml` | Current time and date display | QtQuick.Time | currentTime, currentDate |
-| `src/modules/Center/IdleInhibitor.qml` | Toggle for preventing idle/sleep | PowerManagement DBus | inhibitorActive boolean |
-| `src/modules/Center/Media.qml` | Now playing indicator | MediaService, Popups.qml | currentTrack, isPlaying |
-
-### Right Module Files
-
-| File | Purpose | Dependencies | Properties Exposed |
-|------|---------|--------------|-------------------|
-| `src/modules/Right/Battery.qml` | Battery level and charging status | BatteryService | batteryPercent, isCharging |
-| `src/modules/Right/Network.qml` | Network connectivity icons | NetworkService | wifiStatus, bluetoothStatus |
-| `src/modules/Right/NotificationButton.qml` | Notification count and panel toggle | NotificationService, Popups.qml | notificationCount |
-| `src/modules/Right/SystemMonitor.qml` | Mini CPU/memory usage indicator | SystemStats | cpuUsage, memoryUsage |
-| `src/modules/Right/Tray.qml` | System tray icons with context menus | StatusNotifierWatcher | trayItems array |
-| `src/modules/Right/Volume.qml` | Volume level indicator | VolumeService | volumeLevel, isMuted |
-
----
-
-## Popup System
-
-Popups are overlay windows that appear on user interaction or system events.
-
-### Popup Files and Responsibilities
-
-| File | Type | Trigger | Animation | Parent Component |
-|------|------|---------|-----------|------------------|
-| `src/popups/Launcher.qml` | Application search | SUPER+Space | Slide from center | shell.qml Variants |
-| `src/popups/ClipboardPopup.qml` | Clipboard history | SUPER+V | Slide from top | shell.qml Variants |
-| `src/popups/MediaPopup.qml` | Media player controls | Click center media module | Slide from top-right | shell.qml Variants |
-| `src/popups/NetworkPopup.qml` | Network settings | Click network icon | Slide from top-right | shell.qml Variants |
-| `src/popups/VolumePopup.qml` | Volume mixer | Click volume icon | Slide from top-right | shell.qml Variants |
-| `src/popups/SystemPopup.qml` | System monitor details | Click system monitor | Slide from top-right | shell.qml Variants |
-| `src/popups/NotificationPanel.qml` | Notification center | Click notification button | Slide from top-right | shell.qml Variants |
-| `src/popups/NotificationToast.qml` | Toast notifications | New notification | Slide in from edge | shell.qml Variants |
-
-### Popup Helper Components
-
-| File | Purpose | Used By |
-|------|---------|---------|
-| `src/components/PopupPage.qml` | Base page wrapper with padding and background | All popups |
-| `src/components/PopupSlide.qml` | Slide animation controller | Launcher, ClipboardPopup |
-| `src/components/TabBar.qml` | Tab navigation bar | NetworkPopup |
-| `src/components/PillBase.qml` | Rounded container style | Multiple popups |
-
-### Popup Sub-Components
-
-#### Launcher Sub-Components
-| File | Purpose |
-|------|---------|
-| `src/popups/launcher/LauncherAppLoader.qml` | Loads and filters application list |
-| `src/popups/launcher/LauncherSearchBar.qml` | Search input field |
-| `src/popups/launcher/LauncherResultsList.qml` | Scrollable results container |
-| `src/popups/launcher/LauncherResultItem.qml` | Individual result row |
-
-#### Media Popup Sub-Components
-| File | Purpose |
-|------|---------|
-| `src/popups/media/MediaArt.qml` | Album artwork display |
-| `src/popups/media/MediaControls.qml` | Play/pause/skip buttons |
-| `src/popups/media/MediaProgress.qml` | Progress bar with seek |
-| `src/popups/media/MediaTrackInfo.qml` | Track title and artist |
-| `src/popups/media/MediaVolumeRow.qml` | Per-app volume slider |
-
-#### System Popup Sub-Components
-| File | Purpose |
-|------|---------|
-| `src/popups/system/DiskBar.qml` | Disk usage visualization |
-| `src/popups/system/NetworkGraph.qml` | Network traffic graph |
-| `src/popups/system/Speedometer.qml` | CPU speed indicator |
-
-#### Notification Sub-Components
-| File | Purpose |
-|------|---------|
-| `src/popups/ToastItem.qml` | Individual toast notification |
-| `src/popups/DeviceRow.qml` | Network device list item |
-| `src/popups/NetworkRow.qml` | WiFi network list item |
-| `src/popups/VolumeSlider.qml` | Custom volume slider control |
-
----
-
-## Service Layer
-
-Services run in the background, monitoring system state and exposing properties to QML components.
-
-### Service Files
-
-| File | Monitors | DBus Interface | Update Frequency |
-|------|----------|----------------|------------------|
-| `src/services/BatteryService.qml` | Battery level, charging state, power profile | org.freedesktop.UPower | Event-driven |
-| `src/services/ClipboardService.qml` | Clipboard history, paste operations | wlroots-data-control | Event-driven |
-| `src/services/NetworkService.qml` | WiFi, Bluetooth, VPN, hotspot status | org.freedesktop.NetworkManager | Event-driven |
-| `src/services/NotificationService.qml` | Incoming notifications, dismissal | org.freedesktop.Notifications | Event-driven |
-| `src/services/VolumeService.qml` | Audio sinks, sources, volume levels | org.pulseaudio.Server | Event-driven |
-| `src/services/system/SystemStats.qml` | CPU, memory, disk, network statistics | /proc filesystem | 1 second interval |
-
-### Service Properties and Methods
-
-#### BatteryService
-| Property | Type | Description |
-|----------|------|-------------|
-| `batteryPercent` | real | Current battery percentage (0-100) |
-| `isCharging` | bool | Charging state |
-| `timeToEmpty` | int | Estimated minutes until empty |
-| `timeToFull` | int | Estimated minutes until full |
-
-#### ClipboardService
-| Property | Type | Description |
-|----------|------|-------------|
-| `history` | var | Array of clipboard entries |
-| `maxItems` | int | Maximum history size |
-
-| Method | Parameters | Returns |
-|--------|------------|---------|
-| `addToHistory` | text: string | void |
-| `clearHistory` | none | void |
-| `pasteItem` | index: int | void |
-
-#### NetworkService
-| Property | Type | Description |
-|----------|------|-------------|
-| `wifiEnabled` | bool | WiFi adapter state |
-| `wifiConnected` | bool | WiFi connection state |
-| `bluetoothEnabled` | bool | Bluetooth adapter state |
-| `activeConnections` | var | List of active connections |
-
-| Method | Parameters | Returns |
-|--------|------------|---------|
-| `toggleWifi` | none | void |
-| `toggleBluetooth` | none | void |
-| `getNetworks` | none | array |
-| `connectToNetwork` | ssid: string, password: string | void |
-
-#### NotificationService
-| Property | Type | Description |
-|----------|------|-------------|
-| `notifications` | var | Array of active notifications |
-| `dndMode` | bool | Do Not Disturb state |
-
-| Method | Parameters | Returns |
-|--------|------------|---------|
-| `sendNotification` | summary, body, urgency | uint (id) |
-| `dismissNotification` | id: uint | void |
-| `clearAll` | none | void |
-
-#### VolumeService
-| Property | Type | Description |
-|----------|------|-------------|
-| `defaultSink` | object | Default output device |
-| `defaultSource` | object | Default input device |
-| `sinkInputs` | var | Per-application volumes |
-
-| Method | Parameters | Returns |
-|--------|------------|---------|
-| `setVolume` | value: real | void |
-| `toggleMute` | none | void |
-| `setAppVolume` | index: int, value: real | void |
-
----
-
-## State Management
-
-State is managed through two singleton QML files that serve as the central source of truth for shell behavior.
-
-### ShellState.qml
-
-Manages global shell state including focus mode and bar visibility.
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `topBarLWidth` | int | Width of left bar section (written by TopBar) |
-| `topBarCWidth` | int | Width of center bar section |
-| `topBarRWidth` | int | Width of right bar section |
-| `focusMode` | bool | Computed: true when bar should collapse |
-| `_isFullscreen` | bool | Internal: fullscreen window detected |
-| `_manualHide` | bool | Internal: user toggled hide via keybind |
-| `_manualOverride` | bool | Internal: override auto-hide in fullscreen |
-
-| Function | Parameters | Description |
-|----------|------------|-------------|
-| `toggleManualOverride` | none | Toggles bar visibility in fullscreen mode |
-| `toggleManualHide` | none | Toggles bar visibility anytime |
-
-### Popups.qml
-
-Manages visibility state for all popups.
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `notificationsOpen` | bool | Notification panel visibility |
-| `systemOpen` | bool | System monitor popup visibility |
-| `archMenuOpen` | bool | Arch logo context menu visibility |
-| `calendarOpen` | bool | Calendar popup visibility |
-| `mediaOpen` | bool | Media player popup visibility |
-| `idleInhibitorOpen` | bool | Idle inhibitor popup visibility |
-| `volumeOpen` | bool | Volume popup visibility |
-| `launcherOpen` | bool | Application launcher visibility |
-| `clipboardOpen` | bool | Clipboard manager visibility |
-| `networkOpen` | bool | Network popup visibility |
-| `networkTab` | int | Active tab in network popup (0=WiFi, 1=Bluetooth, 2=VPN, 3=Hotspot) |
-| `anyOpen` | bool | Computed: true if any popup is open |
-
-| Function | Parameters | Description |
-|----------|------------|-------------|
-| `closeAll` | none | Closes all open popups |
-
----
-
-## Theme System
-
-The theme system uses Material Design 3 color tokens generated from the user's wallpaper using Matugen.
-
-### Theme Files
-
-| File | Purpose | Format |
-|------|---------|--------|
-| `src/theme/quickshell.json.hbs` | Handlebars template for Matugen color generation | HBS |
-| `src/theme/Colors.json` | Generated color values (user must generate) | JSON |
-| `src/theme/Colors.qml` | QML singleton exposing colors to components | QML |
-| `src/theme/Fonts.qml` | Font family definitions | QML |
-| `src/theme/Theme.qml` | Master theme aggregator | QML |
-
-### Matugen Configuration
-
-To generate the `Colors.json` file from your wallpaper, add the following to your Matugen configuration file (typically `~/.config/matugen/config.toml`):
-
-```toml
-[templates.quickshell]
-input_path  = "~/.config/quickshell/src/theme/quickshell.json.hbs"
-output_path = "~/.config/quickshell/src/theme/Colors.json"
-```
-
-Then run Matugen with your wallpaper:
-```bash
-matugen image /path/to/wallpaper.jpg
-```
-
-This will process the wallpaper, extract dominant colors, apply Material Design 3 color algorithms, and output the generated `Colors.json` file in the quickshell directory itself.
-
-### Available Color Tokens
-
-The following color tokens are available after generation:
-
-| Token | Description | Usage |
-|-------|-------------|-------|
-| `background` | Main background color | Panel backgrounds |
-| `on_background` | Text on background | Primary text |
-| `primary` | Primary accent color | Buttons, highlights |
-| `on_primary` | Text on primary | Button text |
-| `primary_container` | Container variant of primary | Card backgrounds |
-| `secondary` | Secondary accent | Secondary elements |
-| `tertiary` | Tertiary accent | Decorative elements |
-| `error` | Error state color | Error messages |
-| `surface` | Surface elevation color | Elevated panels |
-| `surface_variant` | Alternative surface | Alternate panels |
-| `outline` | Border color | Dividers, borders |
-| `inverse_surface` | Inverted surface | High contrast areas |
-
-### Using Colors in Components
-
-```qml
-import qs.src.theme
-
-Rectangle {
-    color: Colors.background
-    border.color: Colors.outline
-    
-    Text {
-        color: Colors.on_background
-        font.family: Fonts.sans
-    }
-}
-```
-
----
-
-## Keybindings
-
-Keybindings are defined in `shell.qml` using Quickshell's GlobalShortcut component with Hyprland IPC integration.
-
-### Active Keybindings
-
-| Key Combination | Action | Handler | Description |
-|-----------------|--------|---------|-------------|
-| `SUPER + X` | Toggle bar visibility | `ShellState.toggleManualHide()` | Shows/hides the top bar |
-| `SUPER + Space` | Toggle application launcher | `Popups.launcherOpen = !Popups.launcherOpen` | Opens/closes app launcher |
-| `SUPER + V` | Toggle clipboard manager | `Popups.clipboardOpen = !Popups.clipboardOpen` | Opens/closes clipboard history |
-
-### Hyprland Lua Configuration
-
-To enable these keybindings in Hyprland, add the following to your Lua configuration file (typically `~/.config/hypr/hyprland.lua` or similar):
-
-```lua
-local mainMod = "SUPER"
-
--- Quickshell keybindings
-hl.bind(mainMod .. " + X", hl.dsp.global("quickshell:barHideToggle"))
-hl.bind(mainMod .. " + SPACE", hl.dsp.global("quickshell:launcherToggle"))
-hl.bind(mainMod .. " + V", hl.dsp.global("quickshell:clipboardToggle"))
-```
-
-### Adding Custom Keybindings
-
-To add a new keybinding:
-
-1. Add a new `GlobalShortcut` block in `shell.qml`:
-```qml
-GlobalShortcut {
-    appid:       "quickshell"
-    name:        "yourActionName"
-    description: "Description of action"
-    onPressed:   // Your handler code
-}
-```
-
-2. Add corresponding binding in Hyprland Lua config:
-```lua
-hl.bind(mainMod .. " + KEY", hl.dsp.global("quickshell:yourActionName"))
-```
+#### Desktop Shell
+
+* Modular top bar divided into Left, Center, and Right sections
+* Hyprland workspace integration
+* Current time and date
+* Active media information
+* System tray integration
+* Notification indicator
+* Battery status
+* Network status
+* Volume status
+* Compact system monitoring
+* Multi-monitor support
+* Animated popup system
+* Dynamic Material-style theming through Matugen
+
+#### System Controls
+
+* Battery status and charging information
+* Battery time remaining
+* Performance profile selection
+* Charging mode selection
+* Display refresh-rate selection
+* WiFi management and scanning
+* Bluetooth integration
+* Brightness controls
+* PipeWire audio controls
+* Input and output volume control
+* Caffeine / idle inhibition
+* Session management
+* Polkit authentication interface
+
+#### Application Launcher
+
+* Fuzzy application search
+* Exact, prefix, substring, acronym, keyword, comment, and category matching
+* Persistent pinned applications
+* Persistent recent applications
+* Quick-access section
+* Application action menu
+* Existing-window detection
+* Existing-window focusing
+* Keyboard-driven navigation
+* Direct command execution using `>`
+* Web search using `?`
+* Google search using `!g`
+* Startpage search using `!s`
+* Built-in calculator
+* Unit conversion
+* Currency conversion as an optional online feature
+
+#### Clipboard Manager
+
+* Persistent clipboard history
+* Searchable clipboard entries
+* Text, image, link, and code classification
+* Category filtering
+* Pinned clipboard entries
+* Usage tracking
+* Relative recency information
+* Image previews
+* Cached clipboard images
+* Full-text clipboard search
+* Individual entry deletion
+* Full history clearing with confirmation
+* Keyboard-first interaction
+
+#### Wallpaper Selector
+
+* Dedicated graphical wallpaper picker
+* Wallpaper directory selection
+* Wallpaper scanning and rescanning
+* Thumbnail previews
+* Carousel-based browsing
+* Current wallpaper detection
+* Wallpaper metadata display
+* Keyboard navigation
+* Apply and re-apply controls
+* Matugen integration for dynamic theme generation
+
+#### Additional Utilities
+
+* Categorized emoji picker
+* Emoji search
+* Calendar popup
+* Graphical keybind viewer
+* Notification panel
+* Notification toasts
+* Custom system-tray menus
+* Nested tray menu support
+* Detailed system monitor
+
+### Project Evolution
+
+Velox-Q started as a relatively small Quickshell configuration centered around a top bar and a handful of basic popups and services.
+
+Since the original v1 implementation, the project has progressively been rebuilt into a much more complete desktop shell.
+
+The major stages of that development include:
+
+#### Initial Shell
+
+* Three-part top bar
+* Workspace management
+* Clock and date
+* Media indicator
+* Battery indicator
+* Network indicator
+* Volume indicator
+* Notification indicator
+* Basic system monitoring
+* Initial launcher
+* Initial clipboard manager
+* Initial network, media, volume, and system popups
+* Initial notification system
+* Matugen-based theme system
+
+#### Shell and Popup Architecture
+
+* Shared popup components
+* Central popup state management
+* Popup loading infrastructure
+* Popup dismissal handling
+* Reusable slide animations
+* Per-screen popup instances
+* Popup mutual exclusion
+* Additional dedicated popup windows
+* More consistent theme and animation handling
+
+#### System Integration Expansion
+
+* Dedicated battery service
+* Bluetooth service
+* Brightness service
+* Caffeine service
+* Session service
+* Polkit service
+* Keybind service
+* Expanded system statistics
+* PipeWire-based audio integration
+* More complete network integration
+
+#### System Monitor Revamp
+
+* Expanded CPU monitoring
+* Memory and swap information
+* GPU monitoring
+* VRAM monitoring
+* GPU temperature
+* Disk and partition information
+* Network throughput
+* Network history graphs
+* Thermal sensor information
+* Dedicated detailed system popup
+
+#### Battery Revamp
+
+* Dedicated battery popup
+* Battery time estimation
+* Charging status improvements
+* Performance profiles
+* Charging profiles
+* 80% charge conservation mode
+* Full-charge mode
+* Refresh-rate controls
+* Improved low-battery feedback
+* Better separation between battery UI and system logic
+
+#### Media and Notification Improvements
+
+* Dedicated media controls popup
+* Richer media information
+* Media progress and controls
+* Dedicated media subcomponents
+* Notification panel
+* Notification toast system
+* Dismissal handling
+* Centralized notification state
+
+#### System Tray Revamp
+
+* Dedicated tray component
+* Custom context menus
+* Nested menu support
+* Improved menu handling
+* Shared styling with the rest of the shell
+
+#### Emoji Picker
+
+* Dedicated emoji picker popup
+* Category navigation
+* Emoji grid
+* Search interface
+* Generated emoji search data
+* Dedicated utility for generating search data
+
+#### Wallpaper Revamp
+
+* Complete graphical wallpaper selector
+* Dedicated wallpaper model
+* Directory management
+* Wallpaper scanning
+* Thumbnail-based browsing
+* Carousel interface
+* Current-wallpaper detection
+* Metadata display
+* Dedicated controls
+* Improved separation between wallpaper logic and UI
+
+#### Launcher Revamp
+
+* Fuzzy ranking overhaul
+* Persistent pinned applications
+* Persistent recent applications
+* Quick access
+* Application actions
+* Existing-window focus
+* Better keyboard navigation
+* Command execution
+* Web search
+* Google search
+* Startpage search
+* Calculator
+* Unit conversion
+* Currency conversion
+* Dedicated launcher subcomponents and services
+
+#### Clipboard Revamp
+
+* Search and filtering
+* Clipboard categories
+* Image detection
+* Image preview caching
+* Full-text search
+* Pinned entries
+* Usage tracking
+* Recency information
+* Individual deletion
+* Full-history wipe
+* Confirmation UI
+* Improved keyboard selection and Enter-to-copy behavior
+
+#### Codebase Cleanup
+
+* More modular QML organization
+* Smaller feature-specific components
+* Dedicated singleton services
+* Reduced duplication
+* Cleaner popup structure
+* More consistent formatting
+* Improved separation between presentation and system logic
+* Additional performance-focused cleanup throughout the configuration
 
 ---
 
@@ -555,172 +290,381 @@ hl.bind(mainMod .. " + KEY", hl.dsp.global("quickshell:yourActionName"))
 
 ### Prerequisites
 
-| Dependency | Minimum Version | Purpose |
-|------------|-----------------|---------|
-| Hyprland | 0.55.0 | Wayland compositor |
-| Quickshell | 0.3.0 | Shell framework |
-| Qt6 | 6.6.0 | UI toolkit |
-| Matugen | 0.10.0 | Color generation |
+Velox-Q is primarily intended for an Arch Linux + Hyprland environment.
 
-### Installation Steps
+The complete setup requires more than the core packages listed here because different features depend on system services and utilities.
 
-1. **Clone or copy the configuration**:
+The project will eventually have an installer that handles these dependencies automatically. The main [Hyprland dotfiles](https://github.com/AnkitKumarDhal/K-Trax.git) repository will also provide a higher-level installer that can install and configure the complete environment.
+
+For now, the shell is installed manually.
+
+### Core Dependencies
+
+| Dependency     | Purpose                     |
+| -------------- | --------------------------- |
+| Hyprland       | Wayland compositor          |
+| Quickshell-git | Shell framework             |
+| Qt6            | UI framework                |
+| Matugen        | Dynamic color generation    |
+| PipeWire       | Audio                       |
+| WirePlumber    | PipeWire session management |
+| `cliphist`     | Clipboard history           |
+| `wl-clipboard` | Clipboard integration       |
+| `brightnessctl`| Brightness Management       |
+| `awww`, `pywal16`, `matugen` | Wallpaper application and color scheme generation |
+
+Depending on the features you use, additional system packages _may_ be required for:
+
+* Bluetooth
+* Power and battery control
+* Session management
+* Polkit authentication
+* Hardware monitoring
+
+### Install
+
+Clone the repository:
+
+```bash
+git clone https://github.com/AnkitKumarDhal/Velox-Q.git
+```
+
+Copy the configuration into your Quickshell directory:
+
 ```bash
 mkdir -p ~/.config/quickshell
-cp -r /path/to/this/repo/* ~/.config/quickshell/
+cp -r Velox-Q/* ~/.config/quickshell/
 ```
 
-2. **Install dependencies**:
+Install the main dependencies on Arch Linux:
+
 ```bash
-# Arch Linux
-sudo pacman -S hyprland qt6-base qt6-declarative
-
-# Install Quickshell (from AUR or build from source)
-yay -S quickshell
-
-# Install Matugen (from AUR)
-yay -S matugen
+sudo pacman -S hyprland qt6-base qt6-declarative pipewire wireplumber wl-clipboard cliphist python-pywal16 brighnessctl awww
 ```
 
-3. **Configure Matugen**:
-Add the template configuration to your Matugen config as described in the [Theme System](#theme-system) section.
+Install the required Quickshell and Matugen packages:
 
-4. **Generate colors**:
 ```bash
-matugen image /path/to/your/wallpaper.jpg
+yay -S quickshell-git matugen
 ```
 
-5. **Configure Hyprland**:
-Add the keybindings from the [Keybindings](#keybindings) section to your Hyprland configuration.
+The `quickshell-git` package is recommended rather than the regular `quickshell` package.
 
-6. **Start Quickshell**:
-Add to your Hyprland config or start manually:
+Start the shell:
+
 ```bash
-quickshell &
+quickshell
+```
+
+### Matugen Setup
+
+Add the Quickshell template to your Matugen configuration:
+
+```toml
+[templates.quickshell]
+input_path  = "~/.config/quickshell/src/theme/quickshell.json.hbs"
+output_path = "~/.config/quickshell/src/theme/Colors.json"
+```
+
+Then generate the colors from your wallpaper:
+
+```bash
+matugen image /path/to/wallpaper.jpg
+```
+
+### Autostart
+
+Add Quickshell to your Hyprland startup configuration:
+
+```hyprlang
+exec-once = quickshell
+```
+
+Or if using the Lua version of Hyprland, add this to your autostart section:
+
+```lua
+hl.exec_cmd("quickshell")
+```
+
+The exact configuration syntax may differ depending on how your Hyprland configuration is structured.
+
+---
+
+## Known Issues
+
+* Fullscreen-aware bar visibility can still depend on Hyprland's fullscreen state reporting and the compositor configuration.
+
+* Notification toast animation and stacking may require additional visual tuning, especially when several notifications arrive in rapid succession.
+
+* Currency conversion requires network access when a cached exchange rate is unavailable. This is an optional (turned on by default) online feature rather than a required shell dependency.
+
+---
+
+## Core Components
+
+### Module System
+
+The top bar is divided into three module groups.
+
+#### Left
+
+* Arch Linux entry
+* System monitor
+* Workspace switcher
+
+#### Center
+
+* Clock and date
+* Idle inhibition
+* Media indicator
+
+#### Right
+
+* Battery
+* Network
+* Notifications
+* System tray
+* Volume
+
+The modules are intentionally kept focused on presentation and interaction, with system-level functionality handled by the service layer.
+
+### Popup System
+
+The shell provides dedicated popups for the major interactive features.
+
+* Application launcher
+* Clipboard manager
+* Emoji picker
+* Wallpaper selector
+* Media controls
+* Network controls
+* Volume controls
+* System monitor
+* Battery controls
+* Calendar
+* Caffeine
+* Session manager
+* Keybind viewer
+* Polkit authentication
+* Notifications
+
+Shared popup components provide consistent animation, layout, dismissal, and styling.
+
+### Service System
+
+Services handle the system-facing and persistent parts of the shell.
+
+* Battery
+* Bluetooth
+* Brightness
+* Caffeine
+* Clipboard
+* Keybinds
+* Launcher
+* Unit and currency conversion
+* Media
+* Network
+* Notifications
+* Polkit
+* Session
+* Volume
+* CPU
+* Memory
+* GPU
+* Disk
+* Network statistics
+* Thermal statistics
+
+This keeps system interaction separate from the visual QML components.
+
+### State Management
+
+Global shell state is centralized in two main singleton files.
+
+#### `ShellState.qml`
+
+Handles:
+
+* Bar visibility
+* Fullscreen behavior
+* Manual hide/show behavior
+* Fullscreen visibility override
+* Top-bar layout information
+
+#### `Popups.qml`
+
+Handles:
+
+* Popup visibility
+* Popup coordination
+* Popup mutual exclusion
+* Network tab state
+* Aggregate popup-open state
+* Closing all open popups
+
+---
+
+## Keybindings
+
+Keybindings are defined in `shell.qml` using Quickshell's `GlobalShortcut` component.
+
+### Available Global Actions
+
+| Shortcut Name           | Action                         | Handler                             | Description                                   |
+| ----------------------- | ------------------------------ | ----------------------------------- | --------------------------------------------- |
+| `focusModeToggle`       | Toggle fullscreen bar override | `ShellState.toggleManualOverride()` | Changes bar visibility behavior in fullscreen |
+| `barHideToggle`         | Toggle bar visibility          | `ShellState.toggleManualHide()`     | Manually hides/shows the bar                  |
+| `launcherToggle`        | Toggle launcher                | `Popups.launcherOpen`               | Opens/closes launcher                         |
+| `clipboardToggle`       | Toggle clipboard manager       | `Popups.clipboardOpen`              | Opens/closes clipboard popup                  |
+| `emojiPickerToggle`     | Toggle emoji picker            | `Popups.emojiOpen`                  | Opens/closes emoji popup                      |
+| `mediaPlayerPopup`      | Toggle media popup             | `Popups.mediaOpen`                  | Opens/closes media controls                   |
+| `wallpaperPickerToggle` | Toggle wallpaper picker        | `Popups.wallpaperOpen`              | Opens/closes wallpaper selector               |
+| `keybindsToggle`        | Toggle keybind viewer          | `Popups.keybindsOpen`               | Opens/closes keybind viewer                   |
+| `sessionToggle`         | Toggle session manager         | `Popups.sessionOpen`                | Opens/closes session popup                    |
+
+### Common Default Bindings
+
+```text
+SUPER + X
+    Toggle bar visibility
+
+SUPER + Space
+    Toggle launcher
+
+SUPER + V
+    Toggle clipboard manager
+```
+
+Additional keybindings can be mapped in the Hyprland configuration.
+
+For a Lua-based Hyprland configuration:
+
+```lua
+local mainMod = "SUPER"
+
+hl.bind(mainMod .. " + X", hl.dsp.global("quickshell:barHideToggle"))
+hl.bind(mainMod .. " + SPACE", hl.dsp.global("quickshell:launcherToggle"))
+hl.bind(mainMod .. " + V", hl.dsp.global("quickshell:clipboardToggle"))
 ```
 
 ---
 
 ## Configuration
 
-### User Configuration Files
+### Launcher
 
-| File | Location | Purpose |
-|------|----------|---------|
-| Colors.json | `~/.config/quickshell/src/theme/Colors.json` | Generated color values |
-| Hyprland Lua | `~/.config/hypr/hyprland.lua` | Keybindings |
-| Matugen Config | `~/.config/matugen/config.toml` | Template paths |
+The launcher supports the following syntax:
 
-### Customization Options
+```text
+> command
+? web search
+!g google search
+!s startpage search
+```
 
-#### Changing Wallpaper and Regenerating Colors
+Examples:
+
+```text
+> htop
+? how does Wayland work
+!g Quickshell documentation
+!s Linux news
+```
+
+Calculator examples:
+
+```text
+2 + 2
+sqrt(144)
+sin(30)
+2^10
+```
+
+Unit conversion examples:
+
+```text
+10 km to mi
+100 kmh to mph
+2 gb to mb
+```
+
+Currency conversion examples:
+
+```text
+100 USD to INR
+50 EUR to USD
+```
+
+Currency conversion is optional (turned on by default) and requires online exchange-rate access when no cached rate is available.
+
+The default web search engine can be customized through:
+
 ```bash
-matugen image /new/wallpaper/path.jpg
-# Quickshell will automatically reload Colors.json
+export LAUNCHER_SEARCH_URL="https://www.google.com/search?q="
 ```
 
-#### Adjusting Popup Behavior
-Edit `src/state/Popups.qml` to modify:
-- Default open/close states
-- Aggregate `anyOpen` logic
-- Custom popup state properties
+### Clipboard Manager
 
-#### Modifying Bar Behavior
-Edit `src/state/ShellState.qml` to adjust:
-- Fullscreen detection sensitivity
-- Focus mode conditions
-- Manual override behavior
+The clipboard manager can be customized through its service and popup components.
 
----
+The available categories are:
 
-## Component Interactions
-
-### How Files Work Together
-
-#### TopBar Integration
-`shell.qml` instantiates `TopBar.qml` for each screen. `TopBar.qml` contains three module containers (Left, Center, Right) and reports their widths back to `ShellState.qml` for proper popup positioning.
-
-```
-shell.qml (creates per-screen scope)
-    │
-    ├─→ TopBar.qml (renders bar)
-    │       │
-    │       ├─→ Left modules (ArchLogo, WindowName, Workspaces)
-    │       ├─→ Center modules (ClockDate, IdleInhibitor, Media)
-    │       └─→ Right modules (Battery, Network, NotificationButton, SystemMonitor, Tray, Volume)
-    │
-    └─→ Writes widths to ShellState.topBarLWidth, topBarCWidth, topBarRWidth
+```text
+All
+Text
+Images
+Links
+Code
+Pinned
 ```
 
-#### Popup Lifecycle
+Clipboard state is persisted using Quickshell's state storage, while image and search data use the Quickshell cache directory.
 
-1. **Instantiation**: All popups are created once in `shell.qml` within the `Variants` delegate for each screen.
-2. **Visibility Control**: Popup visibility is controlled by boolean properties in `Popups.qml`.
-3. **Dismissal**: `PopupDismiss.qml` creates an invisible overlay that captures clicks outside popups to close them.
-4. **Animation**: `PopupSlide.qml` and `PopupPage.qml` handle entrance/exit animations.
+### Wallpaper Selector
 
-```
-User presses SUPER+Space
-    │
-    ├─→ GlobalShortcut.onPressed fires
-    │
-    ├─→ Popups.launcherOpen toggles
-    │
-    ├─→ Launcher.qml opacity/visible binding updates
-    │
-    ├─→ PopupSlide.qml animates position
-    │
-    └─→ PopupDismiss.qml becomes active (captures outside clicks)
+The wallpaper picker can browse a configured directory and rescan it directly from the popup.
+
+Wallpaper-related customization is primarily contained within:
+
+```text
+src/popups/wallpaper/
 ```
 
-#### Service-to-UI Data Flow
+And wallpapers directory is configured default to: `~/wallpapers/`
 
-```
-System DBus Event (e.g., volume change)
-    │
-    ├─→ VolumeService.qml receives signal
-    │
-    ├─→ volumeLevel property updates
-    │
-    ├─→ Volume.qml (module) updates slider position
-    │
-    ├─→ VolumePopup.qml updates mixer sliders
-    │
-    └─→ Visual feedback to user
+### Theme
+
+Theme generation is handled through Matugen and Pywal16.
+
+Generate a new theme from a wallpaper:
+
+```bash
+matugen image /path/to/wallpaper.jpg
 ```
 
-#### Theme Propagation
+The generated colors are written to:
 
-```
-Matugen generates Colors.json
-    │
-    ├─→ Colors.qml reads JSON file on startup
-    │
-    ├─→ Colors singleton exposes properties (Colors.background, etc.)
-    │
-    ├─→ All components import Colors.qml
-    │
-    └─→ UI updates with new colors (requires restart or hotreload)
+```text
+~/.config/quickshell/src/theme/Colors.json
 ```
 
----
+### Environment
 
-## Known Issues
+The launcher can optionally use:
 
-The following issues are currently present in the shell configuration:
+```bash
+LAUNCHER_SEARCH_URL
+```
 
-### 1. Notification Toast Animation and Stacking (assuming toasts are at bottom right)
+to change the default web search endpoint.
 
-**Issue**: Toast notifications exhibit janky animation behavior, and the stacking order is inverted. Oldest notifications appear at the bottom of the stack instead of at the top.
+### Future Installation
 
-**Expected Behavior**: Newest notifications should appear at the bottom of the stack with smooth entrance animations, pushing older notifications upward.
+A dedicated installer script will be added to this repository later.
 
-**Affected Files**: https://quickshell.org/docs/v0.3.0/types/
-- `src/popups/NotificationToast.qml`
-- `src/popups/ToastItem.qml`
-- `src/services/NotificationService.qml`
+The main Hyprland dotfiles repository will also provide an installation flow capable of setting up the larger environment and its dependencies automatically.
 
-**Priority**: Medium
+The manual installation method documented above will remain available.
 
 ---
 
@@ -728,60 +672,45 @@ The following issues are currently present in the shell configuration:
 
 The following features and improvements are planned for future development:
 
-- [ ] **User Panel Popup**: Create a user profile panel popup triggered by clicking the Arch logo in the left module, displaying user information, session options, and quick settings.
+* [x] **Application Launcher Revamp**: Fuzzy search, pinned applications, recent applications, quick access, actions, special commands, conversions, and existing-window focusing.
 
-- [ ] **Visual Workspace Switcher**: Enhance the workspace module with visual indicators showing window distribution across workspaces, workspace names, and smooth transition animations.
+* [x] **Clipboard Manager Revamp**: Search, filtering, categories, pinned entries, image previews, usage tracking, full-text search, deletion, and wipe confirmation.
 
-- [ ] **Calendar and Productivity Suite**: Expand the clock/calendar module with a comprehensive popup containing:
-  - Full calendar view with event display
-  - Pomodoro timer with configurable intervals and normal mode option
-  - Focus mode toggle with customizable duration
-  - Task history and completion statistics
-  - Integrated planner with note-taking capability
+* [x] **Wallpaper Selector**: Graphical wallpaper browsing with previews, directory selection, metadata, navigation, and apply controls.
 
-- [ ] **Enhanced Media Player**: Redesign the media player popup with:
-  - Sleeker, more modern visual design
-  - Improved entrance and transition animations
-  - Optional lyrics display (synchronized with playback)
-  - Better handling of multiple simultaneous players
+* [x] **Battery Management**: Dedicated battery popup with performance, charging, and refresh-rate controls.
 
-- [ ] **Idle Inhibitor Popup**: Create a dedicated popup for the idle inhibitor module with visual feedback, timer display, and customizable inhibition rules.
+* [x] **System Monitor Expansion**: CPU, memory, GPU, VRAM, disk, network, swap, and temperature information.
 
-- [ ] **Unified Connectivity Module**: Merge Bluetooth, WiFi, brightness, and battery modules into a single cohesive module:
-  - WiFi icon click opens network popup on WiFi tab
-  - Bluetooth icon click opens network popup on Bluetooth tab
-  - Brightness icon click reveals slider with resolution and refresh rate options
-  - Battery icon click opens enhanced battery popup (see below)
-  - Maintain separate tabs for Hotspot and VPN functionality
+* [x] **Emoji Picker**: Categorized emoji picker with search support.
 
-- [ ] **Advanced Battery Management**: Enhance the battery module with:
-  - Power profile selection (performance, balanced, power-saver)
-  - Accurate estimated time remaining calculation
-  - Real-time charging wattage display
-  - Historical usage statistics and graphs
-  - Battery health monitoring
+* [x] **Session Manager**: Dedicated session and power controls.
 
-- [ ] **Custom Tray Context Menus**: Implement fully customized context menus for system tray icons, replacing default renderer with styled QML components matching the shell aesthetic.
+* [x] **Keybind Viewer**: Dedicated graphical keybind viewer.
 
-- [ ] **Wallpaper and Theme Manager**: Create a GUI wallpaper selector that:
-  - Displays available wallpapers in a grid
-  - Automatically triggers Matugen color generation on selection
-  - Supports Pywal integration for terminal themes
-  - Provides preview of generated color scheme
-  - Manages wallpaper history and favorites
+* [x] **Custom Tray Menus**: Custom system tray context menus and nested menu handling.
 
-- [ ] **GUI Settings Manager**: Build a comprehensive graphical settings interface for users uncomfortable with manual configuration file editing:
-  - Visual keybinding editor
-  - Theme customization panel
-  - Module enable/disable toggles
-  - Popup behavior configuration
-  - Import/export settings functionality
+* [x] **Popup Infrastructure**: Shared popup loading, dismissal, animations, and centralized popup state.
 
-- [x] **Emoji Picker Popup**: Develop an emoji picker popup similar to the clipboard manager, featuring:
-  - Category-based organization
-  - Search functionality
-  - Recently used tracking
-  - Quick insert capability
+* [x] **PipeWire Audio Integration**: Audio handling migrated to the current PipeWire-based service model.
+
+* [x] **Dedicated System Services**: System functionality split into focused singleton services.
+
+* [ ] **Enhanced Media Player**: Continue improving the media popup with richer controls, better multi-player handling, and optional lyrics.
+
+* [ ] **Advanced Calendar / Productivity Suite**: Expand the calendar into a broader productivity interface.
+
+* [ ] **Enhanced Idle Inhibitor**: Add richer status information, timers, and additional configuration options.
+
+* [ ] **Advanced Battery Analytics**: Add battery health information, charging history, usage statistics, and additional hardware information.
+
+* [ ] **GUI Settings Manager**: Provide graphical configuration for shell settings instead of requiring manual file editing.
+
+* [ ] **Unified Hyprland + Quickshell Settings**: Provide one settings interface for both the compositor and shell.
+
+* [ ] **Further Performance Optimization**: Continue optimizing dynamic components, state handling, and resource usage.
+
+* [ ] **Installer Script**: Add a dedicated installer to automate the setup of Velox-Q and its required dependencies.
 
 ---
 
@@ -789,49 +718,76 @@ The following features and improvements are planned for future development:
 
 ### Reporting Issues
 
-When reporting issues, please include:
+When reporting an issue, include:
 
-1. **Environment Details**:
-   - Hyprland version
-   - Quickshell version
-   - Qt6 version
-   - Distribution and version
+1. **Environment**
 
-2. **Steps to Reproduce**: Clear, numbered steps to reproduce the issue.
+   * Distribution
+   * Hyprland version
+   * Quickshell version
+   * Qt version
 
-3. **Expected vs Actual Behavior**: Describe what should happen and what actually happens.
+2. **Steps to Reproduce**
 
-4. **Screenshots/Logs**: Include relevant screenshots or log output when applicable.
+   * Clear steps showing how the issue occurs
 
-5. **Affected Components**: Identify which files or modules appear to be involved.
+3. **Expected vs Actual Behavior**
 
-### Submitting Suggestions
+   * What should happen
+   * What actually happens
 
-New feature suggestions and improvement ideas are welcome. Please submit suggestions via the project's issue tracker with the following information:
+4. **Logs / Screenshots**
 
-- Feature description and use case
-- Proposed implementation approach (if known)
-- Priority assessment (nice-to-have vs essential)
-- Potential impact on existing functionality
+   * Quickshell output
+   * Relevant screenshots
+   * Hyprland logs where applicable
+
+5. **Affected Component**
+
+   * Module
+   * Popup
+   * Service
+   * State
+   * Theme
 
 ### Code Contributions
 
-Before submitting code contributions:
+Please follow the existing project structure and style.
 
-1. Ensure code follows existing style conventions (4-space indentation, camelCase naming)
-2. Test changes thoroughly in your environment
-3. Update documentation if adding new features
-4. Submit pull requests with clear descriptions of changes
+For new functionality, prefer:
 
-### Community Engagement
+```text
+src/modules/
+src/popups/
+src/services/
+src/state/
+src/theme/
+src/components/
+```
 
-Users are strongly encouraged to:
-- Report bugs and unexpected behavior
-- Suggest new features and improvements
-- Share custom themes and configurations
-- Help other users with troubleshooting
+Keep UI logic in UI components and system-facing logic in services wherever practical.
 
-Your feedback helps improve the shell for everyone. No suggestion is too small, and all issues deserve attention.
+When adding a new feature:
+
+* Keep the implementation modular
+* Reuse existing components where possible
+* Avoid duplicating popup/state logic
+* Test on an actual Hyprland + Quickshell environment
+* Update the README when the user-facing feature set changes
+
+### Suggestions
+
+Feature suggestions and improvement ideas are welcome.
+
+Useful suggestions include:
+
+* New shell features
+* UI improvements
+* Performance improvements
+* Hardware compatibility
+* Better Wayland / Hyprland integration
+* Configuration improvements
+* Documentation improvements
 
 ---
 
