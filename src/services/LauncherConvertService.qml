@@ -16,17 +16,11 @@ Singleton {
 
     property var currencyCache: ({})
 
-    readonly property int currencyCacheLifetime:
-        30 * 60 * 1000
-
-    readonly property string currencyCachePath:
-        Quickshell.statePath(
-            "launcher-currency.json"
-        )
+    readonly property int currencyCacheLifetime: 30 * 60 * 1000
+    readonly property string currencyCachePath: Quickshell.statePath("launcher-currency.json")
 
     function normalizeUnit(value) {
-        const unit =
-            String(value || "")
+        const unit = String(value || "")
                 .toLowerCase()
                 .trim()
                 .replace(/²/g, "2")
@@ -254,58 +248,24 @@ Singleton {
     }
 
     function parseUnit(query) {
-        const match =
-            String(query || "")
+        const match = String(query || "")
                 .trim()
-                .match(
-                    /^([-+]?\d+(?:\.\d+)?)\s+(.+?)\s+(?:in|to|\/)\s+(.+)$/i
-                )
+                .match(/^([-+]?\d+(?:\.\d+)?)\s+(.+?)\s+(?:in|to|\/)\s+(.+)$/i)
 
-        if (!match)
-            return null
+        if (!match) return null
+        const value = Number(match[1])
+        const from = root.normalizeUnit(match[2])
+        const to = root.normalizeUnit(match[3])
 
-        const value =
-            Number(match[1])
-
-        const from =
-            root.normalizeUnit(
-                match[2]
-            )
-
-        const to =
-            root.normalizeUnit(
-                match[3]
-            )
-
-        if (
-            !Number.isFinite(value)
-        ) {
+        if (!Number.isFinite(value)) {
             return null
         }
 
-        const units =
-            root.unitTable()
-
-        const temperatureUnits = [
-            "c",
-            "f",
-            "k"
-        ]
-
-        const fromIsTemperature =
-            temperatureUnits.indexOf(
-                from
-            ) !== -1
-
-        const toIsTemperature =
-            temperatureUnits.indexOf(
-                to
-            ) !== -1
-
-        if (
-            fromIsTemperature &&
-            toIsTemperature
-        ) {
+        const units = root.unitTable()
+        const temperatureUnits = ["c", "f", "k"]
+        const fromIsTemperature = temperatureUnits.indexOf(from) !== -1
+        const toIsTemperature = temperatureUnits.indexOf(to) !== -1
+        if (fromIsTemperature && toIsTemperature) {
             return {
                 value: value,
                 from:  from,
@@ -313,24 +273,13 @@ Singleton {
             }
         }
 
-        if (
-            fromIsTemperature ||
-            toIsTemperature
-        ) {
+        if (fromIsTemperature || toIsTemperature) {
             return null
         }
-
-        if (
-            !units[from] ||
-            !units[to]
-        ) {
+        if (!units[from] || !units[to]) {
             return null
         }
-
-        if (
-            units[from][0] !==
-            units[to][0]
-        ) {
+        if (units[from][0] !== units[to][0]) {
             return null
         }
 
@@ -342,296 +291,115 @@ Singleton {
     }
 
     function convertUnit(query) {
-        const parsed =
-            root.parseUnit(
-                query
-            )
+        const parsed = root.parseUnit(query)
+        if (!parsed) return null
 
-        if (!parsed)
-            return null
+        const value = parsed.value
+        const from = parsed.from
+        const to = parsed.to
 
-        const value =
-            parsed.value
-
-        const from =
-            parsed.from
-
-        const to =
-            parsed.to
-
-        if (from === to)
-            return value
-
-        if (
-            from === "c" &&
-            to === "f"
-        ) {
-            return (
-                value * 9 / 5
-            ) + 32
+        if (from === to) return value
+        if (from === "c" && to === "f") {
+            return (value * 9 / 5) + 32
         }
-
-        if (
-            from === "c" &&
-            to === "k"
-        ) {
+        if (from === "c" && to === "k") {
             return value + 273.15
         }
-
-        if (
-            from === "f" &&
-            to === "c"
-        ) {
-            return (
-                value - 32
-            ) * 5 / 9
+        if (from === "f" && to === "c") {
+            return (value - 32) * 5 / 9
         }
-
-        if (
-            from === "f" &&
-            to === "k"
-        ) {
-            return (
-                (value - 32) *
-                5 / 9
-            ) + 273.15
+        if (from === "f" && to === "k") {
+            return ((value - 32) * 5 / 9) + 273.15
         }
-
-        if (
-            from === "k" &&
-            to === "c"
-        ) {
+        if (from === "k" && to === "c") {
             return value - 273.15
         }
-
-        if (
-            from === "k" &&
-            to === "f"
-        ) {
-            return (
-                (value - 273.15) *
-                9 / 5
-            ) + 32
+        if (from === "k" && to === "f") {
+            return ((value - 273.15) * 9 / 5) + 32
         }
 
-        const units =
-            root.unitTable()
-
-        if (
-            !units[from] ||
-            !units[to] ||
-            units[from][0] !==
-            units[to][0]
-        ) {
+        const units = root.unitTable()
+        if ( !units[from] || !units[to] || units[from][0] !== units[to][0]) {
             return null
         }
 
-        return (
-            value *
-            units[from][1] /
-            units[to][1]
-        )
+        return (value * units[from][1] / units[to][1])
     }
 
     function parseCurrency(query) {
-        const match =
-            String(query || "")
+        const match = String(query || "")
                 .trim()
-                .match(
-                    /^([-+]?\d+(?:\.\d+)?)\s*([a-z]{3})\s+(?:in|to|\/|→)\s*([a-z]{3})$/i
-                )
+                .match(/^([-+]?\d+(?:\.\d+)?)\s*([a-z]{3})\s+(?:in|to|\/|→)\s*([a-z]{3})$/i)
 
-        if (!match)
-            return null
+        if (!match) return null
 
         return {
-            amount:
-                Number(match[1]),
-
-            from:
-                match[2].toUpperCase(),
-
-            to:
-                match[3].toUpperCase()
+            amount: Number(match[1]),
+            from: match[2].toUpperCase(),
+            to: match[3].toUpperCase()
         }
     }
 
-    function currencyPairKey(
-        from,
-        to
-    ) {
-        return (
-            String(from)
-                .toUpperCase() +
-            "|" +
-            String(to)
-                .toUpperCase()
-        )
+    function currencyPairKey(from, to) {
+        return (String(from).toUpperCase() + "|" + String(to).toUpperCase())
     }
 
-    function formatCurrencyResult(
-        amount,
-        rate
-    ) {
-        const value =
-            Number(amount) *
-            Number(rate)
-
-        return String(
-            Number(
-                value.toFixed(4)
-            )
-        )
+    function formatCurrencyResult(amount, rate) {
+        const value = Number(amount) * Number(rate)
+        return String(Number(value.toFixed(4)))
     }
 
-    function setCurrencyResult(
-        amount,
-        from,
-        to,
-        rate,
-        date
-    ) {
-        root.currencyAmount =
-            String(amount)
-
-        root.currencyFrom =
-            from
-
-        root.currencyTo =
-            to
-
-        root.currencyDate =
-            date || ""
-
-        root.currencyResult =
-            root.formatCurrencyResult(
-                amount,
-                rate
-            )
-
-        root.currencyError =
-            false
-
-        root.currencyLoading =
-            false
+    function setCurrencyResult(amount, from, to, rate, date) {
+        root.currencyAmount = String(amount)
+        root.currencyFrom = from
+        root.currencyTo = to
+        root.currencyDate = date || ""
+        root.currencyResult = root.formatCurrencyResult(amount, rate)
+        root.currencyError = false
+        root.currencyLoading = false
     }
 
-    function convertCurrency(
-        amount,
-        fromCurrency,
-        toCurrency
-    ) {
-        const amountNumber =
-            Number(amount)
+    function convertCurrency(amount, fromCurrency, toCurrency) {
+        const amountNumber = Number(amount)
+        const from = String(fromCurrency || "").toUpperCase()
+        const to = String(toCurrency || "").toUpperCase()
 
-        const from =
-            String(
-                fromCurrency || ""
-            ).toUpperCase()
-
-        const to =
-            String(
-                toCurrency || ""
-            ).toUpperCase()
-
-        if (
-            !Number.isFinite(
-                amountNumber
-            ) ||
-            !/^[A-Z]{3}$/.test(from) ||
-            !/^[A-Z]{3}$/.test(to)
-        ) {
+        if (!Number.isFinite(amountNumber) || !/^[A-Z]{3}$/.test(from) || !/^[A-Z]{3}$/.test(to)) {
             return false
         }
 
-        root.currencyAmount =
-            String(amountNumber)
-
-        root.currencyFrom =
-            from
-
-        root.currencyTo =
-            to
-
-        root.currencyError =
-            false
+        root.currencyAmount = String(amountNumber)
+        root.currencyFrom = from
+        root.currencyTo = to
+        root.currencyError = false
 
         if (from === to) {
-            root.setCurrencyResult(
-                amountNumber,
-                from,
-                to,
-                1,
-                ""
-            )
-
+            root.setCurrencyResult(amountNumber, from, to, 1, "")
             return true
         }
 
-        const key =
-            root.currencyPairKey(
-                from,
-                to
-            )
+        const key = root.currencyPairKey(from, to)
+        const cached = root.currencyCache[key]
 
-        const cached =
-            root.currencyCache[key]
-
-        if (
-            cached &&
-            cached.rate !== undefined &&
-            cached.timestamp !== undefined &&
-            Date.now() -
-                Number(
-                    cached.timestamp
-                ) <
-                root.currencyCacheLifetime
-        ) {
-            root.setCurrencyResult(
-                amountNumber,
-                from,
-                to,
-                cached.rate,
-                cached.date || ""
-            )
-
+        if (cached && cached.rate !== undefined && cached.timestamp !== undefined && Date.now() - Number(cached.timestamp) < root.currencyCacheLifetime) {
+            root.setCurrencyResult(amountNumber, from, to, cached.rate, cached.date || "")
             return true
         }
 
-        if (
-            currencyProcess.running
-        ) {
-            if (
-                currencyProcess.fromCurrency === from &&
-                currencyProcess.toCurrency === to
-            ) {
+        if (currencyProcess.running) {
+            if (currencyProcess.fromCurrency === from && currencyProcess.toCurrency === to) {
                 return true
             }
-
             return false
         }
 
-        root.currencyResult =
-            ""
-
-        root.currencyLoading =
-            true
-
-        currencyProcess.fromCurrency =
-            from
-
-        currencyProcess.toCurrency =
-            to
-
-        currencyProcess.amount =
-            amountNumber
-
-        currencyProcess.pairKey =
-            key
-
-        currencyProcess.lines =
-            []
-
+        root.currencyResult = ""
+        root.currencyLoading = true
+        currencyProcess.fromCurrency = from
+        currencyProcess.toCurrency = to
+        currencyProcess.amount = amountNumber
+        currencyProcess.pairKey = key
+        currencyProcess.lines = []
         currencyProcess.command = [
             "curl",
             "-fsS",
@@ -642,56 +410,33 @@ Singleton {
             "/" +
             encodeURIComponent(to)
         ]
-
-        currencyProcess.running =
-            true
+        currencyProcess.running = true
 
         return true
     }
 
     function saveCurrencyCache() {
-        currencyCacheFile.setText(
-            JSON.stringify(
-                root.currencyCache
-            )
-        )
+        currencyCacheFile.setText(JSON.stringify(root.currencyCache))
     }
 
     FileView {
         id: currencyCacheFile
 
-        path:
-            root.currencyCachePath
-
-        preload:
-            true
-
-        watchChanges:
-            false
-
-        printErrors:
-            false
+        path: root.currencyCachePath
+        preload: true
+        watchChanges: false
+        printErrors: false
 
         onLoaded: {
             try {
-                const data =
-                    JSON.parse(
-                        currencyCacheFile.text()
-                    )
-
-                root.currencyCache =
-                    data &&
-                    typeof data === "object"
-                        ? data
-                        : {}
+                const data = JSON.parse(currencyCacheFile.text())
+                root.currencyCache = data && typeof data === "object" ? data : {}
             } catch (error) {
-                root.currencyCache =
-                    {}
+                root.currencyCache = {}
             }
         }
 
-        onLoadFailed:
-            root.currencyCache = {}
+        onLoadFailed: root.currencyCache = {}
     }
 
     Process {
@@ -706,91 +451,46 @@ Singleton {
 
         stdout: SplitParser {
             onRead: (line) => {
-                const text =
-                    line.trim()
-
+                const text = line.trim()
                 if (text !== "") {
-                    currencyProcess.lines.push(
-                        text
-                    )
+                    currencyProcess.lines.push(text)
                 }
             }
         }
 
-        stderr:
-            StdioCollector {}
+        stderr: StdioCollector {}
 
-        onExited:
-            (exitCode, exitStatus) => {
-                let success =
-                    false
+        onExited: (exitCode, exitStatus) => {
+            let success = false
+            if (exitCode === 0 && currencyProcess.lines.length > 0) {
+                try {
+                    const data = JSON.parse(currencyProcess.lines.join(""))
+                    const rate = Number(data.rate)
 
-                if (
-                    exitCode === 0 &&
-                    currencyProcess.lines.length > 0
-                ) {
-                    try {
-                        const data =
-                            JSON.parse(
-                                currencyProcess.lines.join("")
-                            )
-
-                        const rate =
-                            Number(
-                                data.rate
-                            )
-
-                        if (
-                            Number.isFinite(
-                                rate
-                            )
-                        ) {
-                            root.currencyCache[
-                                currencyProcess.pairKey
-                            ] = {
-                                rate:
-                                    rate,
-
-                                timestamp:
-                                    Date.now(),
-
-                                date:
-                                    data.date ||
-                                    ""
-                            }
-
-                            root.setCurrencyResult(
-                                currencyProcess.amount,
-                                currencyProcess.fromCurrency,
-                                currencyProcess.toCurrency,
-                                rate,
-                                data.date || ""
-                            )
-
-                            root.saveCurrencyCache()
-
-                            success =
-                                true
-                        }
-                    } catch (error) {
-                        success =
-                            false
+                    if (Number.isFinite(rate)) {
+                        root.currencyCache[currencyProcess.pairKey] = {rate: rate, timestamp: Date.now(), date: data.date || "" }
+                        root.setCurrencyResult(
+                            currencyProcess.amount,
+                            currencyProcess.fromCurrency,
+                            currencyProcess.toCurrency,
+                            rate,
+                            data.date || ""
+                        )
+                        root.saveCurrencyCache()
+                        success = true
                     }
+                } catch (error) {
+                    success = false
                 }
-
-                if (!success) {
-                    root.currencyResult =
-                        ""
-
-                    root.currencyError =
-                        true
-
-                    root.currencyLoading =
-                        false
-                }
-
-                currencyProcess.lines =
-                    []
             }
+
+            if (!success) {
+                root.currencyResult = ""
+                root.currencyError = true
+                root.currencyLoading = false
+            }
+
+            currencyProcess.lines = []
+        }
     }
 }
