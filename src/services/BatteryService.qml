@@ -1,4 +1,5 @@
 pragma Singleton
+
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -7,27 +8,24 @@ import qs.src.theme
 Singleton {
     id: root
 
-    // ── Battery State ─────────────────────────────────────────────────────────
-    property int    capacity:    0
-    property bool   charging:    false
-    property bool   full:        false
-    property bool   notCharging: false
-    property string status:      "Unknown"
-    property bool   hasBattery:  false
-    property bool   applying:    false
+    property int capacity: 0
+    property bool charging: false
+    property bool full: false
+    property bool notCharging: false
+    property string status: "Unknown"
+    property bool hasBattery: false
+    property bool applying: false
 
-    // ── Time remaining ────────────────────────────────────────────────────────
     property int timeRemainingMinutes: -1
 
-    // ── Independent control state ────────────────────────────────────────────
-    property string cpuTier:     ""   // power-saving | balanced | performance
-    property string chargeMode:  ""   // rapid | conserve | full
-    property int    refreshRate: 0    // 60 | 120
-
-    property string _epp:      ""
-    property string _platform: ""
+    property string cpuTier: ""
+    property string chargeMode: ""
+    property int refreshRate: 0
 
     readonly property real fraction: capacity / 100
+
+    property string _backendPath: Qt.resolvedUrl("../../tools/battery/velox-battery/target/debug/velox-battery")
+    property var _state: null
 
     function getIcon(): string {
         if (full) return "󰁹 "
@@ -68,227 +66,136 @@ Singleton {
     }
 
     function setCpuTier(tier) {
-        const fn = { "power-saving": "pwr-power-saving", "balanced": "pwr-balanced", "performance": "pwr-performance" }[tier]
-        if (!fn) return
+        if (!["power-saving", "balanced", "performance"].includes(tier))
+            return
+
         applying = true
-        _cpuProc.command = ["fish", "-c", fn]
-        _cpuProc.running = true
+        _actionProc.command = [root._backendPath, "performance", "set", tier]
+        _actionProc.running = true
     }
 
     function setChargeMode(mode) {
-        const fn = { "rapid": "charge-rapid", "conserve": "charge-conserve", "full": "charge-full" }[mode]
-        if (!fn) return
+        if (!["conserve", "full"].includes(mode))
+            return
+
         applying = true
-        _chargeProc.command = ["fish", "-c", fn]
-        _chargeProc.running = true
+        _actionProc.command = [root._backendPath, "charge", "set", mode]
+        _actionProc.running = true
     }
 
     function setRefreshRate(hz) {
+        if (!Number.isFinite(hz))
+            return
+
         applying = true
-        _displayProc.command = ["fish", "-c", (hz === 120 ? "display-120hz" : "display-60hz")]
-        _displayProc.running = true
+        _actionProc.command = [root._backendPath, "display", "set", String(Math.round(hz))]
+        _actionProc.running = true
     }
 
-    function _recomputeCpuTier() {
-        if (_platform === "low-power")        root.cpuTier = "power-saving"
-        else if (_platform === "performance") root.cpuTier = "performance"
-        else if (_platform === "balanced")    root.cpuTier = "balanced"
-    }
+    function _applyState(data) {
+        if (!data || typeof data !== "object")
+            return
 
-    // ── Internal ──────────────────────────────────────────────────────────────
-    property string _batPath: ""
+        root._state = data
 
-    Process {
-        id: _finder
-        command: ["sh", "-c", "ls /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n 1"]
-        running: true
-        stdout: SplitParser {
-            onRead: (line) => {
-                const p = line.trim()
-                if (!p) return
-                root._batPath = p.replace("/capacity", "")
+        const battery = data.battery ?? {}
+        const chargingState = data.charging ?? {}
+        const performance = data.performance ?? {}
+        const display = data.display ?? {}
 
-                _capProc.command  = ["cat", root._batPath + "/capacity"]
-                _statProc.command = ["cat", root._batPath + "/status"]
-                _chargeTypeProc.command = ["cat", root._batPath + "/charge_types"]
-                _energyProc.command = ["sh", "-c",
-                    "a=$(cat " + root._batPath + "/energy_now 2>/dev/null || " +
-                         "cat " + root._batPath + "/charge_now 2>/dev/null || echo -1); " +
-                    "b=$(cat " + root._batPath + "/power_now 2>/dev/null || " +
-                         "cat " + root._batPath + "/current_now 2>/dev/null || echo -1); " +
-                    "c=$(cat " + root._batPath + "/energy_full 2>/dev/null || " +
-                         "cat " + root._batPath + "/charge_full 2>/dev/null || echo -1); " +
-                    "echo $a; echo $b; echo $c"
-                ]
+        root.hasBattery = battery.present === true
 
-                root.hasBattery         = true
-                _capProc.running        = true
-                _statProc.running       = true
-                _energyProc.running     = true
-                _chargeTypeProc.running = true
-                _eppProc.running        = true
-                _platformProc.running   = true
-                _refreshProc.running    = true
-            }
+        if (root.hasBattery) {
+            root.capacity = Number(battery.capacity ?? 0)
+            root.status = battery.status ?? "Unknown"
+            root.timeRemainingMinutes = Number(battery.time_remaining_minutes ?? -1)
+
+            root.charging = root.status === "Charging"
+            root.full = root.status === "Full"
+            root.notCharging = root.status === "Not charging"
+        } else {
+            root.capacity = 0
+            root.status = "Unknown"
+            root.timeRemainingMinutes = -1
+            root.charging = false
+            root.full = false
+            root.notCharging = false
         }
+
+        root.cpuTier = performance.current ?? ""
+
+        root.chargeMode = chargingState.current ?? ""
+
+        root.refreshRate = Number(display.current_refresh ?? 0)
+        if (Number.isFinite(root.refreshRate))
+            root.refreshRate = Math.round(root.refreshRate)
+        else
+            root.refreshRate = 0
+    }
+
+    function _refresh() {
+        if (_statusProc.running)
+            return
+
+        _statusProc.running = true
     }
 
     Process {
-        id: _capProc
-        command: ["cat", "/dev/null"]
+        id: _statusProc
+        command: [root._backendPath, "status"]
         running: false
-        stdout: SplitParser {
-            onRead: (d) => {
-                const v = parseInt(d)
-                if (!isNaN(v)) { root.capacity = v; root.hasBattery = true }
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const data = JSON.parse(text)
+                    root._applyState(data)
+                } catch (error) {
+                    console.warn("BatteryService: failed to parse velox-battery output:", error)
+                }
             }
+        }
+
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                console.warn("BatteryService: velox-battery status failed:", exitCode)
         }
     }
 
     Process {
-        id: _statProc
-        command: ["cat", "/dev/null"]
-        running: false
-        stdout: SplitParser {
-            onRead: (d) => {
-                const s        = d.trim()
-                root.status      = s
-                root.charging    = (s === "Charging")
-                root.full        = (s === "Full")
-                root.notCharging = (s === "Not charging")
-            }
-        }
-    }
-
-    Process {
-        id: _energyProc
+        id: _actionProc
         command: []
         running: false
-        property var _vals: []
 
-        stdout: SplitParser {
-            onRead: (line) => {
-                const v = parseInt(line.trim())
-                _energyProc._vals.push(isNaN(v) ? -1 : v)
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const data = JSON.parse(text)
+
+                    if (data.result)
+                        root._applyState(data.result)
+                    else
+                        root._refresh()
+                } catch (error) {
+                    root._refresh()
+                }
             }
         }
 
         onExited: {
-            const vals = _energyProc._vals.slice()
-            _energyProc._vals = []
-
-            if (vals.length < 3 || vals[1] <= 0 || vals[0] < 0) {
-                root.timeRemainingMinutes = -1
-                return
-            }
-            const now  = vals[0]
-            const rate = vals[1]
-            const full = vals[2]
-
-            if (root.charging && full > 0 && full > now) {
-                root.timeRemainingMinutes = Math.max(1, Math.round(((full - now) / rate) * 60))
-            } else if (!root.full && !root.notCharging && !root.charging && now > 0) {
-                root.timeRemainingMinutes = Math.max(1, Math.round((now / rate) * 60))
-            } else {
-                root.timeRemainingMinutes = -1
-            }
+            root.applying = false
+            root._refresh()
         }
     }
 
-    // charge_types looks like: "Fast Standard [Long_Life]" — bracketed entry is active
-    Process {
-        id: _chargeTypeProc
-        command: ["cat", "/dev/null"]
-        running: false
-        stdout: SplitParser {
-            onRead: (d) => {
-                const m = d.match(/\[(\w+)\]/)
-                if (!m) return
-                const active = m[1]
-                if (active === "Fast")            root.chargeMode = "rapid"
-                else if (active === "Long_Life")  root.chargeMode = "conserve"
-                else if (active === "Standard")   root.chargeMode = "full"
-            }
-        }
-    }
-
-    Process {
-        id: _eppProc
-        command: ["cat", "/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference"]
-        running: false
-        stdout: SplitParser {
-            onRead: (d) => { root._epp = d.trim(); root._recomputeCpuTier() }
-        }
-    }
-
-    Process {
-        id: _platformProc
-        command: ["cat", "/sys/firmware/acpi/platform_profile"]
-        running: false
-        stdout: SplitParser {
-            onRead: (d) => { root._platform = d.trim(); root._recomputeCpuTier() }
-        }
-    }
-
-    Process {
-        id: _refreshProc
-        command: ["sh", "-c", "hyprctl monitors -j | jq -r '.[] | select(.name==\"eDP-1\") | .refreshRate'"]
-        running: false
-        stdout: SplitParser {
-            onRead: (line) => {
-                const v = parseFloat(line.trim())
-                if (!isNaN(v)) root.refreshRate = Math.round(v)
-            }
-        }
-    }
-
-    Process {
-        id: _cpuProc
-        command: []
-        running: false
-        onExited: { root.applying = false; _eppProc.running = true; _platformProc.running = true }
-    }
-
-    Process {
-        id: _chargeProc
-        command: []
-        running: false
-        onExited: { root.applying = false; _chargeTypeProc.running = true }
-    }
-
-    Process {
-        id: _displayProc
-        command: []
-        running: false
-        onExited: { root.applying = false; _refreshProc.running = true }
-    }
-
-    // Adaptive polling: poll more frequently when charging/discharging, less when full
-    property int _batteryPollInterval: (root.charging || (!root.full && !root.notCharging)) ? 5000 : 15000
-    
     Timer {
         id: batteryTimer
-        interval:         root._batteryPollInterval
-        repeat:           true
-        running:          root.hasBattery
-        triggeredOnStart: false
-        
-        onTriggered: {
-            _capProc.running        = true
-            _statProc.running       = true
-            _energyProc.running     = true
-            _chargeTypeProc.running = true
-            _eppProc.running        = true
-            _platformProc.running   = true
-            _refreshProc.running    = true
-        }
+        interval: 5000
+        repeat: true
+        running: root.hasBattery
+        triggeredOnStart: true
+        onTriggered: root._refresh()
     }
-    
-    // Update polling interval based on battery state changes
-    Connections {
-        target: root
-        function onChargingChanged() { batteryTimer.restart() }
-        function onFullChanged() { batteryTimer.restart() }
-        function onNotChargingChanged() { batteryTimer.restart() }
-    }
+
+    Component.onCompleted: root._refresh()
 }
