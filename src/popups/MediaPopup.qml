@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Services.Mpris
+import Qt5Compat.GraphicalEffects
 
 import qs.src.components
 import qs.src.theme
@@ -111,12 +112,19 @@ PanelWindow {
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     smooth: true
+                    layer.enabled: true
+                    layer.effect: FastBlur {
+                        radius: 40
+                        transparentBorder: false
+                    }
+
+                    opacity: 0.65
                 }
 
                 Rectangle {
                     anchors.fill: parent
                     color: Colors.surfaceContainer
-                    opacity: 0.82
+                    opacity: 0.68
                 }
             }
 
