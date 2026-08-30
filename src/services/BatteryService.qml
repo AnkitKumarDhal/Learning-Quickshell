@@ -225,5 +225,14 @@ Singleton {
         }
     }
 
+    Timer {
+        id: batteryTimer
+        interval: 5000
+        repeat: true
+        running: root.hasBattery
+        triggeredOnStart: true
+        onTriggered: root._refresh()
+    }
+
     Component.onCompleted: root._refresh()
 }
