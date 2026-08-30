@@ -24,6 +24,14 @@ Singleton {
 
     readonly property real fraction: capacity / 100
 
+    readonly property bool performanceAvailable: _state?.performance?.available === true
+    readonly property bool chargingAvailable: _state?.charging?.available === true
+    readonly property bool displayAvailable: _state?.display?.available === true
+
+    readonly property var performanceOptions: _state?.performance?.options ?? []
+    readonly property var chargingOptions: _state?.charging?.options ?? []
+    readonly property var displayOptions: _state?.display?.options ?? []
+
     property string _backendPath: Qt.resolvedUrl("../../tools/battery/velox-battery/target/debug/velox-battery")
     property var _state: null
 
@@ -66,7 +74,7 @@ Singleton {
     }
 
     function setCpuTier(tier) {
-        if (!["power-saving", "balanced", "performance"].includes(tier))
+        if (!performanceAvailable || !performanceOptions.includes(tier))
             return
 
         applying = true
@@ -75,7 +83,7 @@ Singleton {
     }
 
     function setChargeMode(mode) {
-        if (!["conserve", "full"].includes(mode))
+        if (!chargingAvailable || !chargingOptions.includes(mode))
             return
 
         applying = true
@@ -84,7 +92,11 @@ Singleton {
     }
 
     function setRefreshRate(hz) {
-        if (!Number.isFinite(hz))
+        if (!displayAvailable || !Number.isFinite(hz))
+            return
+
+        const available = displayOptions.some(rate => Math.abs(Number(rate) - hz) < 0.01)
+        if (!available)
             return
 
         applying = true
@@ -123,7 +135,6 @@ Singleton {
         }
 
         root.cpuTier = performance.current ?? ""
-
         root.chargeMode = chargingState.current ?? ""
 
         root.refreshRate = Number(display.current_refresh ?? 0)
@@ -148,8 +159,7 @@ Singleton {
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    const data = JSON.parse(text)
-                    root._applyState(data)
+                    root._applyState(JSON.parse(text))
                 } catch (error) {
                     console.warn("BatteryService: failed to parse velox-battery output:", error)
                 }

@@ -10,24 +10,24 @@ import qs.src.services
 PanelWindow {
     id: root
 
-    color:         "transparent"
+    color: "transparent"
     exclusionMode: ExclusionMode.Ignore
 
     anchors {
-        top:   true
+        top: true
         right: true
     }
 
-    implicitWidth:  380
+    implicitWidth: 380
     implicitHeight: root.screen ? root.screen.height : 800
 
     WlrLayershell.layer: WlrLayer.Overlay
     visible: slidePanel.windowVisible
 
     mask: Region {
-        x:      root.implicitWidth - card.width - Theme.barMargin
-        y:      Theme.barHeight + 8
-        width:  card.width
+        x: root.implicitWidth - card.width - Theme.barMargin
+        y: Theme.barHeight + 8
+        width: card.width
         height: card.height
     }
 
@@ -41,45 +41,45 @@ PanelWindow {
         Rectangle {
             id: card
             anchors {
-                top:         parent.top
-                right:       parent.right
-                topMargin:   Theme.barHeight + 8
+                top: parent.top
+                right: parent.right
+                topMargin: Theme.barHeight + 8
                 rightMargin: Theme.barMargin
             }
 
-            width:        360
-            height:       cardCol.implicitHeight + 20
-            radius:       Theme.popupRadius
-            color:        Colors.surfaceContainer
+            width: 360
+            height: cardCol.implicitHeight + 20
+            radius: Theme.popupRadius
+            color: Colors.surfaceContainer
             border.color: Colors.outlineVariant
             border.width: Theme.popupBorder
-            clip:         true
+            clip: true
 
             Rectangle {
                 anchors.fill: parent
-                radius:       parent.radius
-                color:        Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.82)
-                visible:      BatteryService.applying
-                z:            10
+                radius: parent.radius
+                color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.82)
+                visible: BatteryService.applying
+                z: 10
 
                 Text {
                     anchors.centerIn: parent
-                    text:             "Applying..."
-                    color:            Colors.on_Surface
-                    font.pixelSize:   13
-                    font.family:      Fonts.font
+                    text: "Applying..."
+                    color: Colors.on_Surface
+                    font.pixelSize: 13
+                    font.family: Fonts.font
                 }
             }
 
             ColumnLayout {
                 id: cardCol
                 anchors {
-                    top:          parent.top
-                    left:         parent.left
-                    right:        parent.right
-                    topMargin:    14
-                    leftMargin:   16
-                    rightMargin:  16
+                    top: parent.top
+                    left: parent.left
+                    right: parent.right
+                    topMargin: 14
+                    leftMargin: 16
+                    rightMargin: 16
                 }
                 spacing: 14
 
@@ -88,17 +88,17 @@ PanelWindow {
                     spacing: 14
 
                     Text {
-                        text:           BatteryService.getIcon() + BatteryService.capacity + "%"
-                        color:          BatteryService.getColor()
+                        text: BatteryService.getIcon() + BatteryService.capacity + "%"
+                        color: BatteryService.getColor()
                         font.pixelSize: 30
-                        font.bold:      true
-                        font.family:    Fonts.fontM
+                        font.bold: true
+                        font.family: Fonts.fontM
 
                         Behavior on color { ColorAnimation { duration: 300 } }
 
                         SequentialAnimation on opacity {
                             running: BatteryService.capacity <= 10 && !BatteryService.charging
-                            loops:   Animation.Infinite
+                            loops: Animation.Infinite
                             NumberAnimation { to: 0.3; duration: 600; easing.type: Easing.InOutSine }
                             NumberAnimation { to: 1.0; duration: 600; easing.type: Easing.InOutSine }
                         }
@@ -113,16 +113,15 @@ PanelWindow {
                         Text {
                             Layout.alignment: Qt.AlignRight
                             text: {
-                                if (BatteryService.full)        return "Full"
+                                if (BatteryService.full) return "Full"
                                 if (BatteryService.notCharging) return "Not charging"
-                                if (BatteryService.notCharging && BatteryService.chargeMode === "conserve") return "Capped at 80%"
-                                if (BatteryService.charging)    return "Charging"
+                                if (BatteryService.charging) return "Charging"
                                 return "On battery"
                             }
-                            color:          BatteryService.getColor()
+                            color: BatteryService.getColor()
                             font.pixelSize: 12
-                            font.bold:      true
-                            font.family:    Fonts.font
+                            font.bold: true
+                            font.family: Fonts.font
                             Behavior on color { ColorAnimation { duration: 200 } }
                         }
 
@@ -134,9 +133,9 @@ PanelWindow {
                                 if (!t) return ""
                                 return BatteryService.charging ? t + " to full" : t + " left"
                             }
-                            color:          Colors.on_SurfaceVariant
+                            color: Colors.on_SurfaceVariant
                             font.pixelSize: 11
-                            font.family:    Fonts.font
+                            font.family: Fonts.font
                         }
                     }
                 }
@@ -147,31 +146,36 @@ PanelWindow {
 
                     Rectangle {
                         anchors.fill: parent
-                        radius:       3
-                        color:        Colors.surfaceContainerHighest
+                        radius: 3
+                        color: Colors.surfaceContainerHighest
                     }
 
                     Rectangle {
-                        anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
-                        width:  parent.width * BatteryService.fraction
+                        anchors {
+                            left: parent.left
+                            top: parent.top
+                            bottom: parent.bottom
+                        }
+                        width: parent.width * BatteryService.fraction
                         radius: 3
-                        color:  BatteryService.getColor()
+                        color: BatteryService.getColor()
                         Behavior on width { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
-                        Behavior on color { ColorAnimation  { duration: 300 } }
+                        Behavior on color { ColorAnimation { duration: 300 } }
                     }
                 }
 
                 Rectangle {
                     Layout.fillWidth: true
-                    height:  1
-                    color:   Colors.outlineVariant
+                    height: 1
+                    color: Colors.outlineVariant
                     opacity: 0.5
                 }
 
                 component SettingRow: ColumnLayout {
                     id: settingRow
-                    property string label:        ""
-                    property var    options:      []   // [{id: "..", label: ".."}, ...]
+
+                    property string label: ""
+                    property var options: []
                     property string currentValue: ""
                     signal selected(string id)
 
@@ -179,12 +183,12 @@ PanelWindow {
                     spacing: 6
 
                     Text {
-                        text:           settingRow.label
-                        color:          Colors.on_SurfaceVariant
+                        text: settingRow.label
+                        color: Colors.on_SurfaceVariant
                         font.pixelSize: 11
-                        font.bold:      true
-                        font.family:    Fonts.font
-                        leftPadding:    2
+                        font.bold: true
+                        font.family: Fonts.font
+                        leftPadding: 2
                     }
 
                     RowLayout {
@@ -193,6 +197,7 @@ PanelWindow {
 
                         Repeater {
                             model: settingRow.options
+
                             delegate: Rectangle {
                                 required property var modelData
                                 readonly property bool isActive: modelData.id === settingRow.currentValue
@@ -202,33 +207,35 @@ PanelWindow {
                                 radius: 8
 
                                 color: isActive
-                                           ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.16)
-                                           : optHov.containsMouse
-                                               ? Colors.surfaceContainerHighest
-                                               : Colors.surfaceContainerHigh
+                                    ? Qt.rgba(Colors.primary.r, Colors.primary.g, Colors.primary.b, 0.16)
+                                    : optHov.containsMouse
+                                        ? Colors.surfaceContainerHighest
+                                        : Colors.surfaceContainerHigh
+
                                 border.color: isActive ? Colors.primary : Colors.outlineVariant
                                 border.width: isActive ? 1.5 : 1
 
-                                Behavior on color        { ColorAnimation { duration: 150 } }
+                                Behavior on color { ColorAnimation { duration: 150 } }
                                 Behavior on border.color { ColorAnimation { duration: 150 } }
 
                                 Text {
                                     anchors.centerIn: parent
-                                    text:             modelData.label
-                                    color:            isActive ? Colors.primary : Colors.on_Surface
-                                    font.pixelSize:   10
-                                    font.bold:        isActive
-                                    font.family:      Fonts.font
+                                    text: modelData.label
+                                    color: isActive ? Colors.primary : Colors.on_Surface
+                                    font.pixelSize: 10
+                                    font.bold: isActive
+                                    font.family: Fonts.font
                                 }
 
                                 MouseArea {
-                                    id:           optHov
+                                    id: optHov
                                     anchors.fill: parent
                                     hoverEnabled: true
-                                    cursorShape:  (BatteryService.applying || isActive)
-                                                      ? Qt.ArrowCursor : Qt.PointingHandCursor
-                                    enabled:      !BatteryService.applying && !isActive
-                                    onClicked:    settingRow.selected(modelData.id)
+                                    cursorShape: (BatteryService.applying || isActive)
+                                        ? Qt.ArrowCursor
+                                        : Qt.PointingHandCursor
+                                    enabled: !BatteryService.applying && !isActive
+                                    onClicked: settingRow.selected(modelData.id)
                                 }
                             }
                         }
@@ -236,35 +243,49 @@ PanelWindow {
                 }
 
                 SettingRow {
-                    label:        "Performance"
+                    label: "Performance"
+                    visible: BatteryService.performanceAvailable
                     currentValue: BatteryService.cpuTier
-                    options: [
-                        { id: "power-saving", label: "Power Saving" },
-                        { id: "balanced",     label: "Balanced" },
-                        { id: "performance",  label: "Performance" }
-                    ]
+                    options: BatteryService.performanceOptions.map(id => ({
+                        id: id,
+                        label: id === "power-saving"
+                            ? "Power Saving"
+                            : id === "balanced"
+                                ? "Balanced"
+                                : id === "performance"
+                                    ? "Performance"
+                                    : id
+                    }))
                     onSelected: (id) => BatteryService.setCpuTier(id)
                 }
 
                 SettingRow {
-                    label:        "Charging"
+                    label: "Charging"
+                    visible: BatteryService.chargingAvailable
                     currentValue: BatteryService.chargeMode
-                    options: [
-                        { id: "rapid",    label: "Rapid" },
-                        { id: "conserve", label: "Conserve (80%)" },
-                        { id: "full",     label: "Full (100%)" }
-                    ]
+                    options: BatteryService.chargingOptions.map(id => ({
+                        id: id,
+                        label: id === "conserve"
+                            ? "Conserve"
+                            : id === "full"
+                                ? "Full"
+                                : id
+                    }))
                     onSelected: (id) => BatteryService.setChargeMode(id)
                 }
 
                 SettingRow {
-                    label:        "Display"
+                    label: "Display"
+                    visible: BatteryService.displayAvailable
                     currentValue: String(BatteryService.refreshRate)
-                    options: [
-                        { id: "60",  label: "60Hz" },
-                        { id: "120", label: "120Hz" }
-                    ]
-                    onSelected: (id) => BatteryService.setRefreshRate(parseInt(id))
+                    options: BatteryService.displayOptions.map(rate => {
+                        const value = Math.round(Number(rate))
+                        return {
+                            id: String(value),
+                            label: value + "Hz"
+                        }
+                    })
+                    onSelected: (id) => BatteryService.setRefreshRate(Number(id))
                 }
 
                 Item { height: 2 }
