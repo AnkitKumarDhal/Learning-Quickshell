@@ -124,16 +124,16 @@ pub fn set(requested: &str, battery: &BatteryInfo) -> Result<Value, String> {
                 .and_then(|name| name.to_str())
                 .ok_or_else(|| "Could not determine the battery device name.".to_string())?;
 
-            let args: Vec<&str> = match mode {
-                "conserve" => vec!["-n", "tlp", "setcharge", "0", "1", device_name],
-                "full" => vec!["-n", "tlp", "fullcharge", device_name],
+            let args = match mode {
+                "conserve" => ["-n", "/usr/bin/tlp", "setcharge", "0", "1", device_name],
+                "full" => ["-n", "/usr/bin/tlp", "setcharge", "0", "0", device_name],
                 _ => unreachable!(),
             };
 
-            let output = run_command("sudo", &args);
+            let output = run_command("/usr/bin/sudo", &args);
 
             if !output.success {
-                let command = std::iter::once("sudo")
+                let command = std::iter::once("/usr/bin/sudo")
                     .chain(args.iter().copied())
                     .collect::<Vec<_>>();
 

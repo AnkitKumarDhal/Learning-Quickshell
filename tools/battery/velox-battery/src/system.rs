@@ -38,6 +38,7 @@ pub fn executable_in_path(program: &str) -> Option<PathBuf> {
 
     for directory in env::split_paths(&path_var) {
         let candidate = directory.join(program);
+
         if is_executable_file(&candidate) {
             return Some(candidate);
         }
@@ -54,6 +55,7 @@ fn is_executable_file(path: &Path) -> bool {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
+
         fs::metadata(path)
             .map(|metadata| metadata.permissions().mode() & 0o111 != 0)
             .unwrap_or(false)
