@@ -31,11 +31,19 @@ PanelWindow {
         height: card.height
     }
 
+    Connections {
+        target: BatteryService
+        function onHasBatteryChanged() {
+            if (BatteryService.initialized && !BatteryService.hasBattery)
+                Popups.batteryOpen = false
+        }
+    }
+
     PopupSlide {
         id: slidePanel
         anchors.fill: parent
         edge: "top"
-        open: Popups.batteryOpen
+        open: Popups.batteryOpen && BatteryService.initialized && BatteryService.hasBattery
         onCloseRequested: Popups.batteryOpen = false
 
         Rectangle {

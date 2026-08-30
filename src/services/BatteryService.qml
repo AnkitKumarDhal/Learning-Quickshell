@@ -14,6 +14,7 @@ Singleton {
     property bool notCharging: false
     property string status: "Unknown"
     property bool hasBattery: false
+    property bool initialized: false
     property bool applying: false
 
     property int timeRemainingMinutes: -1
@@ -142,6 +143,8 @@ Singleton {
             root.refreshRate = Math.round(root.refreshRate)
         else
             root.refreshRate = 0
+
+        root.initialized = true
     }
 
     function _refresh() {
