@@ -1,2 +1,3 @@
 .qmlls.ini
 target/
+tools/battery/bin/velox-battery

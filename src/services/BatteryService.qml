@@ -34,7 +34,7 @@ Singleton {
     readonly property var chargingOptions: _state?.charging?.options ?? []
     readonly property var displayOptions: _state?.display?.options ?? []
 
-    property string _backendPath: Qt.resolvedUrl("../../tools/battery/velox-battery/target/debug/velox-battery")
+    property string _backendPath: Qt.resolvedUrl("../../tools/battery/bin/velox-battery")
     property var _state: null
 
     function getIcon(): string {
