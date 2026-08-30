@@ -189,6 +189,7 @@ Item {
                 font.pointSize: 11
                 font.bold: true
                 font.family: Fonts.fontM
+                font.italic: root.isPlaying ? true : false
 
                 elide: Text.ElideRight
                 width: Math.min(implicitWidth, 160)

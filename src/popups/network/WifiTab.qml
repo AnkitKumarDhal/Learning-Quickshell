@@ -375,9 +375,9 @@ ColumnLayout {
                                     acceptedButtons: Qt.LeftButton
                                     cursorShape: Qt.PointingHandCursor
 
-                                    onPressed: mouse.accepted = true
-                                    onReleased: mouse.accepted = true
-                                    onClicked: {
+                                    onPressed: (mouse) => mouse.accepted = true
+                                    onReleased: (mouse) => mouse.accepted = true
+                                    onClicked: (mouse) => {
                                         mouse.accepted = true;
                                         root.showPassword = !root.showPassword;
                                         passwordField.forceActiveFocus();

@@ -49,9 +49,7 @@ def load_current_emojis() -> list[tuple[str, str]]:
     )
 
     if not categories:
-        raise RuntimeError(
-            f"Could not parse emoji categories from {EMOJI_DATA}"
-        )
+        raise RuntimeError(f"Could not parse emoji categories from {EMOJI_DATA}")
 
     result: list[tuple[str, str]] = []
     seen: set[str] = set()
@@ -65,9 +63,7 @@ def load_current_emojis() -> list[tuple[str, str]]:
                 result.append((emoji, category))
 
     if not result:
-        raise RuntimeError(
-            f"No emojis were found in {EMOJI_DATA}"
-        )
+        raise RuntimeError(f"No emojis were found in {EMOJI_DATA}")
 
     return result
 
@@ -77,9 +73,7 @@ def download_cldr() -> dict:
 
     request = urllib.request.Request(
         CLDR_URL,
-        headers={
-            "User-Agent": "quickshell-emoji-data-generator/1.0"
-        },
+        headers={"User-Agent": "quickshell-emoji-data-generator/1.0"},
     )
 
     with urllib.request.urlopen(request, timeout=30) as response:
@@ -88,9 +82,7 @@ def download_cldr() -> dict:
 
 def build_annotation_lookup(data: dict) -> dict[str, dict]:
     annotations = data["annotations"]["annotations"]
-
     lookup: dict[str, dict] = {}
-
     for emoji, entry in annotations.items():
         lookup[normalize_emoji(emoji)] = entry
 
@@ -118,16 +110,10 @@ def main() -> int:
 
         if annotation:
             name = annotation.get("tts", [""])[0]
-
             keywords = annotation.get("default", [])
-
-            terms = " ".join(
-                [name, *keywords, category]
-            ).lower()
+            terms = " ".join([name, *keywords, category]).lower()
 
         else:
-            # Keep the emoji searchable by its category even if
-            # CLDR has no annotation for a particular sequence.
             terms = category.lower()
             missing.append((emoji, category))
 
