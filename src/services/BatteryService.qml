@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.UPower
 import qs.src.theme
 
 Singleton {
@@ -154,6 +155,29 @@ Singleton {
         _statusProc.running = true
     }
 
+    Connections {
+        target: UPower
+        function onOnBatteryChanged() {
+            root._refresh()
+        }
+    }
+
+    Connections {
+        target: UPower.displayDevice
+        function onStateChanged() {
+            root._refresh()
+        }
+        function onPercentageChanged() {
+            root._refresh()
+        }
+        function onTimeToEmptyChanged() {
+            root._refresh()
+        }
+        function onTimeToFullChanged() {
+            root._refresh()
+        }
+    }
+
     Process {
         id: _statusProc
         command: [root._backendPath, "status"]
@@ -199,15 +223,6 @@ Singleton {
             root.applying = false
             root._refresh()
         }
-    }
-
-    Timer {
-        id: batteryTimer
-        interval: 5000
-        repeat: true
-        running: root.hasBattery
-        triggeredOnStart: true
-        onTriggered: root._refresh()
     }
 
     Component.onCompleted: root._refresh()
