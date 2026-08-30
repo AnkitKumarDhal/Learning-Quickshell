@@ -93,7 +93,7 @@ Item {
                         height: targetHeight
                         radius: width / 2
                         color: Colors.primary
-                        opacity: root.isPlaying ? 0.18 : 0.08
+                        opacity: root.isPlaying ? 0.28 : 0.08
 
                         Behavior on targetHeight {
                             NumberAnimation {
