@@ -60,7 +60,7 @@ Read-only commands:
   velox-battery diagnose
       Detailed diagnostics and backend-selection information.
 
-Write commands:
+Commands:
 
   velox-battery performance get
       Get the active performance profile.
