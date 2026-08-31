@@ -207,6 +207,9 @@ install_aur_dependencies() {
 }
 
 install_repository() {
+    REPOSITORY_CHANGED=false
+    BATTERY_BACKEND_CHANGED=false
+
     if [[ -d "$INSTALL_DIR" ]] && is_velox_installation; then
         info "Existing Velox-Q installation detected"
 
@@ -216,10 +219,24 @@ install_repository() {
             die "Your Velox-Q installation has local changes. Commit or stash them before updating."
         fi
 
+        local before
+        local after
+
+        before="$(git -C "$INSTALL_DIR" rev-parse HEAD)"
         git -C "$INSTALL_DIR" fetch origin "$BRANCH"
         git -C "$INSTALL_DIR" pull --ff-only origin "$BRANCH"
+        after="$(git -C "$INSTALL_DIR" rev-parse HEAD)"
 
-        success "Velox-Q updated"
+        if [[ "$before" != "$after" ]]; then
+            REPOSITORY_CHANGED=true
+            if ! git -C "$INSTALL_DIR" diff --quiet "$before" "$after" -- tools/battery/velox-battery; then
+                BATTERY_BACKEND_CHANGED=true
+            fi
+            success "Velox-Q updated"
+        else
+            info "Velox-Q is already up to date"
+        fi
+
         return
     fi
 
@@ -230,7 +247,33 @@ install_repository() {
     info "Installing Velox-Q"
     mkdir -p "$(dirname -- "$INSTALL_DIR")"
     git clone --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
+    REPOSITORY_CHANGED=true
+    BATTERY_BACKEND_CHANGED=true
     success "Velox-Q cloned to $INSTALL_DIR"
+}
+
+build_battery_backend() {
+    local crate_dir="${INSTALL_DIR}/tools/battery/velox-battery"
+    local binary_dir="${INSTALL_DIR}/tools/battery/bin"
+    local binary="${binary_dir}/velox-battery"
+
+    [[ -f "${crate_dir}/Cargo.toml" ]] ||
+        die "Battery backend source was not found."
+
+    if [[ -x "$binary" ]] && [[ "$BATTERY_BACKEND_CHANGED" != true ]]; then
+        info "Battery backend is already up to date"
+        return
+    fi
+
+    info "Building battery backend"
+    (
+        cd "$crate_dir"
+        cargo build --release
+    )
+
+    mkdir -p "$binary_dir"
+    install -m 755 "${crate_dir}/target/release/velox-battery" "$binary"
+    success "Battery backend installed"
 }
 
 build_battery_backend() {
