@@ -110,40 +110,37 @@ Singleton {
         if (!data || typeof data !== "object")
             return
 
-        root._state = data
+        const previous = root._state ?? {}
+        const battery = data.battery ?? previous.battery ?? {}
+        const chargingState = data.charging ?? previous.charging ?? {}
+        const performance = data.performance ?? previous.performance ?? {}
+        const display = data.display ?? previous.display ?? {}
 
-        const battery = data.battery ?? {}
-        const chargingState = data.charging ?? {}
-        const performance = data.performance ?? {}
-        const display = data.display ?? {}
+        const merged = {}
+        Object.assign(merged, previous)
+        merged.battery = battery
+        merged.charging = chargingState
+        merged.performance = performance
+        merged.display = display
 
-        root.hasBattery = battery.present === true
+        root._state = merged
 
+        if (data.battery && data.battery.present !== undefined) root.hasBattery = data.battery.present === true
         if (root.hasBattery) {
             root.capacity = Number(battery.capacity ?? 0)
             root.status = battery.status ?? "Unknown"
             root.timeRemainingMinutes = Number(battery.time_remaining_minutes ?? -1)
-
             root.charging = root.status === "Charging"
             root.full = root.status === "Full"
             root.notCharging = root.status === "Not charging"
-        } else {
-            root.capacity = 0
-            root.status = "Unknown"
-            root.timeRemainingMinutes = -1
-            root.charging = false
-            root.full = false
-            root.notCharging = false
         }
 
-        root.cpuTier = performance.current ?? ""
-        root.chargeMode = chargingState.current ?? ""
-
-        root.refreshRate = Number(display.current_refresh ?? 0)
-        if (Number.isFinite(root.refreshRate))
-            root.refreshRate = Math.round(root.refreshRate)
-        else
-            root.refreshRate = 0
+        if (data.performance) root.cpuTier = performance.current ?? root.cpuTier
+        if (data.charging) root.chargeMode = chargingState.current ?? root.chargeMode
+        if (data.display) {
+            root.refreshRate = Number(display.current_refresh ?? root.refreshRate)
+            if (Number.isFinite(root.refreshRate)) root.refreshRate = Math.round(root.refreshRate)
+        }
 
         root.initialized = true
     }
