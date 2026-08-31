@@ -3,7 +3,7 @@
 set -euo pipefail
 
 REPO_URL="https://github.com/AnkitKumarDhal/Velox-Q.git"
-BRANCH="battery"
+BRANCH="main"
 INSTALL_DIR="${HOME}/.config/quickshell"
 BACKUP_BASE="${HOME}/.config/quickshell.bak"
 
