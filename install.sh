@@ -7,8 +7,6 @@ BRANCH="battery"
 INSTALL_DIR="${HOME}/.config/quickshell"
 BACKUP_BASE="${HOME}/.config/quickshell.bak"
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-
 info() {
     printf '\033[1;34m==>\033[0m %s\n' "$1"
 }
