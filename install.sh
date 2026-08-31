@@ -34,6 +34,10 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+systemctl_active() {
+    systemctl is-active --quiet "$1"
+}
+
 has_battery() {
     local path
 
