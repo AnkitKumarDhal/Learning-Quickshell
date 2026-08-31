@@ -78,7 +78,6 @@ install_official_dependencies() {
         wireplumber
         wl-clipboard
         cliphist
-        python-pywal16
         brightnessctl
         awww
     )
@@ -125,7 +124,7 @@ install_aur_dependencies() {
     ensure_aur_helper
 
     info "Installing AUR dependencies"
-    "$AUR_HELPER" -S --needed quickshell-git matugen
+    "$AUR_HELPER" -S --needed quickshell-git matugen-bin python-pywal16
 }
 
 install_repository() {
