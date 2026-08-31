@@ -78,7 +78,7 @@ pub fn inspect() -> DisplayInfo {
         None
     };
 
-    let refresh_options = matching_refresh_rates(&monitor, width, height);
+    let refresh_options = matching_refresh_rates(monitor, width, height);
     let available = !refresh_options.is_empty();
 
     DisplayInfo {

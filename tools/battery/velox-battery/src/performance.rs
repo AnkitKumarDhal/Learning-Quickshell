@@ -253,7 +253,7 @@ pub fn set(requested: &str) -> Result<Value, String> {
 
                     if !output.success {
                         return Err(format_privileged_command_failure(
-                            &["sudo", &args[0], &args[1], &args[2]],
+                            &["sudo", args[0], args[1], args[2]],
                             &output,
                         ));
                     }

@@ -99,23 +99,22 @@ fn battery_time_remaining_minutes(status: &str, battery: &Path) -> Option<i64> {
         read_float(&battery.join("energy_now")),
         read_float(&battery.join("energy_full")),
         read_float(&battery.join("power_now")),
-    ) {
-        if power > 0.0 {
-            let hours = if status.eq_ignore_ascii_case("charging") {
-                if full > now {
-                    (full - now) / power
-                } else {
-                    return None;
-                }
-            } else if status.eq_ignore_ascii_case("discharging") {
-                now / power
+    ) && power > 0.0
+    {
+        let hours = if status.eq_ignore_ascii_case("charging") {
+            if full > now {
+                (full - now) / power
             } else {
                 return None;
-            };
-
-            if hours.is_finite() && hours > 0.0 {
-                return Some((hours * 60.0).round().max(1.0) as i64);
             }
+        } else if status.eq_ignore_ascii_case("discharging") {
+            now / power
+        } else {
+            return None;
+        };
+
+        if hours.is_finite() && hours > 0.0 {
+            return Some((hours * 60.0).round().max(1.0) as i64);
         }
     }
 
@@ -123,23 +122,22 @@ fn battery_time_remaining_minutes(status: &str, battery: &Path) -> Option<i64> {
         read_float(&battery.join("charge_now")),
         read_float(&battery.join("charge_full")),
         read_float(&battery.join("current_now")),
-    ) {
-        if current > 0.0 {
-            let hours = if status.eq_ignore_ascii_case("charging") {
-                if full > now {
-                    (full - now) / current
-                } else {
-                    return None;
-                }
-            } else if status.eq_ignore_ascii_case("discharging") {
-                now / current
+    ) && current > 0.0
+    {
+        let hours = if status.eq_ignore_ascii_case("charging") {
+            if full > now {
+                (full - now) / current
             } else {
                 return None;
-            };
-
-            if hours.is_finite() && hours > 0.0 {
-                return Some((hours * 60.0).round().max(1.0) as i64);
             }
+        } else if status.eq_ignore_ascii_case("discharging") {
+            now / current
+        } else {
+            return None;
+        };
+
+        if hours.is_finite() && hours > 0.0 {
+            return Some((hours * 60.0).round().max(1.0) as i64);
         }
     }
 
