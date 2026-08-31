@@ -6,6 +6,7 @@ REPO_URL="https://github.com/AnkitKumarDhal/Velox-Q.git"
 BRANCH="battery"
 INSTALL_DIR="${HOME}/.config/quickshell"
 BACKUP_BASE="${HOME}/.config/quickshell.bak"
+
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 info() {
@@ -264,25 +265,6 @@ build_battery_backend() {
         info "Battery backend is already up to date"
         return
     fi
-
-    info "Building battery backend"
-    (
-        cd "$crate_dir"
-        cargo build --release
-    )
-
-    mkdir -p "$binary_dir"
-    install -m 755 "${crate_dir}/target/release/velox-battery" "$binary"
-    success "Battery backend installed"
-}
-
-build_battery_backend() {
-    local crate_dir="${INSTALL_DIR}/tools/battery/velox-battery"
-    local binary_dir="${INSTALL_DIR}/tools/battery/bin"
-    local binary="${binary_dir}/velox-battery"
-
-    [[ -f "${crate_dir}/Cargo.toml" ]] ||
-        die "Battery backend source was not found."
 
     info "Building battery backend"
 
