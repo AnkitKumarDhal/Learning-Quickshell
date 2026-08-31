@@ -1,3 +1,4 @@
 .qmlls.ini
 target/
 tools/battery/bin/velox-battery
+src/theme/Colors.json
