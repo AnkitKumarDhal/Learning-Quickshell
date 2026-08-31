@@ -6,7 +6,6 @@ REPO_URL="https://github.com/AnkitKumarDhal/Velox-Q.git"
 BRANCH="battery"
 INSTALL_DIR="${HOME}/.config/quickshell"
 BACKUP_BASE="${HOME}/.config/quickshell.bak"
-
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 info() {
@@ -43,7 +42,6 @@ has_battery() {
 
     for path in /sys/class/power_supply/*; do
         [[ -f "$path/type" ]] || continue
-
         if [[ "$(cat "$path/type")" == "Battery" ]]; then
             return 0
         fi
@@ -54,16 +52,13 @@ has_battery() {
 
 is_velox_installation() {
     [[ -d "${INSTALL_DIR}/.git" ]] || return 1
-
     local remote
     remote="$(git -C "$INSTALL_DIR" remote get-url origin 2>/dev/null || true)"
-
     [[ "$remote" == "$REPO_URL" || "$remote" == "git@github.com:AnkitKumarDhal/Velox-Q.git" ]]
 }
 
 backup_existing_installation() {
     [[ -e "$INSTALL_DIR" ]] || return 0
-
     local backup="$BACKUP_BASE"
 
     if [[ -e "$backup" ]]; then
@@ -187,25 +182,20 @@ ensure_aur_helper() {
     fi
 
     warn "No AUR helper was found."
-
     sudo pacman -S --needed base-devel git
 
     local temp_dir
     temp_dir="$(mktemp -d)"
-
     trap 'rm -rf -- "$temp_dir"' RETURN
 
     info "Bootstrapping yay from the Arch User Repository"
-
     git clone https://aur.archlinux.org/yay.git "$temp_dir/yay"
-
     (
         cd "$temp_dir/yay"
         makepkg -si --noconfirm
     )
 
     command_exists yay || die "yay installation failed."
-
     AUR_HELPER="yay"
 }
 
@@ -238,11 +228,8 @@ install_repository() {
     fi
 
     info "Installing Velox-Q"
-
     mkdir -p "$(dirname -- "$INSTALL_DIR")"
-
     git clone --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
-
     success "Velox-Q cloned to $INSTALL_DIR"
 }
 
@@ -268,11 +255,16 @@ build_battery_backend() {
 }
 
 configure_tlp_privileges() {
-    command_exists tlp || return 0
+    local sudoers_file="/etc/sudoers.d/velox-q"
 
-    if ! systemctl is-active --quiet tlp.service; then
-        info "TLP is installed but not active; skipping TLP privilege setup"
-        return 0
+    if ! has_battery || ! command_exists tlp || ! systemctl is-active --quiet tlp.service; then
+        if sudo test -e "$sudoers_file"; then
+            info "Removing stale TLP charging privileges"
+            sudo rm -f -- "$sudoers_file"
+            success "TLP charging privileges removed"
+        fi
+
+        return
     fi
 
     local batteries=()
@@ -281,35 +273,41 @@ configure_tlp_privileges() {
 
     for path in /sys/class/power_supply/*; do
         [[ -f "$path/type" ]] || continue
-
-        if [[ "$(cat "$path/type")" != "Battery" ]]; then
-            continue
-        fi
+        [[ "$(cat "$path/type")" == "Battery" ]] || continue
+        [[ -f "$path/charge_types" ]] || continue
 
         name="$(basename "$path")"
         batteries+=("$name")
     done
 
     if ((${#batteries[@]} == 0)); then
-        info "No battery detected; skipping TLP charging privileges"
-        return 0
+        if sudo test -e "$sudoers_file"; then
+            info "Removing stale TLP charging privileges"
+            sudo rm -f -- "$sudoers_file"
+            success "TLP charging privileges removed"
+        fi
+
+        return
     fi
 
     local sudoers_tmp
+    local install_user
+
     sudoers_tmp="$(mktemp)"
+    install_user="$(id -un)"
 
     {
-        printf '%s ALL=(root) NOPASSWD:' "$USER"
+        printf '%s ALL=(root) NOPASSWD: ' "$install_user"
 
-        local separator=""
+        local commands=()
+        local IFS=', '
 
         for name in "${batteries[@]}"; do
-            printf '%s /usr/bin/tlp setcharge 0 1 %s' "$separator" "$name"
-            separator=","
-            printf ', /usr/bin/tlp setcharge 0 0 %s' "$name"
+            commands+=("/usr/bin/tlp setcharge 0 1 $name")
+            commands+=("/usr/bin/tlp setcharge 0 0 $name")
         done
 
-        printf '\n'
+        printf '%s\n' "${commands[*]}"
     } >"$sudoers_tmp"
 
     if ! sudo visudo -cf "$sudoers_tmp"; then
@@ -318,7 +316,7 @@ configure_tlp_privileges() {
     fi
 
     info "Installing TLP charging privileges"
-    sudo install -m 440 "$sudoers_tmp" /etc/sudoers.d/velox-q
+    sudo install -m 440 "$sudoers_tmp" "$sudoers_file"
     rm -f -- "$sudoers_tmp"
 
     success "TLP charging privileges configured"
