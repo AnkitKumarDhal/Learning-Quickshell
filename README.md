@@ -292,73 +292,168 @@ The major stages of that development include:
 
 Velox-Q is primarily intended for an Arch Linux + Hyprland environment.
 
-The complete setup requires more than the core packages listed here because different features depend on system services and utilities.
+The installer handles the core packages required by Velox-Q, along with the AUR packages and native helper build required by the current shell.
 
-The project will eventually have an installer that handles these dependencies automatically. The main [Hyprland dotfiles](https://github.com/AnkitKumarDhal/K-Trax.git) repository will also provide a higher-level installer that can install and configure the complete environment.
-
-For now, the shell is installed manually.
+Some optional features may rely on additional system services or applications already present on the system.
 
 ### Core Dependencies
 
-| Dependency     | Purpose                     |
-| -------------- | --------------------------- |
-| Hyprland       | Wayland compositor          |
-| Quickshell-git | Shell framework             |
-| Qt6            | UI framework                |
-| Matugen        | Dynamic color generation    |
-| PipeWire       | Audio                       |
-| WirePlumber    | PipeWire session management |
-| `cliphist`     | Clipboard history           |
-| `wl-clipboard` | Clipboard integration       |
-| `brightnessctl`| Brightness Management       |
-| `awww`, `pywal16`, `matugen` | Wallpaper application and color scheme generation |
+| Dependency      | Purpose                       |
+| --------------- | ----------------------------- |
+| `git`           | Repository management         |
+| `rust`          | Native helper builds          |
+| Hyprland        | Wayland compositor            |
+| Quickshell-git  | Shell framework               |
+| Qt6             | UI framework                  |
+| Matugen         | Dynamic color generation      |
+| PipeWire        | Audio                         |
+| WirePlumber     | PipeWire session management   |
+| `cliphist`      | Clipboard history             |
+| `wl-clipboard`  | Clipboard integration         |
+| `brightnessctl` | Brightness management         |
+| `awww`          | Wallpaper application         |
+| `pywal16`       | Wallpaper and color support   |
 
-Depending on the features you use, additional system packages _may_ be required for:
+Depending on the features you use, additional system packages or services may be required for:
 
 * Bluetooth
-* Power and battery control
 * Session management
 * Polkit authentication
 * Hardware monitoring
 
+Power and battery management is handled separately by the installer when a battery is detected.
+
 ### Install
 
-Clone the repository:
+The installer is the recommended way to install Velox-Q.
+
+#### Installer
+
+Run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AnkitKumarDhal/Velox-Q/refs/heads/main/install.sh | bash
+```
+
+The installer will:
+
+* Install required system packages
+* Install or bootstrap an AUR helper when necessary
+* Install the required AUR packages
+* Install Velox-Q into `~/.config/quickshell`
+* Back up an existing non-Velox-Q configuration to `~/.config/quickshell.bak`
+* Update an existing Velox-Q installation in place
+* Build the native Velox-Q battery backend
+* Detect battery and power-management capabilities
+* Configure TLP and `tlp-pd` when appropriate
+* Configure the required Velox-Q sudoers permissions when TLP charging control is available
+
+The installer does not install or configure power-management software on systems without a battery.
+
+#### Updating
+
+Running the same installer command again will update an existing Velox-Q installation in place.
+
+When the repository is already up to date, the installer avoids rebuilding the native battery backend unnecessarily.
+
+The installer will stop if the existing Velox-Q installation contains local Git changes. Commit or stash those changes before updating.
+
+When `~/.config/quickshell` exists but is not recognized as a Velox-Q Git installation, the installer preserves it by moving it to:
+
+```text
+~/.config/quickshell.bak
+```
+
+If that backup path already exists, a timestamped backup path is created instead.
+
+#### Power Management
+
+Power-management setup is performed only when a battery is detected.
+
+The installer respects an already-active power-management backend.
+
+The current selection behavior is:
+
+```text
+TLP active
+    → use TLP and ensure tlp-pd is available
+
+power-profiles-daemon active
+    → leave the existing backend unchanged
+
+TLP installed but inactive
+    → enable TLP and tlp-pd
+
+power-profiles-daemon installed but inactive
+    → enable power-profiles-daemon
+
+neither installed
+    → install TLP and tlp-pd
+```
+
+Systems without a battery skip this setup entirely.
+
+#### TLP Charging Privileges
+
+When TLP is active and a battery exposes the supported `charge_types` interface, the installer creates:
+
+```text
+/etc/sudoers.d/velox-q
+```
+
+The generated rule is restricted to the charging operations required by Velox-Q.
+
+The sudoers configuration is validated with `visudo` before it is installed.
+
+The installer manages only `/etc/sudoers.d/velox-q`; unrelated sudoers configuration is not modified.
+
+#### Manual Installation
+
+The installer is the recommended installation method.
+
+Manual installation is mainly intended for users who want to inspect or modify the configuration themselves.
+
+1. Clone the repository:
 
 ```bash
 git clone https://github.com/AnkitKumarDhal/Velox-Q.git
 ```
 
-Copy the configuration into your Quickshell directory:
+2. Copy the configuration into your Quickshell directory:
 
 ```bash
 mkdir -p ~/.config/quickshell
 cp -r Velox-Q/* ~/.config/quickshell/
 ```
 
-Install the main dependencies on Arch Linux:
+3. Install the main dependencies on Arch Linux:
 
 ```bash
-sudo pacman -S hyprland qt6-base qt6-declarative pipewire wireplumber wl-clipboard cliphist python-pywal16 brighnessctl awww
+sudo pacman -S git rust hyprland qt6-base qt6-declarative pipewire wireplumber wl-clipboard cliphist brightnessctl awww
 ```
 
-Install the required Quickshell and Matugen packages:
+4. Install the required AUR packages:
 
 ```bash
-yay -S quickshell-git matugen
+yay -S quickshell-git matugen-bin python-pywal16
 ```
 
-The `quickshell-git` package is recommended rather than the regular `quickshell` package.
+5. Build the native battery backend:
 
-Start the shell:
+```bash
+cd ~/.config/quickshell/tools/battery/velox-battery
+cargo build --release
+mkdir -p ../bin
+install -m 755 target/release/velox-battery ../bin/velox-battery
+```
+
+6. Start the shell:
 
 ```bash
 quickshell
 ```
 
-### Matugen Setup
-
-Add the Quickshell template to your Matugen configuration:
+7. Add the Quickshell template to your Matugen configuration:
 
 ```toml
 [templates.quickshell]
@@ -366,21 +461,19 @@ input_path  = "~/.config/quickshell/src/theme/quickshell.json.hbs"
 output_path = "~/.config/quickshell/src/theme/Colors.json"
 ```
 
-Then generate the colors from your wallpaper:
+8. Generate the colors from your wallpaper:
 
 ```bash
 matugen image /path/to/wallpaper.jpg
 ```
 
-### Autostart
-
-Add Quickshell to your Hyprland startup configuration:
+9. Add Quickshell to your Hyprland startup configuration:
 
 ```hyprlang
 exec-once = quickshell
 ```
 
-Or if using the Lua version of Hyprland, add this to your autostart section:
+Or, when using the Lua version of Hyprland:
 
 ```lua
 hl.exec_cmd("quickshell")
@@ -630,7 +723,11 @@ Wallpaper-related customization is primarily contained within:
 src/popups/wallpaper/
 ```
 
-And wallpapers directory is configured default to: `~/wallpapers/`
+The wallpaper directory defaults to:
+
+```text
+~/wallpapers/
+```
 
 ### Theme
 
@@ -657,14 +754,6 @@ LAUNCHER_SEARCH_URL
 ```
 
 to change the default web search endpoint.
-
-### Future Installation
-
-A dedicated installer script will be added to this repository later.
-
-The main Hyprland dotfiles repository will also provide an installation flow capable of setting up the larger environment and its dependencies automatically.
-
-The manual installation method documented above will remain available.
 
 ---
 
@@ -710,7 +799,7 @@ The following features and improvements are planned for future development:
 
 * [ ] **Further Performance Optimization**: Continue optimizing dynamic components, state handling, and resource usage.
 
-* [ ] **Installer Script**: Add a dedicated installer to automate the setup of Velox-Q and its required dependencies.
+* [x] **Installer Script**: Dedicated installer for Velox-Q and its required dependencies, including installation, updates, backup handling, battery-aware power-management setup, native helper builds, and required privilege configuration.
 
 ---
 
