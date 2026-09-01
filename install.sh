@@ -92,6 +92,7 @@ install_official_dependencies() {
         cliphist
         brightnessctl
         awww
+        imagemagick
     )
 
     info "Installing required system packages"
@@ -203,6 +204,23 @@ install_aur_dependencies() {
 
     info "Installing AUR dependencies"
     "$AUR_HELPER" -S --needed quickshell-git matugen-bin python-pywal16
+}
+
+check_wallpaper_dependencies() {
+    local dependencies=(
+        awww
+        wal
+        matugen
+        python3
+        magick
+        identify
+    )
+
+    for dependency in "${dependencies[@]}"; do
+        command_exists "$dependency" || die "Wallpaper dependency '$dependency' was not found."
+    done
+
+    success "Wallpaper dependencies verified"
 }
 
 install_repository() {
@@ -360,6 +378,7 @@ main() {
     install_repository
     install_official_dependencies
     install_aur_dependencies
+    check_wallpaper_dependencies
     install_power_management
     build_battery_backend
     configure_tlp_privileges
