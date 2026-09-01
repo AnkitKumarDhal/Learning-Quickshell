@@ -313,6 +313,7 @@ Some optional features may rely on additional system services or applications al
 | `brightnessctl` | Brightness management         |
 | `awww`          | Wallpaper application         |
 | `pywal16`       | Wallpaper and color support   |
+| `imagemagick`   | Wallpaper metadata and thumbnails|
 
 Depending on the features you use, additional system packages or services may be required for:
 
@@ -340,6 +341,7 @@ The installer will:
 * Install required system packages
 * Install or bootstrap an AUR helper when necessary
 * Install the required AUR packages
+* Verify the wallpaper backend dependencies
 * Install Velox-Q into `~/.config/quickshell`
 * Back up an existing non-Velox-Q configuration to `~/.config/quickshell.bak`
 * Update an existing Velox-Q installation in place
@@ -429,7 +431,7 @@ cp -r Velox-Q/* ~/.config/quickshell/
 3. Install the main dependencies on Arch Linux:
 
 ```bash
-sudo pacman -S git rust hyprland qt6-base qt6-declarative pipewire wireplumber wl-clipboard cliphist brightnessctl awww
+sudo pacman -S git rust hyprland qt6-base qt6-declarative pipewire wireplumber wl-clipboard cliphist imagemagick brightnessctl awww
 ```
 
 4. Install the required AUR packages:
