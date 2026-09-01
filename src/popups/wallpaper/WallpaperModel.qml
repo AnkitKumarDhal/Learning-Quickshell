@@ -756,14 +756,16 @@ QtObject {
 
     property Process wallProc: Process {
         command: [
-            "fish",
-            "-c",
-            "source ~/.config/fish/functions/wall.fish; wall $argv[1]",
-            "--",
+            "python3",
+            Quickshell.shellPath("tools/wallpaper/velox-wallpaper.py"),
             root._pendingWall
         ]
 
         running: false
+
+        stderr: SplitParser {
+            onRead: (line) => console.warn("WallpaperModel: ", line)
+        }
 
         onExited: (exitCode, exitStatus) => {
             if (exitCode === 0) {
