@@ -13,6 +13,8 @@ QtObject {
     property string currentWall:  ""
     property int    selectedIndex: 0
     property bool   applying:     false
+    property int    wallpaperErrorCode: 0
+    property string wallpaperErrorMessage: ""
 
     property string selectedFormat:      ""
     property string selectedDimensions:  ""
@@ -754,6 +756,22 @@ QtObject {
         }
     }
 
+    function _wallpaperError(code) {
+        switch (code) {
+            case 10: return "Invalid wallpaper backend usage"
+            case 11: return "awww is not installed"
+            case 12: return "pywal is not installed"
+            case 13: return "Matugen is not installed"
+            case 15: return "The selected wallpaper could not be found"
+            case 16: return "Failed to apply wallpaper with awww"
+            case 17: return "Failed to generate colors with pywal"
+            case 18: return "Failed to analyze wallpaper colors"
+            case 19: return "Failed to generate the wallpaper theme"
+
+            default: return `Wallpaper backend failed (exit code ${code})`
+        }
+    }
+
     property Process wallProc: Process {
         command: [
             "python3",
@@ -770,6 +788,12 @@ QtObject {
         onExited: (exitCode, exitStatus) => {
             if (exitCode === 0) {
                 root.currentWall = root._pendingWall
+                root.wallpaperErrorCode = 0
+                root.wallpaperErrorMessage = ""
+            } else {
+                root.wallpaperErrorCode = exitCode
+                root.wallpaperErrorMessage = root._wallpaperError(exitCode)
+                console.warn("WallpaperModel: ", root.wallpaperErrorMessage)
             }
 
             root.applying = false
