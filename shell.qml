@@ -1,5 +1,6 @@
 //@ pragma UseQApplication
 //@ pragma IconTheme BeautySolar
+//@ pragma ShellId Velox-Q
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
@@ -11,7 +12,7 @@ import qs.src.components
 import qs.src.services
 
 ShellRoot {
-    // ── Per-screen scope ──────────────────────────────────────────────────────
+    // Per-Screen scope
     Variants {
         model: Quickshell.screens
 
@@ -19,120 +20,60 @@ ShellRoot {
             Scope {
                 required property var modelData
 
-                // ── Bar ───────────────────────────────────────────────────────
+                // Bar
                 TopBar { screen: modelData }
 
-                // ── Popup dismiss overlay ─────────────────────────────────────
+                // Popup dismiss overlay
                 PopupDismiss { screen: modelData }
 
-                // ── Popups ────────────────────────────────────────────────────
-
+                // Popups
                 PopupLoader {
                     open: Popups.systemOpen && Popups.systemScreen === modelData
-                    popup: Component {
-                        SystemPopup {
-                            screen: modelData
-                        }
-                    }
+                    popup: Component { SystemPopup { screen: modelData } }
                 }
-
                 PopupLoader {
                     open: Popups.volumeOpen
-                    popup: Component {
-                        VolumePopup {
-                            screen: modelData
-                        }
-                    }
+                    popup: Component { VolumePopup { screen: modelData } }
                 }
-
                 PopupLoader {
                     open: Popups.networkOpen
-                    popup: Component {
-                        NetworkPopup {
-                            screen: modelData
-                        }
-                    }
+                    popup: Component { NetworkPopup { screen: modelData } }
                 }
-
                 PopupLoader {
                     open: Popups.mediaOpen
-                    popup: Component {
-                        MediaPopup {
-                            screen: modelData
-                        }
-                    }
+                    popup: Component { MediaPopup { screen: modelData } }
                 }
-
                 PopupLoader {
                     open: Popups.launcherOpen
-                    popup: Component {
-                        Launcher {
-                            screen: modelData
-                        }
-                    }
+                    popup: Component { Launcher { screen: modelData } }
                 }
-
                 PopupLoader {
                     open: Popups.clipboardOpen
-                    popup: Component {
-                        ClipboardPopup {
-                            screen: modelData
-                        }
-                    }
+                    popup: Component { ClipboardPopup { screen: modelData } }
                 }
-
                 PopupLoader {
                     open: Popups.emojiOpen
-                    popup: Component {
-                        EmojiPicker {
-                            screen: modelData
-                        }
-                    }
+                    popup: Component { EmojiPicker { screen: modelData } }
                 }
-
                 PopupLoader {
                     open: Popups.wallpaperOpen
-                    popup: Component {
-                        WallpaperPopup {
-                            screen: modelData
-                        }
-                    }
+                    popup: Component { WallpaperPopup { screen: modelData } }
                 }
-
                 PopupLoader {
                     open: Popups.batteryOpen
-                    popup: Component {
-                        BatteryPopup {
-                            screen: modelData
-                        }
-                    }
+                    popup: Component { BatteryPopup { screen: modelData } }
                 }
-
                 PopupLoader {
                     open: Popups.sessionOpen
-                    popup: Component {
-                        SessionPopup {
-                            screen: modelData
-                        }
-                    }
+                    popup: Component { SessionPopup { screen: modelData } }
                 }
-
                 PopupLoader {
                     open: Popups.caffeineOpen
-                    popup: Component {
-                        CaffeinePopup {
-                            screen: modelData
-                        }
-                    }
+                    popup: Component { CaffeinePopup { screen: modelData } }
                 }
-
                 PopupLoader {
                     open: Popups.calendarOpen
-                    popup: Component {
-                        CalendarPopup {
-                            screen: modelData
-                        }
-                    }
+                    popup: Component { CalendarPopup { screen: modelData } }
                 }
 
                 PolkitPopup { screen: modelData }
