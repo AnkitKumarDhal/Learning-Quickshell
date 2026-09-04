@@ -45,6 +45,12 @@ Singleton {
         device.pair();
     }
 
+    function cancelPair(address) {
+        const device = root.devices.find(item => item.address === address);
+        if (!device || !device.pairing) return;
+        device.cancelPair();
+    }
+
     function connect(address) {
         const device = root.devices.find(item => item.address === address);
         if (!device || !root.enabled || root.isConnecting(address)) return;

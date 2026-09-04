@@ -413,7 +413,6 @@ ColumnLayout {
                                 width: pairLabel.implicitWidth + 18
                                 height: 24
                                 radius: 12
-                                enabled: !NetworkService.bluetooth.isPairing(modelData.address)
 
                                 color: NetworkService.bluetooth.isPairing(modelData.address) ? Colors.surfaceContainerHighest : availablePairHover.hovered ? Colors.primaryContainer : Colors.primary
 
@@ -427,21 +426,31 @@ ColumnLayout {
                                     id: pairLabel
 
                                     anchors.centerIn: parent
-                                    text: NetworkService.bluetooth.isPairing(modelData.address) ? "Pairing..." : "Pair"
+                                    text: NetworkService.bluetooth.isPairing(modelData.address) ? "Cancel" : "Pair"
 
                                     font.family: Fonts.font
                                     font.pixelSize: 9
                                     font.bold: true
 
-                                    color: NetworkService.bluetooth.isPairing(modelData.address) ? Colors.on_SurfaceVariant : availablePairHover.hovered ? Colors.on_PrimaryContainer : Colors.on_Primary
+                                    color: NetworkService.bluetooth.isPairing(modelData.address)
+                                            ? availablePairHover.hovered
+                                                ? Colors.errorContainer
+                                                : Colors.surfaceContainerHighest
+                                            : availablePairHover.hovered
+                                                ? Colors.primaryContainer
+                                                : Colors.primary
                                 }
 
                                 MouseArea {
                                     anchors.fill: parent
-
                                     cursorShape: Qt.PointingHandCursor
-
-                                    onClicked: NetworkService.bluetooth.pair(modelData.address)
+                                    onClicked: {
+                                        if (NetworkService.bluetooth.isPairing(modelData.address)) {
+                                            NetworkService.bluetooth.cancelPair(modelData.address)
+                                        } else {
+                                            NetworkService.bluetooth.pair(modelData.address)
+                                        }
+                                    }
                                 }
                             }
                         }
