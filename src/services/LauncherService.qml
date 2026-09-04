@@ -20,6 +20,9 @@ Singleton {
 
     property string pendingFocusAddress: ""
 
+    property bool stateDirectoryReady: false
+    property bool pendingSave: false
+
     function appKey(app) {
         if (!app) return ""
         if (app.id) return app.id
@@ -30,8 +33,6 @@ Singleton {
     function refreshApps(apps) {
         const source = apps && apps.length !== undefined ? apps : []
         const byKey = {}
-        const nextPinned = []
-        const nextRecent = []
         const pinned = []
         const recent = []
 
@@ -46,7 +47,6 @@ Singleton {
             const key = root.pinnedIds[i]
 
             if (byKey[key]) {
-                nextPinned.push(key)
                 pinned.push(byKey[key])
             }
         }
@@ -54,17 +54,15 @@ Singleton {
         for (let i = 0; i < root.recentIds.length; i++) {
             const key = root.recentIds[i]
 
-            if (byKey[key] && nextRecent.indexOf(key) === -1) {
-                nextRecent.push(key)
-
-                if (nextPinned.indexOf(key) === -1) {
+            if (
+                byKey[key] &&
+                root.pinnedIds.indexOf(key) === -1 &&
+                recent.indexOf(byKey[key]) === -1
+            ) {
                     recent.push(byKey[key])
-                }
             }
         }
 
-        root.pinnedIds = nextPinned
-        root.recentIds = nextRecent
         root.pinnedApps = pinned
         root.recentApps = recent
         root.revision++
@@ -106,7 +104,18 @@ Singleton {
     }
 
     function save() {
-        launcherState.setText(JSON.stringify({ pinned: root.pinnedIds, recent: root.recentIds }))
+        if (!root.stateDirectoryReady) {
+            root.pendingSave = true
+            if (!stateDirectoryProc.running) {
+                stateDirectoryProc.running = true
+            }
+            return
+        }
+
+        launcherState.setText(JSON.stringify({
+            pinned: root.pinnedIds,
+            recent: root.recentIds
+        }))
     }
 
     function normalizeClass(value) {
@@ -166,7 +175,7 @@ Singleton {
         path: root.stateFilePath
         preload: true
         watchChanges: false
-        printErrors: false
+        printErrors: true
 
         onLoaded: {
             try {
@@ -174,6 +183,7 @@ Singleton {
                 root.pinnedIds = Array.isArray(data.pinned) ? data.pinned : []
                 root.recentIds = Array.isArray(data.recent) ? data.recent : []
             } catch (error) {
+                console.warn("LauncherService: failed to parse launcher state:", error)
                 root.pinnedIds = []
                 root.recentIds = []
             }
@@ -181,9 +191,45 @@ Singleton {
             root.refreshApps(DesktopEntries.applications.values)
         }
 
-        onLoadFailed: {
+        onLoadFailed: function(error) {
+            console.warn("LauncherService: launcher state LOAD FAILED: ", root.stateFilePath, error)
             root.pinnedIds = []
             root.recentIds = []
+            root.refreshApps(DesktopEntries.applications.values)
+        }
+
+        onSaved: {
+            root.pendingSave = false
+        }
+
+        onSaveFailed: function(error) {
+            console.warn("Failed to save launcher state:", error)
+        }
+    }
+
+    Process {
+        id: stateDirectoryProc
+        command: ["mkdir", "-p", Quickshell.stateDir]
+        running: true
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0) {
+                console.warn("Launcher Service: Failed to create state directory: ", Quickshell.stateDir)
+                return
+            }
+            root.stateDirectoryReady = true
+            if (root.pendingSave) {
+                root.pendingSave = false
+                launcherState.setText(JSON.stringify({
+                    pinned: root.pinnedIds,
+                    recent: root.recentIds
+                }))
+            }
+        }
+    }
+
+    Connections {
+        target: DesktopEntries
+        function onApplicationsChanged() {
             root.refreshApps(DesktopEntries.applications.values)
         }
     }
