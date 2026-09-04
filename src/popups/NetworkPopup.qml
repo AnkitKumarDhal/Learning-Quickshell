@@ -14,7 +14,6 @@ PanelWindow {
     id: root
 
     color: "transparent"
-
     exclusionMode: ExclusionMode.Ignore
 
     anchors {
@@ -24,24 +23,82 @@ PanelWindow {
 
     implicitWidth: 400
     implicitHeight: root.screen ? root.screen.height : 800
-
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
-
     visible: slide.windowVisible
 
     property var selectedNetwork: null
+    readonly property bool hasWifi: NetworkService.wifiDevice !== null
+    readonly property bool hasBluetooth: NetworkService.bluetooth.available
+
+    readonly property var tabModel: {
+        const tabs = [];
+
+        if (root.hasWifi) {
+            tabs.push({
+                key: "wifi",
+                icon: "󰤨",
+                label: "Wi-Fi"
+            });
+        }
+
+        if (root.hasBluetooth) {
+            tabs.push({
+                key: "bluetooth",
+                icon: "󰂯",
+                label: "Bluetooth"
+            });
+        }
+
+        return tabs;
+    }
+
+    readonly property string currentTabKey: {
+        if (Popups.networkTab === 0 && root.hasWifi) return "wifi";
+        if (Popups.networkTab === 1 && root.hasBluetooth) return "bluetooth";
+        if (root.hasWifi) return "wifi";
+        if (root.hasBluetooth) return "bluetooth";
+        return "";
+    }
+
+    property int tabDirection: 1
+
+    function ensureValidTab() {
+        if (root.hasWifi && root.hasBluetooth) {
+            if (Popups.networkTab !== 0 && Popups.networkTab !== 1) Popups.networkTab = 0;
+            return;
+        }
+        if (root.hasWifi) {
+            if (Popups.networkTab !== 0) Popups.networkTab = 0;
+            return;
+        }
+        if (root.hasBluetooth) {
+            if (Popups.networkTab !== 1) Popups.networkTab = 1;
+            return;
+        }
+        Popups.networkTab = 0;
+    }
 
     onVisibleChanged: {
-        if (!visible)
-            root.selectedNetwork = null;
+        if (!visible) root.selectedNetwork = null;
+    }
+
+    onHasWifiChanged: root.ensureValidTab()
+    onHasBluetoothChanged: root.ensureValidTab()
+
+    Component.onCompleted: root.ensureValidTab()
+
+    Connections {
+        target: Popups
+        function onNetworkOpenChanged() {
+            if (Popups.networkOpen) root.ensureValidTab();
+        }
     }
 
     Connections {
         target: root.selectedNetwork
         function onConnectedChanged() {
-            if (root.selectedNetwork?.connected)
-                root.selectedNetwork = null;
+            if (root.selectedNetwork?.connected) root.selectedNetwork = null;
         }
     }
 
@@ -80,13 +137,17 @@ PanelWindow {
             width: 380
             height: mainColumn.implicitHeight + 24
             radius: Theme.popupRadius
-
             color: Colors.surfaceContainer
-
             border.width: Theme.popupBorder
             border.color: Colors.outlineVariant
-
             clip: true
+
+            Behavior on height {
+                NumberAnimation {
+                    duration: Theme.animDuration
+                    easing.type: Easing.OutCubic
+                }
+            }
 
             ColumnLayout {
                 id: mainColumn
@@ -108,13 +169,10 @@ PanelWindow {
 
                     Text {
                         text: "Connectivity"
-
                         font.family: Fonts.font
                         font.pixelSize: 16
                         font.bold: true
-
                         color: Colors.on_Surface
-
                         Layout.fillWidth: true
                     }
 
@@ -122,20 +180,14 @@ PanelWindow {
                         width: 28
                         height: 28
                         radius: 14
-
                         color: closeHover.hovered ? Colors.surfaceContainerHighest : "transparent"
-
-                        HoverHandler {
-                            id: closeHover
-                        }
+                        HoverHandler { id: closeHover }
 
                         Text {
                             anchors.centerIn: parent
                             text: "󰅖"
-
                             font.family: Fonts.fontM
                             font.pixelSize: 15
-
                             color: Colors.outline
                         }
 
@@ -147,53 +199,106 @@ PanelWindow {
                     }
                 }
 
-                ConnectivityStatusCards {
-                    Layout.fillWidth: true
-                }
+                ConnectivityStatusCards { Layout.fillWidth: true }
 
                 TabBar {
+                    id: tabs
                     Layout.fillWidth: true
                     orientation: "horizontal"
-
-                    currentPage: [ "wifi", "bluetooth", "hotspot" ][Popups.networkTab]
-
-                    model: [
-                        {
-                            key: "wifi",
-                            icon: "󰤨",
-                            label: "Wi-Fi"
-                        },
-                        {
-                            key: "bluetooth",
-                            icon: "󰂯",
-                            label: "Bluetooth"
-                        },
-                        {
-                            key: "hotspot",
-                            icon: "󰀂",
-                            label: "Hotspot"
-                        }
-                    ]
-
+                    currentPage: root.currentTabKey
+                    model: root.tabModel
                     onPageChanged: (key) => {
-                            const index = [ "wifi", "bluetooth", "hotspot" ].indexOf(key);
-
-                            if (index >= 0)
-                                Popups.networkTab = index;
-                        }
+                        const newIndex = key === "wifi" ? 0 : key === "bluetooth" ? 1 : -1;
+                        if (newIndex < 0 || newIndex === Popups.networkTab) return;
+                        root.tabDirection = newIndex > Popups.networkTab ? 1 : -1;
+                        Popups.networkTab = newIndex;
+                    }
                 }
 
-                WifiTab {
-                    visible: Popups.networkTab === 0
-                    selectedNetwork: root.selectedNetwork
+                Item {
+                    id: tabContent
+                    Layout.fillWidth: true
 
-                    onNetworkSelected: (network) => {
-                            root.selectedNetwork = network;
+                    implicitHeight: {
+                        if (root.currentTabKey === "wifi") return wifiTab.implicitHeight;
+                        if (root.currentTabKey === "bluetooth") return bluetoothTab.implicitHeight;
+                        return 0;
+                    }
+
+                    clip: true
+
+                    ColumnLayout {
+                        id: wifiTab
+
+                        anchors {
+                            top: parent.top
+                            left: parent.left
+                            right: parent.right
                         }
-                }
 
-                BluetoothTab { visible: Popups.networkTab === 1 }
-                HotspotTab { visible: Popups.networkTab === 2 }
+                        spacing: 0
+                        opacity: root.currentTabKey === "wifi" ? 1 : 0
+                        enabled: root.currentTabKey === "wifi"
+
+                        transform: Translate {
+                            x: root.currentTabKey === "wifi" ? 0 : (root.tabDirection > 0 ? -32 : 32)
+                            Behavior on x {
+                                NumberAnimation {
+                                    duration: Theme.animDuration
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+                        }
+
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Theme.animDuration
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+
+                        WifiTab {
+                            Layout.fillWidth: true
+                            selectedNetwork: root.selectedNetwork
+                            onNetworkSelected: (network) => {
+                                root.selectedNetwork = network;
+                            }
+                        }
+                    }
+
+                    ColumnLayout {
+                        id: bluetoothTab
+
+                        anchors {
+                            top: parent.top
+                            left: parent.left
+                            right: parent.right
+                        }
+
+                        spacing: 0
+                        opacity: root.currentTabKey === "bluetooth" ? 1 : 0
+                        enabled: root.currentTabKey === "bluetooth"
+
+                        transform: Translate {
+                            x: root.currentTabKey === "bluetooth" ? 0 : (root.tabDirection > 0 ? 32 : -32)
+                            Behavior on x {
+                                NumberAnimation {
+                                    duration: Theme.animDuration
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+                        }
+
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Theme.animDuration
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+
+                        BluetoothTab { Layout.fillWidth: true }
+                    }
+                }
             }
         }
     }

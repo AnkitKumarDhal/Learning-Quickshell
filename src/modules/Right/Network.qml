@@ -37,19 +37,26 @@ PillBase {
     readonly property bool bluetoothGood: hasBluetooth && NetworkService.bluetooth.enabled
     readonly property int bluetoothCount: NetworkService.bluetooth.connectedDeviceCount
 
+    function defaultNetworkTab(preferBluetooth = false) {
+        if (preferBluetooth && root.hasBluetooth) return 1;
+        if (root.wifiGood) return 0;
+        if (root.bluetoothGood) return 0;
+        if (root.hasWifi) return 0;
+        if (root.hasBluetooth) return 1;
+        return 0;
+    }
+
     onClicked: {
         const wasOpen = Popups.networkOpen;
-
         Popups.networkOpen = !wasOpen;
-
         if (!wasOpen) {
-            Popups.networkTab = wifiGood ? 0 : bluetoothGood ? 1 : 0;
+            Popups.networkTab = root.defaultNetworkTab();
         }
     }
 
     onRightClicked: {
         Popups.networkOpen = true;
-        Popups.networkTab = 1;
+        Popups.networkTab = root.defaultNetworkTab(true);
     }
 
     Text {

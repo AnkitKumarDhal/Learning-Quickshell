@@ -114,11 +114,11 @@ PanelWindow {
                     smooth: true
                     layer.enabled: true
                     layer.effect: FastBlur {
-                        radius: 40
+                        radius: 12
                         transparentBorder: false
                     }
 
-                    opacity: 0.65
+                    opacity: 0.95
                 }
 
                 Rectangle {

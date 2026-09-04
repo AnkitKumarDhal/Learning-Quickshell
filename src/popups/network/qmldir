@@ -2,4 +2,3 @@ ConnectivityStatusCards 1.0 ConnectivityStatusCards.qml
 WifiTab                 1.0 WifiTab.qml
 NetworkRow              1.0 NetworkRow.qml
 BluetoothTab            1.0 BluetoothTab.qml
-HotspotTab              1.0 HotspotTab.qml
