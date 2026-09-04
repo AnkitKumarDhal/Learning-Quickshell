@@ -222,7 +222,7 @@ Item {
                     delegate: AudioDeviceOption {
                         required property var modelData
                         Layout.fillWidth: true
-                        visible: modelData.audio !== null && !modelData.isStream && (root.isOutput ? modelData.isSink : !modelData.isSink)
+                        visible: modelData.ready && modelData.audio !== null && !modelData.isStream && (root.isOutput ? modelData.isSink : !modelData.isSink)
                         deviceName: modelData.description || modelData.name || "Unknown"
                         isDefault: root.isOutput ? (VolumeService.sink && VolumeService.sink.id === modelData.id) : (VolumeService.source && VolumeService.source.id === modelData.id)
                         icon: root.isOutput ? "󰓃" : "󰍬"
