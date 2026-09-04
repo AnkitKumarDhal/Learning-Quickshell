@@ -19,52 +19,14 @@ Singleton {
     readonly property var availableDevices: root.devices.filter(device => !device.paired && !device.connected)
     readonly property int connectedDeviceCount: root.connectedDevices.length
 
-    property var pairingDevices: ({})
-    property var connectingDevices: ({})
-    readonly property int operationTimeout: 30000
-
     function isPairing(address) {
-        return root.pairingDevices[address] !== undefined;
+        const device = root.devices.find(item => item.address === address);
+        return device?.pairing ?? false;
     }
 
     function isConnecting(address) {
-        return root.connectingDevices[address] !== undefined;
-    }
-
-    function _clearPairing(address) {
-        if (!root.isPairing(address)) return;
-        delete root.pairingDevices[address];
-        root.pairingDevicesChanged();
-    }
-
-    function _clearConnecting(address) {
-        if (!root.isConnecting(address)) return;
-        delete root.connectingDevices[address];
-        root.connectingDevicesChanged();
-    }
-
-    function _updateOperationStates() {
-        const now = Date.now();
-        Object.keys(root.pairingDevices).forEach(address => {
-            const device = root.devices.find(item => item.address === address);
-            if (!device || device.paired || now - root.pairingDevices[address] >= root.operationTimeout) {
-                root._clearPairing(address);
-            }
-        });
-
-        Object.keys(root.connectingDevices).forEach(address => {
-            const device = root.devices.find(item => item.address === address);
-            if (!device || device.connected || now - root.connectingDevices[address] >= root.operationTimeout) {
-                root._clearConnecting(address);
-            }
-        });
-    }
-
-    Timer {
-        interval: 250
-        repeat: true
-        running: Object.keys(root.pairingDevices).length > 0 || Object.keys(root.connectingDevices).length > 0
-        onTriggered: root._updateOperationStates()
+        const device = root.devices.find(item => item.address === address);
+        return device?.state === BluetoothDeviceState.Connecting;
     }
 
     function scan() {
@@ -80,16 +42,12 @@ Singleton {
     function pair(address) {
         const device = root.devices.find(item => item.address === address);
         if (!device || !root.enabled || root.isPairing(address)) return;
-        root.pairingDevices[address] = Date.now();
-        root.pairingDevicesChanged();
         device.pair();
     }
 
     function connect(address) {
         const device = root.devices.find(item => item.address === address);
         if (!device || !root.enabled || root.isConnecting(address)) return;
-        root.connectingDevices[address] = Date.now();
-        root.connectingDevicesChanged();
         device.connect();
     }
 
@@ -108,11 +66,5 @@ Singleton {
     function setEnabled(value) {
         if (!root.adapter) return;
         root.adapter.enabled = value;
-        if (!value) {
-            root.pairingDevices = ({});
-            root.connectingDevices = ({});
-            root.pairingDevicesChanged();
-            root.connectingDevicesChanged();
-        }
     }
 }
