@@ -158,10 +158,18 @@ Item {
                 }
 
                 Text {
-                    text: selector.expanded ? "󰅀" : "󰅂"
+                    text: "󰅂"
                     color: Colors.on_SurfaceVariant
                     font.family: Fonts.font
                     font.pixelSize: 14
+                    rotation: selector.expanded ? 90 : 0
+
+                    Behavior on rotation {
+                        NumberAnimation {
+                            duration: Theme.animDuration
+                            easing.type: Easing.OutCubic
+                        }
+                    }
                 }
             }
 
@@ -174,27 +182,55 @@ Item {
             }
         }
 
-        ColumnLayout {
+        Item {
             id: selector
 
             property bool expanded: false
-            visible: expanded
-            Layout.fillWidth: true
-            spacing: 2
+            property real animatedHeight: 0
 
-            Repeater {
-                model: Pipewire.nodes.values
-                delegate: AudioDeviceOption {
-                    required property var modelData
-                    Layout.fillWidth: true
-                    visible: modelData.audio !== null && !modelData.isStream && (root.isOutput ? modelData.isSink : !modelData.isSink)
-                    deviceName: modelData.description || modelData.name || "Unknown"
-                    isDefault: root.isOutput ? (VolumeService.sink && VolumeService.sink.id === modelData.id) : (VolumeService.source && VolumeService.source.id === modelData.id)
-                    icon: root.isOutput ? "󰓃" : "󰍬"
-                    onSelected: {
-                        if (root.isOutput) root.selectOutput(modelData)
-                        else root.selectInput(modelData)
-                        selector.expanded = false
+            Layout.fillWidth: true
+            implicitHeight: selector.animatedHeight
+            clip: true
+
+            onExpandedChanged: {
+                selector.animatedHeight = expanded ? selectorContent.implicitHeight : 0
+            }
+
+            Component.onCompleted: {
+                selector.animatedHeight = expanded ? selectorContent.implicitHeight : 0
+            }
+
+            Behavior on animatedHeight {
+                NumberAnimation {
+                    duration: Theme.animDuration
+                    easing.type: Easing.OutCubic
+                }
+            }
+
+            ColumnLayout {
+                id: selectorContent
+
+                anchors {
+                    top: parent.top
+                    left: parent.left
+                    right: parent.right
+                }
+                spacing: 2
+
+                Repeater {
+                    model: Pipewire.nodes.values
+                    delegate: AudioDeviceOption {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        visible: modelData.audio !== null && !modelData.isStream && (root.isOutput ? modelData.isSink : !modelData.isSink)
+                        deviceName: modelData.description || modelData.name || "Unknown"
+                        isDefault: root.isOutput ? (VolumeService.sink && VolumeService.sink.id === modelData.id) : (VolumeService.source && VolumeService.source.id === modelData.id)
+                        icon: root.isOutput ? "󰓃" : "󰍬"
+                        onSelected: {
+                            if (root.isOutput) root.selectOutput(modelData)
+                            else root.selectInput(modelData)
+                            selector.expanded = false
+                        }
                     }
                 }
             }
