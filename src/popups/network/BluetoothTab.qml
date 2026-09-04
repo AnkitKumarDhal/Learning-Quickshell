@@ -434,7 +434,7 @@ ColumnLayout {
 
                                     color: NetworkService.bluetooth.isPairing(modelData.address)
                                             ? availablePairHover.hovered
-                                                ? Colors.errorContainer
+                                                ? Colors.on_ErrorContainer
                                                 : Colors.surfaceContainerHighest
                                             : availablePairHover.hovered
                                                 ? Colors.primaryContainer
