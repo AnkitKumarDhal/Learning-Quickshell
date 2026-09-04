@@ -287,8 +287,9 @@ ColumnLayout {
                                 width: connectLabel.implicitWidth + 18
                                 height: 24
                                 radius: 12
+                                enabled: !NetworkService.bluetooth.isConnecting(modelData.address)
 
-                                color: pairedConnectHover.hovered ? Colors.primary : Colors.primaryContainer
+                                color: NetworkService.bluetooth.isConnecting(modelData.address) ? Colors.surfaceContainerHighest : pairedConnectHover.hovered ? Colors.primary : Colors.primaryContainer
                                 Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
                                 HoverHandler {
@@ -299,13 +300,13 @@ ColumnLayout {
                                     id: connectLabel
 
                                     anchors.centerIn: parent
-                                    text: "Connect"
+                                    text: NetworkService.bluetooth.isConnecting(modelData.address) ? "Connecting..." : "Connect"
 
                                     font.family: Fonts.font
                                     font.pixelSize: 9
                                     font.bold: true
 
-                                    color: pairedConnectHover.hovered ? Colors.on_Primary : Colors.on_PrimaryContainer
+                                    color: NetworkService.bluetooth.isConnecting(modelData.address) ? Colors.on_SurfaceVariant : pairedConnectHover.hovered ? Colors.on_Primary : Colors.on_PrimaryContainer
                                 }
 
                                 MouseArea {
@@ -412,8 +413,9 @@ ColumnLayout {
                                 width: pairLabel.implicitWidth + 18
                                 height: 24
                                 radius: 12
+                                enabled: !NetworkService.bluetooth.isPairing(modelData.address)
 
-                                color: availablePairHover.hovered ? Colors.primaryContainer : Colors.primary
+                                color: NetworkService.bluetooth.isPairing(modelData.address) ? Colors.surfaceContainerHighest : availablePairHover.hovered ? Colors.primaryContainer : Colors.primary
 
                                 Behavior on color { ColorAnimation { duration: Theme.hoverFadeDuration } }
 
@@ -425,13 +427,13 @@ ColumnLayout {
                                     id: pairLabel
 
                                     anchors.centerIn: parent
-                                    text: "Pair"
+                                    text: NetworkService.bluetooth.isPairing(modelData.address) ? "Pairing..." : "Pair"
 
                                     font.family: Fonts.font
                                     font.pixelSize: 9
                                     font.bold: true
 
-                                    color: availablePairHover.hovered ? Colors.on_PrimaryContainer : Colors.on_Primary
+                                    color: NetworkService.bluetooth.isPairing(modelData.address) ? Colors.on_SurfaceVariant : availablePairHover.hovered ? Colors.on_PrimaryContainer : Colors.on_Primary
                                 }
 
                                 MouseArea {

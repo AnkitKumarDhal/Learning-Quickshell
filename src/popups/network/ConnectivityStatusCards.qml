@@ -217,7 +217,7 @@ RowLayout {
                             : !NetworkService.bluetooth.enabled
                                 ? "Disabled"
                                 : NetworkService.bluetooth.connectedDeviceCount > 0
-                                    ? (NetworkService.bluetooth.connectedDeviceCount + " connected")
+                                    ? (NetworkService.bluetooth.connectedDeviceCount + " conn.")
                                     : "Ready"
 
                     font.family: Fonts.font
