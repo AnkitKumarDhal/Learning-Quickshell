@@ -12,7 +12,7 @@ ColumnLayout {
     readonly property bool inputMode: root.mode === "input"
 
     function isApplicationStream(node) {
-        if (!node || !node.ready || node.audio === null || !node.isStream) {
+        if (!node || node.audio === null || !node.isStream) {
             return false
         }
 
