@@ -7,6 +7,8 @@ import qs.src.theme
 RowLayout {
     id: root
 
+    property string activeTab: ""
+
     signal wifiClicked()
     signal bluetoothClicked()
 
@@ -20,6 +22,8 @@ RowLayout {
         radius: 12
 
         color: NetworkService.wifiConnected ? Colors.primaryContainer : Colors.surfaceContainerHigh
+        border.width: root.activeTab === "wifi" ? 2 : 0
+        border.color: Colors.primary
 
         Behavior on color {
             ColorAnimation {
@@ -144,6 +148,8 @@ RowLayout {
         radius: 12
 
         color: NetworkService.bluetooth.connectedDeviceCount > 0 ? Colors.primaryContainer : Colors.surfaceContainerHigh
+        border.width: root.activeTab === "bluetooth" ? 2 : 0
+        border.color: Colors.primary
 
         Behavior on color {
             ColorAnimation {

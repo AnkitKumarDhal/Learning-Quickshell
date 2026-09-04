@@ -168,6 +168,7 @@ PanelWindow {
 
                 ConnectivityStatusCards {
                     Layout.fillWidth: true
+                    activeTab: root.currentTabKey
                     onWifiClicked: {
                         if (!root.hasWifi) return;
                         root.tabDirection = root.currentTabKey === "bluetooth" ? -1 : 1;
