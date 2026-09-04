@@ -1,0 +1,5 @@
+AudioStatusCard        1.0 AudioStatusCard.qml
+AudioCardDetails       1.0 AudioCardDetails.qml
+AudioApplicationMixer  1.0 AudioApplicationMixer.qml
+AudioApplicationRow    1.0 AudioApplicationRow.qml
+AudioDeviceOption      1.0 AudioDeviceOption.qml
