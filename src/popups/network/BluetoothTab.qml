@@ -437,7 +437,7 @@ ColumnLayout {
                                                 ? Colors.on_ErrorContainer
                                                 : Colors.surfaceContainerHighest
                                             : availablePairHover.hovered
-                                                ? Colors.primaryContainer
+                                                ? Colors.on_PrimaryContainer
                                                 : Colors.primary
                                 }
 
