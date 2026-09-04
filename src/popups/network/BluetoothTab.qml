@@ -438,7 +438,7 @@ ColumnLayout {
                                                 : Colors.surfaceContainerHighest
                                             : availablePairHover.hovered
                                                 ? Colors.on_PrimaryContainer
-                                                : Colors.primary
+                                                : Colors.on_Primary
                                 }
 
                                 MouseArea {
