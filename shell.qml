@@ -32,7 +32,7 @@ ShellRoot {
                     popup: Component { SystemPopup { screen: modelData } }
                 }
                 PopupLoader {
-                    open: Popups.volumeOpen
+                    open: Popups.volumeOpen && Popups.volumeScreen === modelData
                     popup: Component { VolumePopup { screen: modelData } }
                 }
                 PopupLoader {

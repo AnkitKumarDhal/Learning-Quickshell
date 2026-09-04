@@ -85,7 +85,7 @@ PanelWindow {
             spacing: Theme.barSpacing
 
             Network             { screen: root.screen }
-            Volume              {}
+            Volume              { screen: root.screen }
             Battery             {}
             Tray                { window: root }
             NotificationButton  { screen: root.screen }

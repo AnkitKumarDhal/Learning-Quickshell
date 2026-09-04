@@ -8,6 +8,8 @@ import qs.src.services
 PillBase {
     id: root
 
+    required property var screen
+
     hoverExpand: true
 
     border.color: Colors.primary
@@ -30,7 +32,12 @@ PillBase {
         verticalAlignment: Text.AlignVCenter
     }
 
-    onClicked:      Popups.volumeOpen = !Popups.volumeOpen
+    onClicked: {
+        const wasOpen = Popups.volumeOpen
+        Popups.volumeScreen = root.screen
+        Popups.volumeAnchorX = root.mapToItem(null, root.width / 2, 0).x
+        Popups.volumeOpen = !wasOpen
+    }
     onRightClicked: VolumeService.toggleMute()
     onScrolled: (wheel) => {
         VolumeService.changeVolume(wheel.angleDelta.y > 0 ? 0.05 : -0.05)
