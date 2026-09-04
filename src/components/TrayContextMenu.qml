@@ -35,52 +35,28 @@ PanelWindow {
     }
 
     WlrLayershell.layer: WlrLayer.Overlay
-
-    WlrLayershell.keyboardFocus:
-        menuOpen
-            ? WlrKeyboardFocus.Exclusive
-            : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: menuOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     HyprlandFocusGrab {
         id: focusGrab
-
         windows: [root]
-
         onCleared: {
             root.close()
         }
     }
 
-    /*
-     * Clicking anywhere outside the actual menu dismisses it.
-     *
-     * The menu itself has a higher z value, so its own MouseAreas receive
-     * clicks first.
-     */
     MouseArea {
         id: dismissArea
-
         anchors.fill: parent
-
         enabled: root.menuOpen
-
         z: 0
-
-        acceptedButtons:
-            Qt.LeftButton |
-            Qt.RightButton |
-            Qt.MiddleButton
-
-        onClicked: {
-            root.close()
-        }
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        onClicked: root.close()
     }
 
     Timer {
         id: focusTimer
-
         interval: 30
-
         onTriggered: {
             if (root.menuOpen) {
                 focusGrab.active = true
@@ -92,9 +68,7 @@ PanelWindow {
 
     Timer {
         id: closeTimer
-
         interval: Theme.animDuration
-
         onTriggered: {
             root.closing = false
             root.menuHandle = null
@@ -102,28 +76,18 @@ PanelWindow {
         }
     }
 
-    /*
-     * Gives QML one event loop turn to populate QsMenuOpener before the
-     * initial keyboard selection is calculated.
-     */
     Timer {
         id: menuReadyTimer
-
         interval: 0
-
         onTriggered: {
-            if (!root.menuOpen)
-                return
-
+            if (!root.menuOpen) return
             menuCard.resetKeyboard()
             menuCard.forceActiveFocus()
         }
     }
 
     function open(handle, x, y, title) {
-        if (!handle)
-            return
-
+        if (!handle) return
         closeTimer.stop()
 
         menuHandle = handle
@@ -140,8 +104,7 @@ PanelWindow {
     }
 
     function close() {
-        if (!menuOpen && !closing)
-            return
+        if (!menuOpen && !closing) return
 
         focusTimer.stop()
         menuReadyTimer.stop()
@@ -156,13 +119,8 @@ PanelWindow {
 
     Item {
         id: menuContainer
-
         z: 10
-
-        visible:
-            root.menuOpen ||
-            root.closing
-
+        visible: root.menuOpen || root.closing
         width: menuCard.width
         height: menuCard.height
 
@@ -181,18 +139,9 @@ PanelWindow {
             hostHeight: root.height
             hostX: menuContainer.x
 
-            opacity:
-                root.menuOpen
-                    ? 1
-                    : 0
-
-            scale:
-                root.menuOpen
-                    ? 1
-                    : 0.96
-
-            transformOrigin:
-                Item.TopRight
+            opacity: root.menuOpen ? 1 : 0
+            scale: root.menuOpen ? 1 : 0.96
+            transformOrigin: Item.TopRight
 
             Behavior on opacity {
                 NumberAnimation {
@@ -208,82 +157,32 @@ PanelWindow {
                 }
             }
 
-            onTriggered: {
-                root.close()
-            }
+            onTriggered: root.close()
         }
     }
 
-    /*
-     * Smart horizontal positioning.
-     *
-     * Tray is normally on the right side of the screen, so the menu should
-     * open towards the left. If the tray/menu is on the other side, it opens
-     * towards the right instead.
-     */
     Binding {
         target: menuContainer
         property: "x"
 
         value: {
-            const openLeft =
-                root.menuX >
-                root.width / 2
-
-            const preferredX =
-                openLeft
-                    ? root.menuX - root.menuWidth + 12
-                    : root.menuX - 12
-
-            return Math.max(
-                root.screenMargin,
-                Math.min(
-                    preferredX,
-                    root.width -
-                    root.menuWidth -
-                    root.screenMargin
-                )
-            )
+            const openLeft = root.menuX > root.width / 2
+            const preferredX = openLeft ? root.menuX - root.menuWidth + 12 : root.menuX - 12
+            return Math.max(root.screenMargin, Math.min(preferredX, root.width - root.menuWidth - root.screenMargin))
         }
     }
 
-    /*
-     * Smart vertical positioning.
-     *
-     * Normally the menu opens below the tray. If there isn't enough room,
-     * it opens upwards instead.
-     */
     Binding {
         target: menuContainer
         property: "y"
 
         value: {
             const belowY = root.menuY
-            const aboveY =
-                root.menuY -
-                menuContainer.height -
-                8
+            const aboveY = root.menuY - menuContainer.height - 8
+            const fitsBelow = belowY + menuContainer.height <= root.height - root.screenMargin
+            const preferredY = fitsBelow ? belowY : aboveY
 
-            const fitsBelow =
-                belowY +
-                menuContainer.height <=
-                root.height -
-                root.screenMargin
-
-            const preferredY =
-                fitsBelow
-                    ? belowY
-                    : aboveY
-
-            return Math.max(
-                root.screenMargin,
-                Math.min(
-                    preferredY,
-                    root.height -
-                    menuContainer.height -
-                    root.screenMargin
-                )
-            )
+            return Math.max(root.screenMargin, Math.min(preferredY, root.height - menuContainer.height - root.screenMargin))
         }
     }
 }
