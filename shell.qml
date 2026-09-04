@@ -92,7 +92,7 @@ PopupLoader {
     }
 }
 
-    // ── Global Keybinds ───────────────────────────────────────────────────────
+    // Global Keybinds
     // Hyprland lua config bind:
     GlobalShortcut {
         appid:       "quickshell"
