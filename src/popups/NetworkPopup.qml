@@ -181,6 +181,16 @@ PanelWindow {
                     }
                 }
 
+                Rectangle {
+                    height: 1
+                    Layout.fillWidth: true
+                    Layout.topMargin: 0
+                    Layout.bottomMargin: 0
+                    radius: 1
+                    color: Colors.outlineVariant
+                    opacity: 0.7
+                }
+
                 Item {
                     id: tabContent
                     Layout.fillWidth: true

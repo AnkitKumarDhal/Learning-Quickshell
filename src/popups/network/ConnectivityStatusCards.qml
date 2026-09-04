@@ -21,7 +21,7 @@ RowLayout {
 
         radius: 12
 
-        color: NetworkService.wifiConnected ? Colors.primaryContainer : Colors.surfaceContainerHigh
+        color: wifiCardClick.containsMouse ? Colors.surfaceContainerHighest : NetworkService.wifiConnected ? Colors.primaryContainer : Colors.surfaceContainerHigh
         border.width: root.activeTab === "wifi" ? 2 : 0
         border.color: Colors.primary
 
@@ -35,6 +35,7 @@ RowLayout {
             id: wifiCardClick
             anchors.fill: parent
             enabled: NetworkService.wifiDevice !== null
+            hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: root.wifiClicked()
         }
@@ -104,6 +105,14 @@ RowLayout {
             }
 
             Rectangle {
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: 28
+                radius: 1
+                color: Colors.outline
+                opacity: 0.7
+            }
+
+            Rectangle {
                 width: 38
                 height: 22
                 radius: 11
@@ -147,7 +156,7 @@ RowLayout {
         implicitHeight: 66
         radius: 12
 
-        color: NetworkService.bluetooth.connectedDeviceCount > 0 ? Colors.primaryContainer : Colors.surfaceContainerHigh
+        color: bluetoothCardClick.containsMouse ? Colors.surfaceContainerHighest : NetworkService.bluetooth.connectedDeviceCount > 0 ? Colors.primaryContainer : Colors.surfaceContainerHigh
         border.width: root.activeTab === "bluetooth" ? 2 : 0
         border.color: Colors.primary
 
@@ -161,6 +170,7 @@ RowLayout {
             id: bluetoothCardClick
             anchors.fill: parent
             enabled: NetworkService.bluetooth.available
+            hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: root.bluetoothClicked()
         }
@@ -220,6 +230,14 @@ RowLayout {
 
                     Layout.fillWidth: true
                 }
+            }
+
+            Rectangle {
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: 28
+                radius: 1
+                color: Colors.outline
+                opacity: 0.7
             }
 
             Rectangle {
