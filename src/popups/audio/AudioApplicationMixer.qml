@@ -10,8 +10,23 @@ ColumnLayout {
 
     property string mode: "output"
     readonly property bool inputMode: root.mode === "input"
+
+    function isApplicationStream(node) {
+        if (!node || node.audio === null || !node.isStream) {
+            return false
+        }
+
+        const properties = node.properties ?? {}
+        const applicationName = String(properties["application.name"] ?? "").toLowerCase()
+        const nodeName = String(node.name ?? "").toLowerCase()
+
+        if (applicationName.includes("speech dispatcher")) return false
+        if (nodeName.startsWith("speech-dispatcher-")) return false
+        return root.inputMode ? !node.isSink : node.isSink
+    }
+
     readonly property var streams: ScriptModel {
-            values: [...Pipewire.nodes.values].filter(node => node.audio !== null && node.isStream && (root.inputMode ? !node.isSink : node.isSink))
+        values: [...Pipewire.nodes.values].filter(node => root.isApplicationStream(node))
     }
 
     spacing: 6

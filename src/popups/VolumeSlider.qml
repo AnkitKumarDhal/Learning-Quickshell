@@ -34,8 +34,8 @@ Item {
     // Handle
     Rectangle {
         id: handle
-        width:  16
-        height: 16
+        width:  12
+        height: 12
         radius: 8
         color:  root.muted ? Colors.error : Colors.primary
         anchors.verticalCenter: parent.verticalCenter

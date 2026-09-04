@@ -12,7 +12,7 @@ Item {
     id: root
 
     required property var node
-    implicitHeight: 58
+    implicitHeight: 64
 
     PwObjectTracker {
         objects: root.node ? [root.node] : []
@@ -54,6 +54,8 @@ Item {
             anchors.fill: parent
             anchors.leftMargin: 10
             anchors.rightMargin: 10
+            anchors.topMargin: 6
+            anchors.bottomMargin: 6
             spacing: 10
 
             Rectangle {
@@ -81,7 +83,7 @@ Item {
                         text: root.applicationName
                         color: Colors.on_Surface
                         font.family: Fonts.font
-                        font.pixelSize: 11
+                        font.pixelSize: 12
                         font.bold: true
                         elide: Text.ElideRight
                         Layout.fillWidth: true
@@ -91,7 +93,7 @@ Item {
                         text: Math.round(root.volume * 100) + "%"
                         color: root.muted ? Colors.error : Colors.on_SurfaceVariant
                         font.family: Fonts.font
-                        font.pixelSize: 10
+                        font.pixelSize: 12
                         font.bold: true
                     }
                 }
