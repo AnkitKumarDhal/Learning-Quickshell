@@ -13,12 +13,15 @@ import qs.src.popups.network
 PanelWindow {
     id: root
 
+    required property var screen
+
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
 
     anchors {
         top: true
         right: true
+        left: true
     }
 
     implicitWidth: 400
@@ -110,7 +113,7 @@ PanelWindow {
 
     mask:
         Region {
-            x: root.implicitWidth - connectivityCard.width - Theme.barMargin
+            x: connectivityCard.x
             y: Theme.barHeight + 8
             width: connectivityCard.width
             height: connectivityCard.height
@@ -121,7 +124,7 @@ PanelWindow {
 
         anchors.fill: parent
         edge: "top"
-        open: Popups.networkOpen
+        open: Popups.networkOpen && Popups.networkScreen === root.screen
         onCloseRequested: Popups.networkOpen = false
 
         Rectangle {
@@ -129,10 +132,9 @@ PanelWindow {
 
             anchors {
                 top: parent.top
-                right: parent.right
                 topMargin: Theme.barHeight + 8
-                rightMargin: Theme.barMargin
             }
+            x: Popups.networkAnchorX - width / 2
 
             width: 380
             height: mainColumn.implicitHeight + 24

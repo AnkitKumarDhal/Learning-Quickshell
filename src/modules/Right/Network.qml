@@ -10,6 +10,8 @@ import qs.src.components
 PillBase {
     id: root
 
+    required property var screen
+
     border.color: Colors.primary
     border.width: Popups.networkOpen ? 1 : 0
     Behavior on border.width { NumberAnimation { duration: 150 } }
@@ -48,6 +50,8 @@ PillBase {
 
     onClicked: {
         const wasOpen = Popups.networkOpen;
+        Popups.networkScreen = root.screen;
+        Popups.networkAnchorX = root.mapToItem(null, root.width / 2, 0).x;
         Popups.networkOpen = !wasOpen;
         if (!wasOpen) {
             Popups.networkTab = root.defaultNetworkTab();
@@ -55,6 +59,8 @@ PillBase {
     }
 
     onRightClicked: {
+        Popups.networkScreen = root.screen;
+        Popups.networkAnchorX = root.mapToItem(null, root.width / 2, 0).x;
         Popups.networkOpen = true;
         Popups.networkTab = root.defaultNetworkTab(true);
     }

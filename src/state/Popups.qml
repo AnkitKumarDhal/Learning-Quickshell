@@ -7,9 +7,6 @@ Singleton {
 
     // ── Popup States ──────────────────────────────────────────────────────────
     property bool notificationsOpen: false
-    property bool systemOpen:        false
-    property var  systemScreen:      null
-    property real systemAnchorX:     0
     property bool archMenuOpen:      false
     property bool calendarOpen:      false
     property bool mediaOpen:         false
@@ -18,13 +15,20 @@ Singleton {
     property bool launcherOpen:      false
     property bool clipboardOpen:     false
     property bool emojiOpen:         false
-    property bool networkOpen:       false
     property bool wallpaperOpen:     false
     property bool batteryOpen:       false
     property bool keybindsOpen:      false
     property bool sessionOpen:       false
     property bool caffeineOpen:      false
     property int  networkTab:        0
+
+    property bool systemOpen:        false
+    property var  systemScreen:      null
+    property real systemAnchorX:     0
+
+    property bool networkOpen:       false
+    property var  networkScreen:     null
+    property real networkAnchorX:    0
 
     // ── Mutual Exclusion ──────────────────────────────────────────────────────
     // Opening any popup closes all others.

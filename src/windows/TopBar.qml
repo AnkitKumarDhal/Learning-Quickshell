@@ -84,7 +84,7 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.barSpacing
 
-            Network             {}
+            Network             { screen: root.screen }
             Volume              {}
             Battery             {}
             Tray                { window: root }
