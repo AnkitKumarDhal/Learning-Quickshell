@@ -137,7 +137,7 @@ PanelWindow {
             x: Popups.networkAnchorX - width / 2
 
             width: 380
-            height: mainColumn.implicitHeight + 24
+            height: mainColumn.implicitHeight + 32
             radius: Theme.popupRadius
             color: Colors.surfaceContainer
             border.width: Theme.popupBorder
@@ -158,62 +158,25 @@ PanelWindow {
                     top: parent.top
                     left: parent.left
                     right: parent.right
-                    topMargin: 14
-                    leftMargin: 14
-                    rightMargin: 14
-                    bottomMargin: 14
+                    topMargin: 16
+                    leftMargin: 16
+                    rightMargin: 16
+                    bottomMargin: 16
                 }
 
                 spacing: 10
 
-                RowLayout {
+                ConnectivityStatusCards {
                     Layout.fillWidth: true
-
-                    Text {
-                        text: "Connectivity"
-                        font.family: Fonts.font
-                        font.pixelSize: 16
-                        font.bold: true
-                        color: Colors.on_Surface
-                        Layout.fillWidth: true
+                    onWifiClicked: {
+                        if (!root.hasWifi) return;
+                        root.tabDirection = root.currentTabKey === "bluetooth" ? -1 : 1;
+                        Popups.networkTab = 0;
                     }
-
-                    Rectangle {
-                        width: 28
-                        height: 28
-                        radius: 14
-                        color: closeHover.hovered ? Colors.surfaceContainerHighest : "transparent"
-                        HoverHandler { id: closeHover }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "󰅖"
-                            font.family: Fonts.fontM
-                            font.pixelSize: 15
-                            color: Colors.outline
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Popups.networkOpen = false
-                        }
-                    }
-                }
-
-                ConnectivityStatusCards { Layout.fillWidth: true }
-
-                TabBar {
-                    id: tabs
-                    Layout.fillWidth: true
-                    orientation: "horizontal"
-                    currentPage: root.currentTabKey
-                    model: root.tabModel
-                    onPageChanged: (key) => {
-                        const newIndex = key === "wifi" ? 0 : key === "bluetooth" ? 1 : -1;
-                        if (newIndex < 0 || newIndex === Popups.networkTab) return;
-                        root.tabDirection = newIndex > Popups.networkTab ? 1 : -1;
-                        Popups.networkTab = newIndex;
+                    onBluetoothClicked: {
+                        if (!root.hasBluetooth) return;
+                        root.tabDirection = root.currentTabKey === "wifi" ? 1 : -1;
+                        Popups.networkTab = 1;
                     }
                 }
 

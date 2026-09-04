@@ -7,6 +7,9 @@ import qs.src.theme
 RowLayout {
     id: root
 
+    signal wifiClicked()
+    signal bluetoothClicked()
+
     Layout.fillWidth: true
     spacing: 8
 
@@ -24,12 +27,21 @@ RowLayout {
             }
         }
 
+        MouseArea {
+            id: wifiCardClick
+            anchors.fill: parent
+            enabled: NetworkService.wifiDevice !== null
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.wifiClicked()
+        }
+
         RowLayout {
             anchors {
                 fill: parent
                 leftMargin: 12
                 rightMargin: 12
             }
+            z: 1
 
             spacing: 10
 
@@ -137,6 +149,14 @@ RowLayout {
             ColorAnimation {
                 duration: Theme.hoverFadeDuration
             }
+        }
+
+        MouseArea {
+            id: bluetoothCardClick
+            anchors.fill: parent
+            enabled: NetworkService.bluetooth.available
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.bluetoothClicked()
         }
 
         RowLayout {
