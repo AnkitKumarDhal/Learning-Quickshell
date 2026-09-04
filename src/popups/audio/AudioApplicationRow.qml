@@ -51,17 +51,19 @@ Item {
         }
 
         RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
-            anchors.topMargin: 6
-            anchors.bottomMargin: 6
-            spacing: 10
+            anchors {
+                fill: parent
+                leftMargin: 10
+                rightMargin: 10
+                topMargin: 6
+                bottomMargin: 6
+            }
+            spacing: 12
 
             Rectangle {
-                Layout.preferredWidth: 32
-                Layout.preferredHeight: 32
-                radius: 16
+                Layout.preferredWidth: 34
+                Layout.preferredHeight: 34
+                radius: 17
                 color: Colors.surfaceContainerHighest
 
                 IconImage {
@@ -75,10 +77,12 @@ Item {
 
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 2
+                spacing: 3
 
                 RowLayout {
                     Layout.fillWidth: true
+                    spacing: 8
+
                     Text {
                         text: root.applicationName
                         color: Colors.on_Surface
@@ -93,7 +97,7 @@ Item {
                         text: Math.round(root.volume * 100) + "%"
                         color: root.muted ? Colors.error : Colors.on_SurfaceVariant
                         font.family: Fonts.font
-                        font.pixelSize: 12
+                        font.pixelSize: 11
                         font.bold: true
                     }
                 }
@@ -120,10 +124,11 @@ Item {
             }
 
             Rectangle {
-                Layout.preferredWidth: 30
-                Layout.preferredHeight: 30
-                radius: 15
+                Layout.preferredWidth: 32
+                Layout.preferredHeight: 32
+                radius: 16
                 color: root.muted ? Colors.errorContainer : Colors.surfaceContainerHighest
+
                 Behavior on color {
                     ColorAnimation {
                         duration: 120
