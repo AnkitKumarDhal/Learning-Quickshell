@@ -212,14 +212,7 @@ RowLayout {
                 }
 
                 Text {
-                    text: !NetworkService.bluetooth.available
-                            ? "Unavailable"
-                            : !NetworkService.bluetooth.enabled
-                                ? "Disabled"
-                                : NetworkService.bluetooth.connectedDeviceCount > 0
-                                    ? (NetworkService.bluetooth.connectedDeviceCount + " conn.")
-                                    : "Ready"
-
+                    text: NetworkService.bluetooth.stateText
                     font.family: Fonts.font
                     font.pixelSize: 11
                     font.bold: true

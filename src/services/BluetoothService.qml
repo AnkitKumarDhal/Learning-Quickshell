@@ -9,7 +9,11 @@ Singleton {
 
     readonly property var adapter: Bluetooth.defaultAdapter
     readonly property bool available: root.adapter !== null
-    readonly property bool enabled: root.adapter?.enabled ?? false
+    readonly property var state: root.adapter?.state
+    readonly property bool enabled: root.state === BluetoothAdapterState.Enabled
+    readonly property bool enabling: root.state === BluetoothAdapterState.Enabling
+    readonly property bool disabling: root.state === BluetoothAdapterState.Disabling
+    readonly property bool blocked: root.state === BluetoothAdapterState.Blocked
     readonly property bool discovering: root.adapter?.discovering ?? false
     readonly property bool scanning: root.discovering
 
@@ -18,6 +22,18 @@ Singleton {
     readonly property var pairedDevices: root.devices.filter(device => device.paired && !device.connected)
     readonly property var availableDevices: root.devices.filter(device => !device.paired && !device.connected)
     readonly property int connectedDeviceCount: root.connectedDevices.length
+    readonly property bool operational: root.enabled || root.connectedDeviceCount > 0
+
+    readonly property string stateText: {
+        if (!root.available) return "Unavailable";
+        if (root.enabling) return "Enabling";
+        if (root.disabling) return "Disabling";
+        if (root.blocked) return "Blocked";
+        if (root.connectedDeviceCount > 0) return root.connectedDeviceCount + " conn.";
+        if (root.state === BluetoothAdapterState.Disabled) return "Disabled";
+        if (root.state === BluetoothAdapterState.Enabled) return "Ready";
+        return "Unavailable";
+    }
 
     function isPairing(address) {
         const device = root.devices.find(item => item.address === address);

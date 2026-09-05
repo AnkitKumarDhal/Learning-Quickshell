@@ -47,6 +47,7 @@ ColumnLayout {
             width: scanLabel.implicitWidth + 20
             height: 28
             radius: 14
+            enabled: NetworkService.bluetooth.operational || NetworkService.bluetooth.scanning
 
             color: NetworkService.bluetooth.scanning || btScanHover.hovered ? Colors.primary : Colors.surfaceContainerHighest
 
@@ -56,7 +57,7 @@ ColumnLayout {
                 id: scanLabel
 
                 anchors.centerIn: parent
-                text: NetworkService.bluetooth.scanning ? "Stop" : "Scan"
+                text: NetworkService.bluetooth.scanning ? "Stop" : NetworkService.bluetooth.enabling ? "Starting..." : "Scan"
 
                 font.family: Fonts.font
                 font.pixelSize: 10
@@ -477,16 +478,22 @@ ColumnLayout {
             }
 
             Text {
-                visible: !NetworkService.bluetooth.enabled
+                visible: NetworkService.bluetooth.available && !NetworkService.bluetooth.operational && (
+                        NetworkService.bluetooth.enabling ||
+                        NetworkService.bluetooth.disabling ||
+                        NetworkService.bluetooth.blocked ||
+                        NetworkService.bluetooth.state === BluetoothAdapterState.Disabled)
                 Layout.alignment: Qt.AlignHCenter
-
-                text: NetworkService.bluetooth.available ? "Bluetooth is disabled" : "No Bluetooth adapter found"
-
+                text: NetworkService.bluetooth.enabling
+                        ? "Bluetooth is starting…"
+                        : NetworkService.bluetooth.disabling
+                            ? "Bluetooth is turning off…"
+                            : NetworkService.bluetooth.blocked
+                                ? "Bluetooth is blocked"
+                                : "Bluetooth is disabled"
                 font.family: Fonts.font
                 font.pixelSize: 10
-
                 color: Colors.outline
-
                 topPadding: 12
                 bottomPadding: 12
             }
