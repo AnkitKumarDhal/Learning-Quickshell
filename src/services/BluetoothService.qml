@@ -10,10 +10,12 @@ Singleton {
     readonly property var adapter: Bluetooth.defaultAdapter
     readonly property bool available: root.adapter !== null
     readonly property var state: root.adapter?.state
-    readonly property bool enabled: root.state === BluetoothAdapterState.Enabled
+    readonly property bool enabled: root.adapter?.enabled ?? false
     readonly property bool enabling: root.state === BluetoothAdapterState.Enabling
     readonly property bool disabling: root.state === BluetoothAdapterState.Disabling
     readonly property bool blocked: root.state === BluetoothAdapterState.Blocked
+    readonly property bool powerTransitioning: root.enabling || root.disabling
+    readonly property bool powerActive: root.state === BluetoothAdapterState.Enabled || root.state === BluetoothAdapterState.Enabling
     readonly property bool discovering: root.adapter?.discovering ?? false
     readonly property bool scanning: root.discovering
 

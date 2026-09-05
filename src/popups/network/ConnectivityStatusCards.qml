@@ -18,9 +18,7 @@ RowLayout {
     Rectangle {
         Layout.fillWidth: true
         implicitHeight: 66
-
         radius: 12
-
         color: wifiCardClick.containsMouse ? Colors.surfaceContainerHighest : NetworkService.wifiConnected ? Colors.primaryContainer : Colors.surfaceContainerHigh
         border.width: root.activeTab === "wifi" ? 2 : 0
         border.color: Colors.primary
@@ -47,25 +45,20 @@ RowLayout {
                 rightMargin: 12
             }
             z: 1
-
             spacing: 10
 
             Text {
                 text: {
                     if (!NetworkService.wifiEnabled) return "󰤭";
                     if (!NetworkService.wifiConnected) return "󰤭";
-
                     const s = NetworkService.signalStrength;
-
                     if (s < 0.25) return "󰤟";
                     if (s < 0.50) return "󰤢";
                     if (s < 0.75) return "󰤥";
                     return "󰤨";
                 }
-
                 font.family: Fonts.fontM
                 font.pixelSize: 20
-
                 color: NetworkService.wifiConnected ? Colors.on_PrimaryContainer : Colors.outline
             }
 
@@ -75,29 +68,21 @@ RowLayout {
 
                 Text {
                     text: "Wi-Fi"
-
                     font.family: Fonts.font
                     font.pixelSize: 10
                     font.bold: true
-
                     color: NetworkService.wifiConnected ? Colors.on_PrimaryContainer : Colors.on_SurfaceVariant
                 }
 
                 Text {
-                    text:
-                        !NetworkService.wifiEnabled
+                    text: !NetworkService.wifiEnabled
                             ? "Disabled"
                             : NetworkService.wifiConnected
-                                ? (
-                                    NetworkService.ssid ||
-                                    "Connected"
-                                )
+                                ? (NetworkService.ssid || "Connected")
                                 : "Not connected"
-
                     font.family: Fonts.font
                     font.pixelSize: 11
                     font.bold: true
-
                     color: NetworkService.wifiConnected ? Colors.on_PrimaryContainer : Colors.on_Surface
                     elide: Text.ElideRight
                     Layout.fillWidth: true
@@ -126,11 +111,8 @@ RowLayout {
                     width: 16
                     height: 16
                     radius: 8
-
                     anchors.verticalCenter: parent.verticalCenter
-
                     x: NetworkService.wifiEnabled ? 19 : 3
-
                     color: NetworkService.wifiEnabled ? Colors.on_Primary : Colors.outline
 
                     Behavior on x {
@@ -155,7 +137,6 @@ RowLayout {
         Layout.fillWidth: true
         implicitHeight: 66
         radius: 12
-
         color: bluetoothCardClick.containsMouse ? Colors.surfaceContainerHighest : NetworkService.bluetooth.connectedDeviceCount > 0 ? Colors.primaryContainer : Colors.surfaceContainerHigh
         border.width: root.activeTab === "bluetooth" ? 2 : 0
         border.color: Colors.primary
@@ -201,14 +182,10 @@ RowLayout {
 
                 Text {
                     text: "Bluetooth"
-
                     font.family: Fonts.font
                     font.pixelSize: 10
                     font.bold: true
-
-                    color: NetworkService.bluetooth.connectedDeviceCount > 0
-                            ? Colors.on_PrimaryContainer
-                            : Colors.on_SurfaceVariant
+                    color: NetworkService.bluetooth.connectedDeviceCount > 0 ? Colors.on_PrimaryContainer : Colors.on_SurfaceVariant
                 }
 
                 Text {
@@ -216,11 +193,7 @@ RowLayout {
                     font.family: Fonts.font
                     font.pixelSize: 11
                     font.bold: true
-
-                    color: NetworkService.bluetooth.connectedDeviceCount > 0
-                            ? Colors.on_PrimaryContainer
-                            : Colors.on_Surface
-
+                    color: NetworkService.bluetooth.connectedDeviceCount > 0 ? Colors.on_PrimaryContainer : Colors.on_Surface
                     Layout.fillWidth: true
                 }
             }
@@ -237,11 +210,7 @@ RowLayout {
                 width: 38
                 height: 22
                 radius: 11
-
-                color: NetworkService.bluetooth.enabled
-                        ? Colors.primary
-                        : Colors.surfaceContainerHighest
-
+                color: NetworkService.bluetooth.powerActive ? Colors.primary : Colors.surfaceContainerHighest
                 border.width: NetworkService.bluetooth.enabled ? 0 : 1
                 border.color: Colors.outlineVariant
                 opacity: NetworkService.bluetooth.available ? 1 : 0.45
@@ -250,13 +219,9 @@ RowLayout {
                     width: 16
                     height: 16
                     radius: 8
-
                     anchors.verticalCenter: parent.verticalCenter
-                    x: NetworkService.bluetooth.enabled ? 19 : 3
-
-                    color: NetworkService.bluetooth.enabled
-                            ? Colors.on_Primary
-                            : Colors.outline
+                    x: NetworkService.bluetooth.powerActive ? 19 : 3
+                    color: NetworkService.bluetooth.powerActive ? Colors.on_Primary : Colors.outline
 
                     Behavior on x {
                         NumberAnimation {
@@ -270,7 +235,7 @@ RowLayout {
                     anchors.fill: parent
                     enabled: NetworkService.bluetooth.available
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: NetworkService.bluetooth.setEnabled(!NetworkService.bluetooth.enabled)
+                    onClicked: NetworkService.bluetooth.setEnabled(!NetworkService.bluetooth.powerActive)
                 }
             }
         }
